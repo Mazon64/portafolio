@@ -67,12 +67,55 @@ model Project {
   last_telemetry_at DateTime @updatedAt
 }
 
-model Skill {
+model SkillCategory {
   id          String   @id @default(uuid())
-  name        String
-  category    String   // Ej. "Frontend", "Backend", "Herramientas"
-  show_on_cv  Boolean  @default(true)
+  title       String   // Ej. "Desarrollo multiplataforma", "Diseño UI/UX"
+  description String   // Ej. "Frameworks y lenguajes enfocados al desarrollo..."
+  order       Int      @default(0) // Para ordenar las tarjetas en la pantalla
+  skills      Skill[]
 }
 
-// Nota: La tabla de embeddings para pgvector se manejará mediante migraciones 
-// SQL crudas, ya que Prisma tiene soporte limitado para vectores nativos.
+model Skill {
+  id          String   @id @default(uuid())
+  name        String   // Ej. "React" o "Trabajo en equipo"
+  icon_name   String?  // String de referencia para react-icons (ej. "SiReact"). 
+  is_badge    Boolean  @default(false) // Si es true, el frontend lo pinta como la píldora verde
+  show_on_cv  Boolean  @default(true)
+  
+  // Relación con la categoría
+  categoryId  String
+  category    SkillCategory @relation(fields: [categoryId], references: [id])
+}
+
+---
+
+## 3. Estrategia de Autenticación y Autorización
+
+### 3.1 Autenticación (SSO con GitHub)
+El acceso al sistema de gestión (CMS) y auditoría se realizará exclusivamente a través de Single Sign-On (SSO) utilizando el proveedor de identidad de GitHub. Esto se orquestará mediante la librería **NextAuth.js** (Auth.js), garantizando un flujo OAuth 2.0 seguro sin gestionar contraseñas propias.
+
+*   **Credenciales:** Se requerirá un `GITHUB_ID` y un `GITHUB_SECRET` generados desde los *Developer Settings* de GitHub.
+*   **Firma de Sesión:** Las sesiones (basadas en JWT) se firmarán criptográficamente utilizando una llave segura y aleatoria definida en la variable de entorno `NEXTAUTH_SECRET`.
+
+### 3.2 Autorización (Patrón Whitelist por Entorno)
+Para asegurar que **solo el propietario del ecosistema** (David Yael Aranda Montes) pueda acceder a las rutas protegidas (`/admin/*`), se implementará una validación en tiempo de ejecución (Middleware y Callbacks) basada en variables de entorno.
+
+**Flujo de Validación de Acceso:**
+1.  El usuario inicia sesión con GitHub.
+2.  El *Callback* de `signIn` de NextAuth intercepta la respuesta.
+3.  Compara el correo electrónico (o el ID de GitHub) entrante contra una "Key Segura" definida en el servidor (ej. `ADMIN_GITHUB_EMAIL=tu_correo@gmail.com`).
+4.  Si coincide, el JWT se genera y se otorga acceso. Si no coincide, la conexión es rechazada inmediatamente con un error `403 Access Denied`, imposibilitando que otros usuarios de GitHub entren al panel.
+
+**Pseudocódigo del Callback (NextAuth):**
+```typescript
+callbacks: {
+  async signIn({ user }) {
+    // Validación estricta con la variable de entorno segura
+    const isAllowedToSignIn = user.email === process.env.ADMIN_GITHUB_EMAIL;
+    if (isAllowedToSignIn) {
+      return true; // Acceso concedido
+    } else {
+      return false; // Acceso denegado, redirige a página de error
+    }
+  }
+}
