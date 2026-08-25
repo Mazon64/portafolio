@@ -1,6 +1,6 @@
 # Especificación de Requisitos de Software (SRS)
 ## Proyecto: Portafolio Base - Ecosistema de Ingeniería
-**Versión:** 1.1.0
+**Versión:** 1.0.0
 **Fecha:** 23 de Agosto, 2026
 
 ---
@@ -22,18 +22,22 @@ El Portafolio Base es una aplicación Fullstack desarrollada en Next.js. El alca
 ## 2. Requisitos Funcionales (RF)
 
 ### 2.1 Módulo de Identidad y CV Imprimible
-* **RF-01:** Renderizado de CV optimizado con `shadcn/ui`.
-* **RF-02:** Exportación e impresión (layout A4/Carta vía `@media print`).
+* **RF-01: Renderizado de CV Optimizado.** El sistema debe proveer una vista dedicada del CV utilizando componentes de `shadcn/ui`.
+* **RF-02: Exportación e Impresión.** El sistema debe permitir la impresión directa del CV, ocultando elementos interactivos y formateando el layout a dimensiones A4/Carta mediante `@media print`.
+* **RF-03: Única Fuente de Verdad (Contenido).** Toda la información de Perfil, Experiencia, Educación, Habilidades y Proyectos debe consumirse desde la base de datos relacional (PostgreSQL). (Nota: La información de contacto se mantendrá estática en el código/entorno).
+* **RF-04: Filtro de Visibilidad CV vs Portafolio.** El sistema debe permitir definir qué registros (ej. proyectos o experiencias específicas) se muestran en la versión completa del Portafolio Web y cuáles se renderizan en la versión sintética del CV imprimible.
+* **RF-05: Vista Detallada de Proyectos (Tarjetas Expandibles).** En la vista web, los proyectos se mostrarán como tarjetas resumidas que, al interactuar, revelarán información detallada consumida desde la base de datos, combinada con su "Estado Actual" generado dinámicamente por el sistema de telemetría (RAG).
 
 ### 2.2 Módulo de Telemetría por Webhooks
 * **RF-03:** Endpoint de recepción (`/api/webhooks/github`) para eventos de GitHub (Pushes, PRs, Issues, CI/CD).
 * **RF-04:** Generación de resúmenes semánticos y embeddings vía API de Google Gemini.
 * **RF-05:** Persistencia vectorial en Supabase (pgvector) y actualización dinámica del estado de los proyectos.
 
-### 2.3 Módulo de Autenticación y Panel de Administración
-* **RF-06: Autenticación OAuth.** El sistema debe integrar inicio de sesión exclusivo mediante GitHub.
-* **RF-07: Autorización Estricta (Whitelist).** El acceso a la ruta `/admin/chats` debe estar restringido única y exclusivamente al ID/Username de GitHub de David Yael Aranda Montes. Cualquier otro usuario autenticado debe ser rechazado.
-* **RF-08: Gestión de Chats.** El panel de administración debe permitir visualizar el historial completo de conversaciones, eliminarlas manualmente y marcarlas ("Pin") para evitar su borrado automático.
+### 2.3 Módulo de Autenticación y Panel de Administración (CMS)
+* **RF-09: Autenticación OAuth.** El sistema debe integrar inicio de sesión exclusivo mediante GitHub.
+* **RF-10: Autorización Estricta (Whitelist).** El acceso a la ruta `/admin` debe estar restringido única y exclusivamente a la cuenta de GitHub de David Yael Aranda Montes.
+* **RF-11: Gestión de Contenido (CMS).** El panel de administración debe proporcionar una interfaz para Crear, Leer, Actualizar y Eliminar (CRUD) la información de las secciones Perfil, Experiencia, Educación, Habilidades y Proyectos, modificando directamente la base de datos primaria.
+* **RF-12: Gestión de Chats.** El panel de administración debe permitir visualizar el historial completo de conversaciones, eliminarlas y marcarlas ("Pin").
 
 ### 2.4 Módulo de Retención y Continuidad de Sesión
 * **RF-09: Identificación de Invitados.** Al iniciar un chat, el sistema debe generar un UUID de sesión único y almacenarlo en una cookie en el navegador del visitante.
