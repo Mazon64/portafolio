@@ -1,5 +1,5 @@
 # Especificación de APIs
-## Proyecto: Portafolio Base - Ecosistema de Ingeniería
+## Proyecto: Portafolio
 **Versión:** 1.0.0
 
 ---

@@ -1,5 +1,5 @@
 # Especificación de Requisitos de Software (SRS)
-## Proyecto: Portafolio Base - Ecosistema de Ingeniería
+## Proyecto: Portafolio
 **Versión:** 1.0.0
 **Fecha:** 23 de Agosto, 2026
 
@@ -8,10 +8,10 @@
 ## 1. Introducción
 
 ### 1.1 Propósito
-El propósito de este documento es definir las especificaciones y requisitos para el desarrollo del "Portafolio Base", el núcleo del ecosistema de software profesional de David Yael Aranda Montes. 
+El propósito de este documento es definir las especificaciones y requisitos para el desarrollo del "Portafolio", el núcleo del ecosistema de software profesional de David Yael Aranda Montes. 
 
 ### 1.2 Alcance del Sistema
-El Portafolio Base es una aplicación Fullstack desarrollada en Next.js. El alcance abarca:
+El Portafolio es una aplicación Fullstack desarrollada en Next.js. El alcance abarca:
 1. **Identidad Profesional:** CV web interactivo e imprimible (optimizado con CSS nativo).
 2. **Telemetría de Ingeniería (AI-Driven):** Sistema RAG alimentado por Webhooks de GitHub para reportar el avance real de proyectos.
 3. **Auditoría y Gestión de Interacciones:** Un panel de administración privado para monitorear, auditar y depurar las conversaciones que los reclutadores tienen con el Chatbot.

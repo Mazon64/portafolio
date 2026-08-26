@@ -1,11 +1,11 @@
 # Documento de Arquitectura de Software
-## Proyecto: Portafolio Base - Ecosistema de Ingeniería
+## Proyecto: Portafolio
 **Versión:** 1.0.0
 
 ---
 
 ## 1. Topología del Sistema
-El Portafolio Base emplea una arquitectura Serverless / Edge impulsada por el framework Next.js (App Router), dividiendo las responsabilidades de datos en un enfoque de persistencia políglota para optimizar el rendimiento y la escalabilidad.
+El Portafolio emplea una arquitectura Serverless / Edge impulsada por el framework Next.js (App Router), dividiendo las responsabilidades de datos en un enfoque de persistencia políglota para optimizar el rendimiento y la escalabilidad.
 
 *   **Frontend & API Gateway:** Vercel (Next.js).
 *   **Dominio Relacional y Vectorial:** PostgreSQL alojado en Supabase.
