@@ -33,7 +33,7 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col font-sans">
+      <body className={`${geistSans.className} min-h-full flex flex-col`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
