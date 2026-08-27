@@ -1,11 +1,10 @@
 import type { ReactNode } from "react";
 import {
   ArrowUpRightIcon,
-  CodeXmlIcon,
-  ContactRoundIcon,
   MailIcon,
   MessageCircleIcon,
 } from "lucide-react";
+import { FaGithub, FaLinkedin } from "react-icons/fa6";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -86,7 +85,7 @@ export default async function Home({
               rel="noreferrer"
               className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
             >
-              <ContactRoundIcon />
+              <FaLinkedin aria-hidden="true" />
               {contact.linkedin}
               <ArrowUpRightIcon />
             </a>
@@ -96,7 +95,7 @@ export default async function Home({
               rel="noreferrer"
               className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
             >
-              <CodeXmlIcon />
+              <FaGithub aria-hidden="true" />
               {contact.github}
               <ArrowUpRightIcon />
             </a>
