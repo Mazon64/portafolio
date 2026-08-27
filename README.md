@@ -69,7 +69,7 @@ El entorno Docker utiliza un contrato separado. Se debe crear `.env.docker` a pa
 docker compose --env-file .env.docker up --build
 ```
 
-La configuración predeterminada publica el contenedor en `http://localhost:3001` para no interferir con el servidor nativo de desarrollo en `http://localhost:3000`.
+La configuración predeterminada publica el contenedor en `http://localhost:3000`. El servidor nativo de desarrollo y el contenedor utilizan el mismo puerto, por lo que no deben ejecutarse simultáneamente.
 
 ## Rutas E Idiomas
 
