@@ -1,0 +1,73 @@
+{
+  "metadata": {
+    "title": "David Yael Aranda | Ingeniero de software",
+    "description": "Portafolio y ecosistema de ingeniería"
+  },
+  "home": {
+    "eyebrow": "Portafolio · Ingeniería de software",
+    "heading": "Construyo software con intención, claridad y alcance.",
+    "name": "David Yael Aranda Montes",
+    "introduction": "Este espacio reúne mi perfil, experiencia y proyectos. El contenido profesional se conectará a la base de datos bilingüe en la siguiente etapa."
+  },
+  "navigation": {
+    "menu": "Navegación",
+    "menuDescription": "Explora el portafolio y ajusta tus preferencias.",
+    "close": "Cerrar menú",
+    "about": "Sobre mí",
+    "skills": "Habilidades",
+    "projects": "Proyectos",
+    "experience": "Experiencia",
+    "education": "Educación",
+    "contact": "Contacto"
+  },
+  "preferences": {
+    "language": "Idioma",
+    "spanish": "Español",
+    "english": "Inglés",
+    "theme": "Tema",
+    "system": "Sistema",
+    "light": "Claro",
+    "dark": "Oscuro"
+  },
+  "sections": {
+    "about": {
+      "number": "01",
+      "title": "Sobre mí",
+      "description": "Perfil profesional, enfoque de trabajo y los principios que guían cada producto que construyo."
+    },
+    "skills": {
+      "number": "02",
+      "title": "Habilidades",
+      "description": "Tecnologías, herramientas y capacidades organizadas por áreas de especialización."
+    },
+    "projects": {
+      "number": "03",
+      "title": "Proyectos",
+      "description": "Una selección de productos con su contexto, decisiones técnicas y estado actual."
+    },
+    "experience": {
+      "number": "04",
+      "title": "Experiencia",
+      "description": "Trayectoria profesional, responsabilidades y resultados relevantes."
+    },
+    "education": {
+      "number": "05",
+      "title": "Educación",
+      "description": "Formación académica y aprendizaje continuo que respaldan mi práctica profesional."
+    },
+    "contact": {
+      "number": "06",
+      "title": "Datos de contacto",
+      "description": "Conversemos sobre una oportunidad, una colaboración o un producto por construir."
+    }
+  },
+  "contact": {
+    "linkedin": "LinkedIn",
+    "github": "GitHub",
+    "email": "Correo"
+  },
+  "chat": {
+    "label": "Abrir chat",
+    "unavailable": "Chat próximamente"
+  }
+}

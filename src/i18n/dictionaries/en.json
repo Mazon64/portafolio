@@ -1,0 +1,73 @@
+{
+  "metadata": {
+    "title": "David Yael Aranda | Software Engineer",
+    "description": "Software engineering portfolio and ecosystem"
+  },
+  "home": {
+    "eyebrow": "Portfolio · Software engineering",
+    "heading": "I build software with intention, clarity, and reach.",
+    "name": "David Yael Aranda Montes",
+    "introduction": "This space brings together my profile, experience, and projects. Professional content will connect to the bilingual database in the next stage."
+  },
+  "navigation": {
+    "menu": "Navigation",
+    "menuDescription": "Explore the portfolio and adjust your preferences.",
+    "close": "Close menu",
+    "about": "About",
+    "skills": "Skills",
+    "projects": "Projects",
+    "experience": "Experience",
+    "education": "Education",
+    "contact": "Contact"
+  },
+  "preferences": {
+    "language": "Language",
+    "spanish": "Spanish",
+    "english": "English",
+    "theme": "Theme",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "sections": {
+    "about": {
+      "number": "01",
+      "title": "About",
+      "description": "Professional profile, working approach, and the principles behind every product I build."
+    },
+    "skills": {
+      "number": "02",
+      "title": "Skills",
+      "description": "Technologies, tools, and capabilities organized by areas of expertise."
+    },
+    "projects": {
+      "number": "03",
+      "title": "Projects",
+      "description": "A selection of products with their context, technical decisions, and current status."
+    },
+    "experience": {
+      "number": "04",
+      "title": "Experience",
+      "description": "Professional background, responsibilities, and relevant outcomes."
+    },
+    "education": {
+      "number": "05",
+      "title": "Education",
+      "description": "Academic background and continuous learning supporting my professional practice."
+    },
+    "contact": {
+      "number": "06",
+      "title": "Contact details",
+      "description": "Let's talk about an opportunity, a collaboration, or a product worth building."
+    }
+  },
+  "contact": {
+    "linkedin": "LinkedIn",
+    "github": "GitHub",
+    "email": "Email"
+  },
+  "chat": {
+    "label": "Open chat",
+    "unavailable": "Chat coming soon"
+  }
+}
