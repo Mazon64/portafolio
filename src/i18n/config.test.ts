@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   detectLocale,
+  getLocalizedUrl,
   hasLocale,
   isPublicRouteSegment,
   looksLikeLocale,
@@ -31,5 +32,16 @@ describe("locale validation", () => {
     expect(looksLikeLocale("pt-BR")).toBe(true);
     expect(looksLikeLocale("projects")).toBe(false);
     expect(isPublicRouteSegment("cv")).toBe(true);
+  });
+});
+
+describe("getLocalizedUrl", () => {
+  it("changes only the locale and preserves the rest of the URL", () => {
+    expect(
+      getLocalizedUrl("https://example.com/es?view=grid#projects", "en"),
+    ).toBe("https://example.com/en?view=grid#projects");
+    expect(getLocalizedUrl("https://example.com/en/cv", "es")).toBe(
+      "https://example.com/es/cv",
+    );
   });
 });

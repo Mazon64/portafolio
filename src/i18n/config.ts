@@ -47,3 +47,12 @@ export function looksLikeLocale(value: string | undefined): boolean {
 export function isPublicRouteSegment(value: string | undefined): boolean {
   return publicRouteSegments.some((segment) => segment === value);
 }
+
+export function getLocalizedUrl(currentUrl: string, locale: Locale): string {
+  const url = new URL(currentUrl);
+  const segments = url.pathname.split("/");
+  segments[1] = locale;
+  url.pathname = segments.join("/") || `/${locale}`;
+
+  return url.toString();
+}
