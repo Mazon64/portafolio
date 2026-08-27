@@ -41,7 +41,13 @@ export function ThemeSwitcher({ labels }: ThemeSwitcherProps) {
 
   if (!mounted) {
     return (
-      <Button variant="ghost" size="icon-sm" aria-label={labels.theme}>
+      <Button
+        disabled
+        variant="ghost"
+        size="icon-sm"
+        className="disabled:opacity-100"
+        aria-label={labels.theme}
+      >
         <LaptopIcon />
       </Button>
     );

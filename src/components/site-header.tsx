@@ -57,6 +57,7 @@ export function SiteHeader({
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-5 sm:px-8">
         <Link
           href={`/${locale}`}
+          aria-label={siteConfig.name}
           className="flex shrink-0 items-center gap-3 font-heading"
         >
           <span className="grid size-9 place-items-center rounded-full bg-foreground text-xs font-bold tracking-tight text-background">
@@ -67,7 +68,7 @@ export function SiteHeader({
           </span>
         </Link>
 
-        <nav className="ml-auto hidden items-center gap-1 lg:flex">
+        <nav className="ml-auto hidden items-center gap-1 xl:flex">
           {navigation.map((item) => (
             <a
               key={item.href}
@@ -79,12 +80,12 @@ export function SiteHeader({
           ))}
         </nav>
 
-        <div className="hidden items-center gap-1 border-l border-border pl-3 lg:flex">
+        <div className="hidden items-center gap-1 border-l border-border pl-3 xl:flex">
           <LocaleSwitcher locale={locale} labels={preferenceLabels} />
           <ThemeSwitcher labels={themeLabels} />
         </div>
 
-        <div className="ml-auto lg:hidden">
+        <div className="ml-auto xl:hidden">
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger
               render={
@@ -94,15 +95,15 @@ export function SiteHeader({
               <MenuIcon />
             </SheetTrigger>
             <SheetContent
-              className="w-[min(88vw,24rem)]"
+              className="w-[min(88vw,24rem)] overflow-hidden"
               closeLabel={labels.close}
             >
-              <SheetHeader className="border-b border-border px-6 py-5">
+              <SheetHeader className="shrink-0 border-b border-border px-6 py-5">
                 <SheetTitle>{labels.menu}</SheetTitle>
                 <SheetDescription>{labels.menuDescription}</SheetDescription>
               </SheetHeader>
 
-              <nav className="flex flex-col px-4">
+              <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4">
                 {navigation.map((item, index) => (
                   <a
                     key={item.href}
@@ -118,7 +119,7 @@ export function SiteHeader({
                 ))}
               </nav>
 
-              <div className="mt-auto flex items-center justify-between border-t border-border p-6">
+              <div className="flex shrink-0 items-center justify-between border-t border-border p-6">
                 <LocaleSwitcher locale={locale} labels={preferenceLabels} />
                 <ThemeSwitcher labels={themeLabels} />
               </div>

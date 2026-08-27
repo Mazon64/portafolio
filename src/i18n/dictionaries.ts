@@ -22,6 +22,7 @@ export type Dictionary = {
     menu: string;
     menuDescription: string;
     close: string;
+    skipToContent: string;
     about: string;
     skills: string;
     projects: string;

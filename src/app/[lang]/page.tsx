@@ -36,6 +36,12 @@ export default async function Home({
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <a
+        href="#main-content"
+        className="fixed top-3 left-3 z-50 -translate-y-20 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-lg transition-transform focus:translate-y-0 focus:outline-none focus:ring-2 focus:ring-ring"
+      >
+        {navigation.skipToContent}
+      </a>
       <SiteHeader
         locale={lang}
         navigation={navigationItems}
@@ -47,7 +53,7 @@ export default async function Home({
         }}
       />
 
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <section className="relative isolate overflow-hidden border-b border-border">
           <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_75%_20%,color-mix(in_oklch,var(--foreground)_8%,transparent),transparent_32%)]" />
           <div className="mx-auto flex min-h-[calc(100svh-4rem)] max-w-7xl flex-col justify-end px-5 py-16 sm:px-8 sm:py-24 lg:py-28">
