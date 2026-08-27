@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { LaptopIcon, MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
@@ -27,9 +28,24 @@ const themeIcons = {
   dark: MoonIcon,
 };
 
+const subscribe = () => () => {};
+
 export function ThemeSwitcher({ labels }: ThemeSwitcherProps) {
+  const mounted = useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false,
+  );
   const { theme = "system", setTheme } = useTheme();
   const ThemeIcon = themeIcons[theme as keyof typeof themeIcons] ?? LaptopIcon;
+
+  if (!mounted) {
+    return (
+      <Button variant="ghost" size="icon-sm" aria-label={labels.theme}>
+        <LaptopIcon />
+      </Button>
+    );
+  }
 
   return (
     <DropdownMenu>
