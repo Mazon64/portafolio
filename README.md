@@ -30,6 +30,7 @@ Tecnologías utilizadas:
 - Lucide para iconos de interfaz.
 - React Icons para marcas.
 - Vitest para pruebas unitarias.
+- Prisma 7.10 con el adaptador PostgreSQL.
 
 ## Requisitos
 
@@ -104,7 +105,7 @@ Los contratos se encuentran en `.env.example` y `.env.docker.example`.
 | `PORT` | Puerto escuchado por el servidor dentro del contenedor. |
 | `HOST_PORT` | Puerto del host utilizado únicamente por Docker Compose. |
 | `DATABASE_URL` | Conexión agrupada de Prisma a PostgreSQL. |
-| `DIRECT_URL` | Conexión directa para migraciones. |
+| `DIRECT_URL` | Pooler de sesión usado por Prisma CLI y migraciones. |
 | `AUTH_SECRET` | Firma de sesiones de Auth.js. |
 | `AUTH_GITHUB_ID` | Identificador OAuth de GitHub. |
 | `AUTH_GITHUB_SECRET` | Secreto OAuth de GitHub. |
@@ -118,6 +119,21 @@ Los contratos se encuentran en `.env.example` y `.env.docker.example`.
 
 Las variables privadas permanecen en el servidor. El prefijo `NEXT_PUBLIC_` no se utiliza para secretos, ningún secreto se pasa como argumento de build y Git no contiene valores reales.
 
+`DATABASE_URL` usa el pooler transaccional de Supabase para las consultas de la aplicación. `DIRECT_URL` usa el pooler de sesión para Prisma CLI y migraciones. Ambas conexiones utilizan el usuario PostgreSQL exclusivo `prisma`.
+
+Las conexiones locales se configuran sin mostrar credenciales mediante:
+
+```powershell
+.\scripts\configure-supabase.ps1
+```
+
+Su estructura y conectividad se verifican con:
+
+```bash
+npm run db:check
+npm run db:validate
+```
+
 ## Scripts
 
 Comandos disponibles:
@@ -128,6 +144,9 @@ npm run build  # Build de producción y validación de tipos
 npm run start  # Servidor de producción
 npm run lint   # ESLint
 npm run test   # Pruebas unitarias
+npm run db:check     # Conectividad de los dos endpoints PostgreSQL
+npm run db:generate  # Generación local del cliente Prisma
+npm run db:validate  # Validación del esquema Prisma
 ```
 
 ## Estructura Principal

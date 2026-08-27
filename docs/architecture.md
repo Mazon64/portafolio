@@ -23,7 +23,7 @@ Los textos de interfaz que no son contenido administrable permanecen en dicciona
 ## 2. Estrategia de Persistencia de Datos
 
 ### 2.1 Base de Datos Primaria: PostgreSQL (Supabase)
-PostgreSQL almacenará las entidades estructuradas del portafolio y el CV, además de los vectores del sistema RAG. Prisma ORM será la única capa de acceso a estos datos, administrados desde el CMS.
+PostgreSQL almacenará las entidades estructuradas del portafolio y el CV, además de los vectores del sistema RAG. Prisma 7.10 con `@prisma/adapter-pg` será la única capa de acceso a estos datos, administrados desde el CMS.
 
 Los datos independientes del idioma, como fechas, URLs, orden, visibilidad y telemetría, permanecerán en la entidad principal. Los campos localizables se almacenarán en tablas de traducción con una restricción única por entidad e idioma. Este modelo evita duplicar datos operativos y permite exigir versiones completas en español e inglés desde el CMS.
 
@@ -196,7 +196,7 @@ Los secretos estarán disponibles solo en el servidor. El prefijo `NEXT_PUBLIC_`
 | `PORT` | Puerto de escucha asignado al contenedor. |
 | `HOST_PORT` | Puerto del host utilizado por Docker Compose; no se inyecta en el contenedor. |
 | `DATABASE_URL` | Conexión agrupada de Prisma a PostgreSQL/Supabase. |
-| `DIRECT_URL` | Conexión directa para migraciones. |
+| `DIRECT_URL` | Pooler de sesión usado por Prisma CLI y migraciones. |
 | `AUTH_SECRET` | Firma de sesiones de Auth.js. |
 | `AUTH_GITHUB_ID` | Identificador OAuth de GitHub. |
 | `AUTH_GITHUB_SECRET` | Secreto OAuth de GitHub. |

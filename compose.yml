@@ -8,6 +8,7 @@ services:
       SITE_URL: ${SITE_URL:?SITE_URL must be defined in .env.docker}
       HOSTNAME: ${HOSTNAME:?HOSTNAME must be defined in .env.docker}
       PORT: ${PORT:?PORT must be defined in .env.docker}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be defined in .env.docker}
     ports:
       - "${HOST_PORT:?HOST_PORT must be defined in .env.docker}:${PORT:?PORT must be defined in .env.docker}"
     restart: unless-stopped
