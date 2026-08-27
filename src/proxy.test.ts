@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
+import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 import { describe, expect, it } from "vitest";
-import { proxy } from "./proxy";
+import nextConfig from "../next.config";
+import { config, proxy } from "./proxy";
 
 function redirectFor(path: string, acceptLanguage?: string) {
   const request = new NextRequest(`https://example.com${path}`, {
@@ -11,25 +13,25 @@ function redirectFor(path: string, acceptLanguage?: string) {
 }
 
 describe("locale proxy", () => {
-  it("keeps explicit supported locales", () => {
-    expect(redirectFor("/es", "en")).toBeUndefined();
-    expect(redirectFor("/en/projects", "es")).toBeUndefined();
+  it.each(["/es", "/en", "/fr", "/cv", "/es/cv", "/api/health"])(
+    "does not run for %s",
+    (url) => {
+      expect(
+        unstable_doesMiddlewareMatch({ config, nextConfig, url }),
+      ).toBe(false);
+    },
+  );
+
+  it("runs only for the root URL", () => {
+    expect(
+      unstable_doesMiddlewareMatch({ config, nextConfig, url: "/" }),
+    ).toBe(true);
   });
 
-  it("detects the preferred language for unprefixed routes", () => {
+  it("detects the preferred language at the root", () => {
     expect(redirectFor("/", "es-MX,en;q=0.8")).toBe("https://example.com/es");
-    expect(redirectFor("/projects?view=grid", "en-US,es;q=0.8")).toBe(
-      "https://example.com/en/projects?view=grid",
-    );
-    expect(redirectFor("/cv", "es-MX,en;q=0.8")).toBe(
-      "https://example.com/es/cv",
-    );
-  });
-
-  it("falls back unsupported locale prefixes to English", () => {
-    expect(redirectFor("/fr", "es")).toBe("https://example.com/en");
-    expect(redirectFor("/pt-BR/projects", "es")).toBe(
-      "https://example.com/en/projects",
+    expect(redirectFor("/?view=grid", "en-US,es;q=0.8")).toBe(
+      "https://example.com/en?view=grid",
     );
   });
 });

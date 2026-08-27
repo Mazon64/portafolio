@@ -13,7 +13,7 @@ El Portafolio emplea una arquitectura Serverless / Edge impulsada por Next.js (A
 * **Capa de Inteligencia Artificial:** Google Gemini API (modelo Flash).
 
 ### 1.1 Internacionalización y Preferencias de Interfaz
-Las rutas públicas usan los prefijos `/es` y `/en`. Si una URL no incluye prefijo, el Proxy selecciona español únicamente cuando es el idioma principal aceptado por el navegador; para cualquier otro idioma utiliza inglés. Un prefijo de idioma no soportado también se normaliza a inglés. Los prefijos soportados enviados explícitamente siempre tienen prioridad sobre la configuración del navegador.
+Las rutas públicas usan obligatoriamente los prefijos `/es` y `/en`. El Proxy solo interviene en `/`: selecciona español cuando es el idioma principal aceptado por el navegador e inglés para cualquier otro idioma. Cualquier otra ruta sin prefijo o con un idioma no soportado devuelve 404.
 
 Los textos de interfaz que no son contenido administrable se mantienen en diccionarios JSON cargados exclusivamente en el servidor. El contenido profesional se consulta en PostgreSQL usando un idioma previamente validado. La preferencia visual inicial se obtiene del tema del sistema mediante `next-themes`; una selección manual futura tendrá prioridad y quedará persistida en el navegador.
 

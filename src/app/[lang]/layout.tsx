@@ -20,6 +20,8 @@ export function generateStaticParams() {
   return locales.map((lang) => ({ lang }));
 }
 
+export const dynamicParams = false;
+
 export async function generateMetadata({
   params,
 }: {

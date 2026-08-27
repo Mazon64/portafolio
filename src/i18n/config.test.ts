@@ -3,8 +3,6 @@ import {
   detectLocale,
   getLocalizedUrl,
   hasLocale,
-  isPublicRouteSegment,
-  looksLikeLocale,
 } from "./config";
 
 describe("detectLocale", () => {
@@ -27,12 +25,6 @@ describe("locale validation", () => {
     expect(hasLocale("fr")).toBe(false);
   });
 
-  it("recognizes unsupported language tags but not application routes", () => {
-    expect(looksLikeLocale("fr")).toBe(true);
-    expect(looksLikeLocale("pt-BR")).toBe(true);
-    expect(looksLikeLocale("projects")).toBe(false);
-    expect(isPublicRouteSegment("cv")).toBe(true);
-  });
 });
 
 describe("getLocalizedUrl", () => {

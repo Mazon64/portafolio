@@ -33,7 +33,7 @@ El Portafolio es una aplicación Fullstack desarrollada en Next.js. El alcance a
 ### 2.2 Módulo de Internacionalización
 * **RF-06: Idiomas Soportados.** Las rutas públicas deben ofrecer versiones en español (`/es`) e inglés (`/en`).
 * **RF-07: Detección Automática.** Una URL sin prefijo debe usar español cuando sea el idioma principal aceptado por el navegador e inglés para cualquier otro idioma o cuando la preferencia no esté disponible.
-* **RF-08: Prioridad del Prefijo.** Un prefijo `/es` o `/en` explícito debe prevalecer sobre la preferencia del navegador. Un prefijo de idioma no soportado debe redirigirse a la ruta equivalente en inglés.
+* **RF-08: Rutas Localizadas.** Toda ruta pública distinta de `/` debe incluir `/es` o `/en`. Las rutas sin prefijo y los idiomas no soportados deben devolver 404.
 * **RF-09: Traducciones de Interfaz.** Los textos estáticos no administrables deben residir en diccionarios versionados fuera de la base de datos.
 * **RF-10: Contenido Bilingüe.** Los campos administrables localizables deben tener traducciones completas en español e inglés, sin duplicar fechas, URLs, visibilidad ni telemetría.
 
