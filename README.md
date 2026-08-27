@@ -35,7 +35,7 @@ Tecnologías utilizadas:
 
 Para ejecutar el proyecto se necesita:
 
-- Una versión de Node.js compatible con Next.js 16.
+- Node.js 24.
 - npm.
 - Docker, solo para ejecutar la imagen de producción localmente.
 
