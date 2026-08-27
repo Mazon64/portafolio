@@ -168,8 +168,8 @@ Las consultas públicas deben filtrar por el `Locale` solicitado. El CMS no debe
 ### 3.1 Autenticación (SSO con GitHub)
 El acceso al CMS y a la auditoría se realizará exclusivamente mediante Single Sign-On con GitHub. Auth.js orquestará el flujo OAuth 2.0 sin gestionar contraseñas propias.
 
-* **Credenciales:** `GITHUB_ID` y `GITHUB_SECRET`, generados en GitHub.
-* **Firma de sesión:** JWT firmados con una llave segura definida en `NEXTAUTH_SECRET`.
+* **Credenciales:** `AUTH_GITHUB_ID` y `AUTH_GITHUB_SECRET`, generados en GitHub.
+* **Firma de sesión:** JWT firmados con una llave segura definida en `AUTH_SECRET`.
 
 ### 3.2 Autorización (Whitelist por Entorno)
 Solo el propietario del ecosistema podrá acceder a `/admin/*`. Los callbacks de autenticación compararán el identificador estable de la cuenta de GitHub con una whitelist almacenada en variables de entorno del servidor. El correo puede emplearse como dato adicional, pero no como único identificador si el proveedor permite modificarlo.
@@ -181,3 +181,25 @@ callbacks: {
   }
 }
 ```
+
+---
+
+## 4. Variables de Entorno
+
+Los secretos permanecen disponibles solo en el servidor. No se utilizará el prefijo `NEXT_PUBLIC_` para credenciales, conexiones o firmas.
+
+| Variable | Propósito |
+| --- | --- |
+| `SITE_URL` | Origen absoluto usado en canonical y alternates de metadatos. |
+| `DATABASE_URL` | Conexión agrupada de Prisma a PostgreSQL/Supabase. |
+| `DIRECT_URL` | Conexión directa para migraciones. |
+| `AUTH_SECRET` | Firma de sesiones de Auth.js. |
+| `AUTH_GITHUB_ID` | Identificador OAuth de GitHub. |
+| `AUTH_GITHUB_SECRET` | Secreto OAuth de GitHub. |
+| `ADMIN_GITHUB_ID` | Identificador estable autorizado para el CMS. |
+| `GITHUB_WEBHOOK_SECRET` | Validación de firmas del webhook. |
+| `GEMINI_API_KEY` | Acceso a Google Gemini. |
+| `MONGODB_URI` | Conexión a MongoDB Atlas. |
+| `CRON_SECRET` | Autorización de tareas programadas. |
+
+El repositorio versiona `.env.example` sin secretos. Cada entorno mantiene su propio archivo `.env` o configuración equivalente en la plataforma de despliegue.

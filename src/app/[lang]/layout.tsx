@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { notFound } from "next/navigation";
 import { ThemeProvider } from "@/components/theme-provider";
+import { getSiteUrl } from "@/config/env";
 import { hasLocale, locales } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import "../globals.css";
@@ -32,7 +33,22 @@ export async function generateMetadata({
   if (!hasLocale(lang)) notFound();
 
   const { metadata } = await getDictionary(lang);
-  return metadata;
+  const siteUrl = getSiteUrl();
+
+  return {
+    ...metadata,
+    ...(siteUrl && {
+      metadataBase: siteUrl,
+      alternates: {
+        canonical: `/${lang}`,
+        languages: {
+          es: "/es",
+          en: "/en",
+          "x-default": "/",
+        },
+      },
+    }),
+  };
 }
 
 export default async function RootLayout({
