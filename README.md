@@ -145,7 +145,7 @@ docs/
 
 Mi portafolio y mis demás proyectos se desplegarán inicialmente en servicios con niveles gratuitos. Cada aplicación estará dockerizada y GitHub Actions verificará el código, construirá una imagen OCI y la publicará en GitHub Container Registry.
 
-Render ejecutará la misma imagen construida por GitHub Actions. El workflow `.github/workflows/delivery.yml` ejecuta pruebas, lint y build para los pull requests. En cada push a `master`, también publica las etiquetas `latest` y `sha-<commit>` en GHCR y usa un Deploy Hook para solicitar el despliegue. Cloudflare administrará el dominio, el DNS y el proxy del tráfico público.
+Render ejecutará la misma imagen construida por GitHub Actions. El workflow `.github/workflows/delivery.yml` ejecuta pruebas, lint y build para los pull requests y pushes a `main`. La ejecución manual también publica las etiquetas `latest` y `sha-<commit>` en GHCR y usa un Deploy Hook para solicitar el despliegue. Cloudflare administrará el dominio, el DNS y el proxy del tráfico público.
 
 La entrega requiere la siguiente configuración en GitHub:
 
