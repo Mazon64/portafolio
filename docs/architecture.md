@@ -192,6 +192,9 @@ Los secretos estarán disponibles solo en el servidor. El prefijo `NEXT_PUBLIC_`
 | Variable | Propósito |
 | --- | --- |
 | `SITE_URL` | Origen absoluto usado en canonical y alternates de metadatos. |
+| `HOSTNAME` | Interfaz de red utilizada por el servidor del contenedor. |
+| `PORT` | Puerto de escucha asignado al contenedor. |
+| `HOST_PORT` | Puerto del host utilizado por Docker Compose; no se inyecta en el contenedor. |
 | `DATABASE_URL` | Conexión agrupada de Prisma a PostgreSQL/Supabase. |
 | `DIRECT_URL` | Conexión directa para migraciones. |
 | `AUTH_SECRET` | Firma de sesiones de Auth.js. |
@@ -203,7 +206,7 @@ Los secretos estarán disponibles solo en el servidor. El prefijo `NEXT_PUBLIC_`
 | `MONGODB_URI` | Conexión a MongoDB Atlas. |
 | `CRON_SECRET` | Autorización de tareas programadas. |
 
-El repositorio versiona `.env.example` sin secretos. Cada entorno mantiene su propio archivo `.env` o la configuración equivalente de la plataforma de despliegue.
+El repositorio versiona `.env.example` para desarrollo nativo y `.env.docker.example` para ejecución local en contenedor, ambos sin secretos. Los archivos reales `.env` y `.env.docker` permanecen fuera de Git. Cada plataforma mantiene una configuración equivalente. `SITE_URL` es la única variable de aplicación proporcionada durante el build porque forma parte de los metadatos estáticos. Las variables operativas, conexiones y credenciales se inyectan en runtime; ninguna credencial se incorpora como argumento de build. `NODE_ENV=production` permanece fija como invariante de la imagen.
 
 ---
 

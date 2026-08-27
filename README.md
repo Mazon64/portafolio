@@ -63,11 +63,13 @@ npm run dev
 
 5. Abrir `http://localhost:3000`. La raíz redirige a `/es` o `/en` según el idioma principal del navegador.
 
-El contenedor de producción se construye y ejecuta con:
+El entorno Docker utiliza un contrato separado. Se debe crear `.env.docker` a partir de `.env.docker.example` y ejecutar:
 
 ```bash
-docker compose up --build
+docker compose --env-file .env.docker up --build
 ```
+
+La configuración predeterminada publica el contenedor en `http://localhost:3001` para no interferir con el servidor nativo de desarrollo en `http://localhost:3000`.
 
 ## Rutas E Idiomas
 
@@ -93,11 +95,14 @@ La selección se persiste en el navegador. El selector evita depender del tema d
 
 ## Variables De Entorno
 
-El contrato completo se encuentra en `.env.example`.
+Los contratos se encuentran en `.env.example` y `.env.docker.example`.
 
 | Variable | Uso |
 | --- | --- |
 | `SITE_URL` | Origen absoluto para canonical y alternates. |
+| `HOSTNAME` | Interfaz de red utilizada por el servidor dentro del contenedor. |
+| `PORT` | Puerto escuchado por el servidor dentro del contenedor. |
+| `HOST_PORT` | Puerto del host utilizado únicamente por Docker Compose. |
 | `DATABASE_URL` | Conexión agrupada de Prisma a PostgreSQL. |
 | `DIRECT_URL` | Conexión directa para migraciones. |
 | `AUTH_SECRET` | Firma de sesiones de Auth.js. |
@@ -109,7 +114,9 @@ El contrato completo se encuentra en `.env.example`.
 | `MONGODB_URI` | Conexión a MongoDB Atlas. |
 | `CRON_SECRET` | Autorización de tareas programadas. |
 
-Las variables privadas permanecen en el servidor. El prefijo `NEXT_PUBLIC_` no se utiliza para secretos y Git no contiene valores reales.
+`.env` contiene la configuración del desarrollo nativo. `.env.docker` contiene la configuración independiente del contenedor y no se incluye en la imagen ni en Git. `SITE_URL` se proporciona durante el build porque las páginas localizadas generan metadatos estáticos, y también queda disponible en runtime. `HOSTNAME` y `PORT` se inyectan al ejecutar el contenedor, mientras que `HOST_PORT` solo lo consume Docker Compose. Las conexiones y credenciales se añadirán explícitamente al runtime cuando se implementen sus integraciones. `NODE_ENV=production` es una invariante de la imagen y no una variable configurable del entorno.
+
+Las variables privadas permanecen en el servidor. El prefijo `NEXT_PUBLIC_` no se utiliza para secretos, ningún secreto se pasa como argumento de build y Git no contiene valores reales.
 
 ## Scripts
 
