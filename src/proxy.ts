@@ -1,39 +1,36 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import {
+  defaultLocale,
+  detectLocale,
+  getPathLocale,
+  hasLocale,
+  isPublicRouteSegment,
+  looksLikeLocale,
+} from "./i18n/config";
 
-const locales = ['es', 'en'];
-
-// Usando la nueva convención proxy
 export function proxy(request: NextRequest) {
-    const { pathname } = request.nextUrl;
-    
-    if (
-        pathname.startsWith('/_next') ||
-        pathname.startsWith('/api') ||
-        pathname.includes('.')
-    ) {
-        return;
-    }
+  const { pathname } = request.nextUrl;
+  const pathLocale = getPathLocale(pathname);
 
-    const pathnameHasSupportedLocale = locales.some(
-        (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
-    );
+  if (pathLocale && hasLocale(pathLocale)) return;
 
-    if (pathnameHasSupportedLocale) return;
+  const hasUnsupportedLocale =
+    !isPublicRouteSegment(pathLocale) && looksLikeLocale(pathLocale);
+  const locale = hasUnsupportedLocale
+    ? defaultLocale
+    : detectLocale(request.headers.get("accept-language"));
+  const pathnameWithoutLocale = hasUnsupportedLocale && pathLocale
+    ? pathname.slice(pathLocale.length + 1) || "/"
+    : pathname;
 
-    const acceptLanguage = request.headers.get('accept-language') || '';
-    const preferredLocale = acceptLanguage.toLowerCase().includes('es') ? 'es' : 'en';
-    const pathStartsWithUnsupportedLocale = /^\/[a-z]{2}(\/|$)/i.test(pathname);
+  request.nextUrl.pathname = `/${locale}${
+    pathnameWithoutLocale === "/" ? "" : pathnameWithoutLocale
+  }`;
 
-    let newPathname = pathname;
-    if (pathStartsWithUnsupportedLocale) {
-        newPathname = pathname.replace(/^\/[a-z]{2}/i, '') || '/';
-    }
-
-    request.nextUrl.pathname = `/${preferredLocale}${newPathname === '/' ? '' : newPathname}`;
-    return NextResponse.redirect(request.nextUrl);
+  return NextResponse.redirect(request.nextUrl);
 }
 
 export const config = {
-    matcher: ['/((?!_next|api|favicon.ico|.*\\..*).*)'],
+  matcher: ["/((?!_next|api|favicon.ico|.*\\..*).*)"],
 };
