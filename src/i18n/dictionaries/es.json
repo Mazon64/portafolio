@@ -57,6 +57,11 @@
     "email": "Correo",
     "newTab": "Abre en una pestaña nueva"
   },
+  "skillsCarousel": {
+    "label": "Categorías de habilidades",
+    "previous": "Mostrar categoría anterior",
+    "next": "Mostrar categoría siguiente"
+  },
   "projects": {
     "empty": "Los proyectos públicos están en preparación.",
     "imagePlaceholder": "Imagen del proyecto",

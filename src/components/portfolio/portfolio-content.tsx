@@ -47,9 +47,12 @@ export async function PortfolioContent({
       <PortfolioSection
         id="skills"
         copy={dictionary.sections.skills}
-        className="bg-muted/15"
+        flushBottom
       >
-        <SkillsSection categories={portfolio.skillCategories} />
+        <SkillsSection
+          categories={portfolio.skillCategories}
+          copy={dictionary.skillsCarousel}
+        />
       </PortfolioSection>
 
       <PortfolioSection id="projects" copy={dictionary.sections.projects}>

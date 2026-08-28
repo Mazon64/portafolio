@@ -51,6 +51,11 @@ export type Dictionary = {
     email: string;
     newTab: string;
   };
+  skillsCarousel: {
+    label: string;
+    previous: string;
+    next: string;
+  };
   projects: {
     empty: string;
     imagePlaceholder: string;

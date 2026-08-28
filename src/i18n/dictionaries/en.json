@@ -57,6 +57,11 @@
     "email": "Email",
     "newTab": "Opens in a new tab"
   },
+  "skillsCarousel": {
+    "label": "Skill categories",
+    "previous": "Show previous category",
+    "next": "Show next category"
+  },
   "projects": {
     "empty": "Public projects are being prepared.",
     "imagePlaceholder": "Project image",
