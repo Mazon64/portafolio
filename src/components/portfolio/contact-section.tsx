@@ -6,6 +6,7 @@ import type { ProfileDto } from "@/data/portfolio.types";
 import { cn } from "@/lib/utils";
 
 type ContactCopy = {
+  number: string;
   title: string;
   linkedin: string;
   github: string;
@@ -27,7 +28,10 @@ export function ContactSection({
     >
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,color-mix(in_oklch,var(--background)_16%,transparent),transparent_42%)]" />
       <div className="mx-auto flex min-h-[32rem] w-full max-w-5xl flex-col items-center justify-center px-5 py-20 text-center sm:px-8 sm:py-28">
-        <p className="font-mono text-xs uppercase tracking-[0.22em] text-background/60">
+        <span className="font-mono text-xs text-background/60">
+          /{copy.number}
+        </span>
+        <p className="mt-5 font-mono text-xs uppercase tracking-[0.22em] text-background/60">
           {profile.email}
         </p>
         <h2 className="mt-6 text-balance font-heading text-5xl font-semibold tracking-[-0.05em] sm:text-6xl lg:text-7xl">

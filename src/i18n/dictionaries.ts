@@ -45,6 +45,7 @@ export type Dictionary = {
     education: SectionCopy;
   };
   contact: {
+    number: string;
     title: string;
     linkedin: string;
     github: string;

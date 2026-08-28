@@ -19,10 +19,19 @@ export function SkillsSection({
   };
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ startX: number; scrollLeft: number } | null>(null);
+  const dragRef = useRef<{
+    startX: number;
+    scrollLeft: number;
+    lastX: number;
+    lastTime: number;
+    velocity: number;
+  } | null>(null);
+  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [canScroll, setCanScroll] = useState(false);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isSettling, setIsSettling] = useState(false);
 
   function updatePosition() {
     const track = trackRef.current;
@@ -33,14 +42,18 @@ export function SkillsSection({
     setAtEnd(track.scrollLeft >= maxScroll - 2);
   }
 
-  function centerNearestCard(behavior: ScrollBehavior = "smooth") {
+  function centerNearestCard(
+    behavior: ScrollBehavior = "smooth",
+    projectedScroll = 0,
+  ) {
     const track = trackRef.current;
     if (!track) return;
 
     const cards = Array.from(
       track.querySelectorAll<HTMLElement>("[data-skill-card]"),
     );
-    const viewportCenter = track.scrollLeft + track.clientWidth / 2;
+    const viewportCenter =
+      track.scrollLeft + track.clientWidth / 2 + projectedScroll;
     const nearest = cards.reduce((selected, card) => {
       const selectedDistance = Math.abs(
         selected.offsetLeft + selected.offsetWidth / 2 - viewportCenter,
@@ -56,6 +69,24 @@ export function SkillsSection({
       left: nearest.offsetLeft + nearest.offsetWidth / 2 - track.clientWidth / 2,
       behavior,
     });
+  }
+
+  function settleOnCard(velocity = 0) {
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const projectedScroll = Math.max(-320, Math.min(320, -velocity * 180));
+
+    setIsDragging(false);
+    setIsSettling(!reducedMotion);
+    centerNearestCard(reducedMotion ? "auto" : "smooth", projectedScroll);
+
+    if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
+    if (!reducedMotion) {
+      settleTimerRef.current = setTimeout(() => {
+        setIsSettling(false);
+      }, 450);
+    }
   }
 
   function moveCard(direction: -1 | 1) {
@@ -97,11 +128,14 @@ export function SkillsSection({
       const contentWidth =
         cards.reduce((total, card) => total + card.offsetWidth, 0) +
         Math.max(0, cards.length - 1) * gap;
-      const hasOverflow = contentWidth > track.clientWidth - 40;
+      const hasOverflow = contentWidth > track.clientWidth;
 
       setCanScroll(hasOverflow);
       if (!hasOverflow) {
-        track.scrollLeft = 0;
+        track.scrollTo({ left: 0, behavior: "auto" });
+        dragRef.current = null;
+        setIsDragging(false);
+        setIsSettling(false);
         setAtStart(true);
         setAtEnd(true);
       } else {
@@ -114,9 +148,14 @@ export function SkillsSection({
     track
       .querySelectorAll<HTMLElement>("[data-skill-card]")
       .forEach((card) => observer.observe(card));
+    window.addEventListener("resize", measure);
     measure();
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+      if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
+    };
   }, [categories]);
 
   return (
@@ -155,36 +194,62 @@ export function SkillsSection({
 
       <div
         ref={trackRef}
+        tabIndex={canScroll ? 0 : -1}
         onScroll={updatePosition}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowLeft") {
+            event.preventDefault();
+            moveCard(-1);
+          }
+          if (event.key === "ArrowRight") {
+            event.preventDefault();
+            moveCard(1);
+          }
+        }}
         onPointerDown={(event) => {
           if (!canScroll || event.button !== 0) return;
           event.currentTarget.setPointerCapture(event.pointerId);
+          if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
+          setIsSettling(false);
+          setIsDragging(true);
           dragRef.current = {
             startX: event.clientX,
             scrollLeft: event.currentTarget.scrollLeft,
+            lastX: event.clientX,
+            lastTime: performance.now(),
+            velocity: 0,
           };
         }}
         onPointerMove={(event) => {
-          if (!dragRef.current) return;
+          const drag = dragRef.current;
+          if (!drag) return;
+          const now = performance.now();
+          const elapsed = Math.max(1, now - drag.lastTime);
+
           event.currentTarget.scrollLeft =
-            dragRef.current.scrollLeft - (event.clientX - dragRef.current.startX);
+            drag.scrollLeft - (event.clientX - drag.startX);
+          drag.velocity = (event.clientX - drag.lastX) / elapsed;
+          drag.lastX = event.clientX;
+          drag.lastTime = now;
         }}
         onPointerUp={(event) => {
-          if (!dragRef.current) return;
+          const velocity = dragRef.current?.velocity;
+          if (velocity === undefined) return;
           dragRef.current = null;
           event.currentTarget.releasePointerCapture(event.pointerId);
-          centerNearestCard();
+          settleOnCard(velocity);
         }}
         onPointerCancel={() => {
+          const velocity = dragRef.current?.velocity ?? 0;
           dragRef.current = null;
-          centerNearestCard();
+          settleOnCard(velocity);
         }}
         style={{
           paddingInline: canScroll
             ? "max(1.25rem, calc((100vw - min(88vw, 40rem)) / 2))"
             : "1.25rem",
         }}
-        className={`grid grid-flow-col grid-rows-[auto_auto_auto] items-stretch gap-x-6 pb-12 select-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:pb-16 ${canScroll ? "snap-x snap-mandatory auto-cols-[min(88vw,40rem)] cursor-grab touch-pan-y overflow-x-auto overscroll-x-contain active:cursor-grabbing" : "auto-cols-[min(88vw,40rem)] justify-center overflow-x-hidden"}`}
+        className={`grid grid-flow-col grid-rows-[auto_auto_auto] items-stretch gap-x-6 pb-12 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:pb-16 ${canScroll ? `auto-cols-[min(88vw,40rem)] cursor-grab touch-pan-y overflow-x-auto overscroll-x-contain active:cursor-grabbing ${isDragging || isSettling ? "snap-none" : "snap-x snap-mandatory"}` : "auto-cols-[min(88vw,40rem)] justify-center overflow-x-hidden"}`}
       >
         {categories.map((category) => (
           <article
