@@ -51,6 +51,15 @@ export type Dictionary = {
     github: string;
     email: string;
     newTab: string;
+    form: {
+      name: string;
+      email: string;
+      message: string;
+      send: string;
+      sending: string;
+      success: string;
+      error: string;
+    };
   };
   skillsCarousel: {
     label: string;

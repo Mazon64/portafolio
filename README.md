@@ -119,6 +119,9 @@ Los contratos se encuentran en `.env.example` y `.env.docker.example`.
 | `ADMIN_GITHUB_ID` | Cuenta autorizada para el CMS. |
 | `GITHUB_WEBHOOK_SECRET` | Firma de webhooks de GitHub. |
 | `GEMINI_API_KEY` | Acceso a Google Gemini. |
+| `RESEND_API_KEY` | Credencial server-only para enviar mensajes del formulario. |
+| `CONTACT_FROM_EMAIL` | Remitente verificado utilizado por Resend. |
+| `CONTACT_TO_EMAIL` | Buzón privado que recibe los mensajes de contacto. |
 | `MONGODB_URI` | Conexión a MongoDB Atlas. |
 | `CRON_SECRET` | Autorización de tareas programadas. |
 

@@ -41,6 +41,8 @@ export function SiteHeader({
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeHref, setActiveHref] = useState<string | null>(null);
   const [drawerOffset, setDrawerOffset] = useState(0);
+  const [drawerDragging, setDrawerDragging] = useState(false);
+  const drawerCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const edgeSwipeRef = useRef<{ startX: number; startY: number } | null>(null);
   const drawerSwipeRef = useRef<{
     startX: number;
@@ -88,6 +90,15 @@ export function SiteHeader({
     };
   }, [navigation]);
 
+  useEffect(
+    () => () => {
+      if (drawerCloseTimerRef.current) {
+        clearTimeout(drawerCloseTimerRef.current);
+      }
+    },
+    [],
+  );
+
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur-xl max-xl:pointer-events-none max-xl:fixed max-xl:inset-x-0 max-xl:border-0 max-xl:bg-transparent max-xl:backdrop-blur-none">
       <div className="mx-auto flex h-16 w-full max-w-[96rem] items-center gap-6 px-5 sm:px-8 lg:px-12 max-xl:h-0 max-xl:p-0">
@@ -127,7 +138,10 @@ export function SiteHeader({
             open={menuOpen}
             onOpenChange={(open) => {
               setMenuOpen(open);
-              if (!open) setDrawerOffset(0);
+              if (!open) {
+                setDrawerOffset(0);
+                setDrawerDragging(false);
+              }
             }}
           >
             <SheetTrigger
@@ -138,7 +152,7 @@ export function SiteHeader({
               <MenuIcon />
             </SheetTrigger>
             <SheetContent
-              className={`w-[min(88vw,24rem)] touch-pan-y overflow-hidden ${drawerOffset > 0 ? "transition-none" : ""}`}
+              className={`w-[min(88vw,24rem)] touch-pan-y overflow-hidden ${drawerDragging ? "transition-none" : ""}`}
               closeLabel={labels.close}
               style={{
                 transform:
@@ -163,18 +177,29 @@ export function SiteHeader({
                 if (deltaY > deltaX) return;
 
                 swipe.offset = deltaX;
+                setDrawerDragging(true);
                 setDrawerOffset(deltaX);
               }}
-              onPointerUp={() => {
+              onPointerUp={(event) => {
                 const offset = drawerSwipeRef.current?.offset ?? 0;
                 drawerSwipeRef.current = null;
+                setDrawerDragging(false);
                 if (offset >= 80) {
-                  setMenuOpen(false);
+                  setDrawerOffset(event.currentTarget.getBoundingClientRect().width);
+                  if (drawerCloseTimerRef.current) {
+                    clearTimeout(drawerCloseTimerRef.current);
+                  }
+                  drawerCloseTimerRef.current = setTimeout(() => {
+                    setMenuOpen(false);
+                    setDrawerOffset(0);
+                  }, 200);
+                } else {
+                  setDrawerOffset(0);
                 }
-                setDrawerOffset(0);
               }}
               onPointerCancel={() => {
                 drawerSwipeRef.current = null;
+                setDrawerDragging(false);
                 setDrawerOffset(0);
               }}
             >

@@ -56,7 +56,16 @@
     "linkedin": "LinkedIn",
     "github": "GitHub",
     "email": "Email",
-    "newTab": "Opens in a new tab"
+    "newTab": "Opens in a new tab",
+    "form": {
+      "name": "Name",
+      "email": "Contact email",
+      "message": "Message",
+      "send": "Send message",
+      "sending": "Sending...",
+      "success": "Your message was sent successfully.",
+      "error": "The message could not be sent. Please try again later."
+    }
   },
   "skillsCarousel": {
     "label": "Skill categories",

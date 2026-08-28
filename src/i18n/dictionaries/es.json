@@ -56,7 +56,16 @@
     "linkedin": "LinkedIn",
     "github": "GitHub",
     "email": "Correo",
-    "newTab": "Abre en una pestaña nueva"
+    "newTab": "Abre en una pestaña nueva",
+    "form": {
+      "name": "Nombre",
+      "email": "Correo de contacto",
+      "message": "Mensaje",
+      "send": "Enviar mensaje",
+      "sending": "Enviando...",
+      "success": "Tu mensaje fue enviado correctamente.",
+      "error": "No se pudo enviar el mensaje. Inténtalo nuevamente más tarde."
+    }
   },
   "skillsCarousel": {
     "label": "Categorías de habilidades",
