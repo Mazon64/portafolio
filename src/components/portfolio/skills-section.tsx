@@ -176,7 +176,7 @@ export function SkillsSection({
           type="button"
           aria-label={copy.previous}
           onClick={() => moveCard(-1)}
-          className="absolute top-1/2 left-4 z-20 grid size-11 -translate-y-1/2 place-items-center rounded-full border border-border bg-background/90 text-foreground shadow-lg backdrop-blur-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:left-8"
+          className="absolute top-1/2 left-4 z-20 grid size-11 -translate-y-1/2 cursor-pointer place-items-center rounded-full border border-border bg-background/90 text-foreground shadow-lg backdrop-blur-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:left-8"
         >
           <ChevronLeftIcon aria-hidden="true" className="size-5" />
         </button>
@@ -186,7 +186,7 @@ export function SkillsSection({
           type="button"
           aria-label={copy.next}
           onClick={() => moveCard(1)}
-          className="absolute top-1/2 right-4 z-20 grid size-11 -translate-y-1/2 place-items-center rounded-full border border-border bg-background/90 text-foreground shadow-lg backdrop-blur-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:right-8"
+          className="absolute top-1/2 right-4 z-20 grid size-11 -translate-y-1/2 cursor-pointer place-items-center rounded-full border border-border bg-background/90 text-foreground shadow-lg backdrop-blur-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:right-8"
         >
           <ChevronRightIcon aria-hidden="true" className="size-5" />
         </button>
