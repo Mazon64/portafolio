@@ -15,8 +15,6 @@ export type Dictionary = {
   home: {
     eyebrow: string;
     heading: string;
-    name: string;
-    introduction: string;
   };
   navigation: {
     menu: string;
@@ -45,23 +43,41 @@ export type Dictionary = {
     projects: SectionCopy;
     experience: SectionCopy;
     education: SectionCopy;
-    contact: SectionCopy;
   };
   contact: {
+    title: string;
     linkedin: string;
     github: string;
     email: string;
+    newTab: string;
   };
-  chat: {
-    label: string;
-    unavailable: string;
+  projects: {
+    empty: string;
+    imagePlaceholder: string;
+    expand: string;
+    progress: string;
+    technologies: string;
+    status: string;
+    details: string;
+    repository: string;
+    prototype: string;
+    newTab: string;
+    statuses: {
+      planned: string;
+      inProgress: string;
+      paused: string;
+      completed: string;
+      archived: string;
+    };
+  };
+  loading: {
+    portfolio: string;
   };
 };
 
 type SectionCopy = {
   number: string;
   title: string;
-  description: string;
 };
 
 export function getDictionary(locale: Locale) {

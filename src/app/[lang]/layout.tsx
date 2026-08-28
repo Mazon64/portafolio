@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { notFound } from "next/navigation";
+import { SiteHeader } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { getSiteUrl } from "@/config/env";
 import { hasLocale, locales } from "@/i18n/config";
@@ -62,6 +63,16 @@ export default async function RootLayout({
 
   if (!hasLocale(lang)) notFound();
 
+  const { navigation, preferences } = await getDictionary(lang);
+  const navigationItems = [
+    { href: "#about", label: navigation.about },
+    { href: "#skills", label: navigation.skills },
+    { href: "#projects", label: navigation.projects },
+    { href: "#experience", label: navigation.experience },
+    { href: "#education", label: navigation.education },
+    { href: "#contact", label: navigation.contact },
+  ];
+
   return (
     <html
       lang={lang}
@@ -75,7 +86,25 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <div className="min-h-screen bg-background text-foreground">
+            <a
+              href="#main-content"
+              className="fixed top-3 left-3 z-50 -translate-y-20 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-lg transition-transform focus:translate-y-0 focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              {navigation.skipToContent}
+            </a>
+            <SiteHeader
+              locale={lang}
+              navigation={navigationItems}
+              labels={{
+                menu: navigation.menu,
+                menuDescription: navigation.menuDescription,
+                close: navigation.close,
+                ...preferences,
+              }}
+            />
+            {children}
+          </div>
         </ThemeProvider>
       </body>
     </html>

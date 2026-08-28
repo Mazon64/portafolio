@@ -6,3 +6,195 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum Locale {
+  ES @map("es")
+  EN @map("en")
+}
+
+enum SkillPresentation {
+  ICON_TILES @map("icon_tiles")
+  BADGES     @map("badges")
+}
+
+enum ProjectStatus {
+  PLANNED     @map("planned")
+  IN_PROGRESS @map("in_progress")
+  PAUSED      @map("paused")
+  COMPLETED   @map("completed")
+  ARCHIVED    @map("archived")
+}
+
+model Profile {
+  id           String               @id @default(uuid()) @db.Uuid
+  slug         String               @unique
+  fullName     String
+  email        String?
+  linkedinUrl  String?
+  githubUrl    String?
+  createdAt    DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime             @updatedAt @db.Timestamptz(3)
+  translations ProfileTranslation[]
+}
+
+model ProfileTranslation {
+  id          String  @id @default(uuid()) @db.Uuid
+  profileId   String  @db.Uuid
+  locale      Locale
+  title       String
+  longBio     String  @db.Text
+  contactText String  @db.Text
+  profile     Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, locale])
+  @@index([locale])
+}
+
+model Experience {
+  id              String                  @id @default(uuid()) @db.Uuid
+  slug            String                  @unique
+  company         String
+  startDate       DateTime                @db.Date
+  endDate         DateTime?               @db.Date
+  showOnPortfolio Boolean                 @default(true)
+  showOnCv        Boolean                 @default(true)
+  order           Int                     @default(0)
+  createdAt       DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime                @updatedAt @db.Timestamptz(3)
+  translations    ExperienceTranslation[]
+
+  @@index([showOnPortfolio, order])
+  @@index([showOnCv, order])
+}
+
+model ExperienceTranslation {
+  id           String     @id @default(uuid()) @db.Uuid
+  experienceId String     @db.Uuid
+  locale       Locale
+  role         String
+  description  String     @db.Text
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+
+  @@unique([experienceId, locale])
+  @@index([locale])
+}
+
+model Education {
+  id              String                 @id @default(uuid()) @db.Uuid
+  slug            String                 @unique
+  institution     String
+  startDate       DateTime               @db.Date
+  endDate         DateTime?              @db.Date
+  showOnPortfolio Boolean                @default(true)
+  showOnCv        Boolean                @default(true)
+  order           Int                    @default(0)
+  createdAt       DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime               @updatedAt @db.Timestamptz(3)
+  translations    EducationTranslation[]
+
+  @@index([showOnPortfolio, order])
+  @@index([showOnCv, order])
+}
+
+model EducationTranslation {
+  id          String    @id @default(uuid()) @db.Uuid
+  educationId String    @db.Uuid
+  locale      Locale
+  degree      String
+  education   Education @relation(fields: [educationId], references: [id], onDelete: Cascade)
+
+  @@unique([educationId, locale])
+  @@index([locale])
+}
+
+model Project {
+  id                 String               @id @default(uuid()) @db.Uuid
+  slug               String               @unique
+  repositoryFullName String?              @unique
+  demoUrl            String?
+  repositoryUrl      String?
+  techStack          String[]             @default([])
+  showOnPortfolio    Boolean              @default(true)
+  showOnCv           Boolean              @default(false)
+  order              Int                  @default(0)
+  status             ProjectStatus        @default(PLANNED)
+  progressPct        Int                  @default(0)
+  lastTelemetryAt    DateTime?            @db.Timestamptz(3)
+  createdAt          DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime             @updatedAt @db.Timestamptz(3)
+  translations       ProjectTranslation[]
+
+  @@index([showOnPortfolio, order])
+  @@index([showOnCv, order])
+  @@index([status])
+}
+
+model ProjectTranslation {
+  id           String  @id @default(uuid()) @db.Uuid
+  projectId    String  @db.Uuid
+  locale       Locale
+  name         String
+  summary      String  @db.Text
+  detailedInfo String  @db.Text
+  project      Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, locale])
+  @@index([locale])
+}
+
+model SkillCategory {
+  id              String                     @id @default(uuid()) @db.Uuid
+  slug            String                     @unique
+  presentation    SkillPresentation
+  showOnPortfolio Boolean                    @default(true)
+  showOnCv        Boolean                    @default(true)
+  order           Int                        @default(0)
+  createdAt       DateTime                   @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime                   @updatedAt @db.Timestamptz(3)
+  skills          Skill[]
+  translations    SkillCategoryTranslation[]
+
+  @@index([showOnPortfolio, order])
+  @@index([showOnCv, order])
+}
+
+model SkillCategoryTranslation {
+  id          String        @id @default(uuid()) @db.Uuid
+  categoryId  String        @db.Uuid
+  locale      Locale
+  title       String
+  description String        @db.Text
+  category    SkillCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, locale])
+  @@index([locale])
+}
+
+model Skill {
+  id              String             @id @default(uuid()) @db.Uuid
+  slug            String             @unique
+  iconKey         String?
+  showOnPortfolio Boolean            @default(true)
+  showOnCv        Boolean            @default(true)
+  order           Int                @default(0)
+  categoryId      String             @db.Uuid
+  createdAt       DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime           @updatedAt @db.Timestamptz(3)
+  category        SkillCategory      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  translations    SkillTranslation[]
+
+  @@index([categoryId, order])
+  @@index([showOnPortfolio, order])
+  @@index([showOnCv, order])
+}
+
+model SkillTranslation {
+  id      String @id @default(uuid()) @db.Uuid
+  skillId String @db.Uuid
+  locale  Locale
+  name    String
+  skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([skillId, locale])
+  @@index([locale])
+}

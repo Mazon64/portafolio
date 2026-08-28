@@ -26,9 +26,14 @@ Mi portafolio es una aplicación fullstack desarrollada en Next.js. Su alcance a
 ### 2.1 Módulo de Identidad y CV Imprimible
 * **RF-01: Renderizado de CV Optimizado.** El sistema debe proveer una vista dedicada del CV utilizando componentes de `shadcn/ui`.
 * **RF-02: Exportación e Impresión.** El sistema debe permitir la impresión directa del CV, ocultar los elementos interactivos y adaptar el layout a dimensiones A4/Carta mediante `@media print`.
-* **RF-03: Única Fuente de Verdad.** La información de perfil, experiencia, educación, habilidades y proyectos debe consumirse desde PostgreSQL. La información de contacto puede permanecer en código o variables de entorno.
+* **RF-03: Única Fuente de Verdad.** La información de perfil, experiencia, educación, habilidades, proyectos y el mensaje de contacto debe consumirse desde PostgreSQL. Solo la identidad estable del shell puede permanecer en código.
 * **RF-04: Visibilidad CV vs Portafolio.** El sistema debe permitir definir qué registros se muestran en el portafolio web y cuáles se incluyen en el CV imprimible.
 * **RF-05: Proyectos Expandibles.** Cada proyecto debe mostrar un resumen y permitir consultar información detallada combinada con el estado generado por telemetría.
+* **RF-05.1: Repositorios Opcionales.** Un proyecto debe poder publicarse sin URL ni identificador de repositorio; la vinculación con GitHub solo aplica cuando exista un repositorio visible o autorizado para telemetría.
+* **RF-05.2: Presentación de Habilidades.** Las habilidades deben organizarse en categorías ordenadas que se presenten como cuadrículas de iconos o colecciones de badges.
+* **RF-05.3: Resumen Visual de Proyecto.** Cada card de proyecto debe mostrar nombre, resumen, espacio para imagen y porcentaje de progreso.
+* **RF-05.4: Detalle Expandible.** La expansión de un proyecto debe mostrar tecnologías, estado, repositorio, prototipo y una narrativa detallada de su desarrollo.
+* **RF-05.5: Narrativa Asistida.** En una etapa posterior, el sistema debe generar contenido técnico estructurado a partir de README, documentación e imágenes descritas, manteniendo trazabilidad hacia las fuentes y sin publicar HTML arbitrario producido por IA.
 
 ### 2.2 Módulo de Internacionalización
 * **RF-06: Idiomas Soportados.** Las rutas públicas deben ofrecer versiones en español (`/es`) e inglés (`/en`).
@@ -74,3 +79,4 @@ Mi portafolio es una aplicación fullstack desarrollada en Next.js. Su alcance a
 * **RNF-08:** Cada entidad publicada debe tener exactamente una traducción por idioma soportado.
 * **RNF-09:** La aplicación debe distribuirse como una imagen OCI ejecutable localmente y en Render.
 * **RNF-10:** GitHub Actions debe verificar el código, construir la imagen, publicarla en GHCR y solicitar su despliegue.
+* **RNF-11:** La primera migración debe verificar que pgvector esté habilitado sin fijar tablas ni dimensiones de embeddings antes de seleccionar el modelo utilizado por el módulo RAG.

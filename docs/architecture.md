@@ -16,151 +16,44 @@ Mi portafolio utiliza una aplicación fullstack de Next.js (App Router) distribu
 ### 1.1 Internacionalización y Preferencias de Interfaz
 Los prefijos `/es` y `/en` son obligatorios para las rutas públicas. El Proxy interviene solo en `/`: selecciona español cuando es el idioma principal aceptado por el navegador e inglés para cualquier otro idioma. Cualquier otra ruta sin prefijo o con un idioma no soportado devuelve 404.
 
-Los textos de interfaz que no son contenido administrable permanecen en diccionarios JSON cargados exclusivamente en el servidor. El contenido profesional se consultará en PostgreSQL usando un idioma previamente validado. La preferencia visual inicial se obtiene del tema del sistema mediante `next-themes`; una selección manual tiene prioridad y queda persistida en el navegador.
+Los textos de interfaz que no son contenido administrable permanecen en diccionarios JSON cargados exclusivamente en el servidor. El contenido profesional se consulta en PostgreSQL usando un idioma previamente validado. La preferencia visual inicial se obtiene del tema del sistema mediante `next-themes`; una selección manual tiene prioridad y queda persistida en el navegador.
 
 ---
 
 ## 2. Estrategia de Persistencia de Datos
 
 ### 2.1 Base de Datos Primaria: PostgreSQL (Supabase)
-PostgreSQL almacenará las entidades estructuradas del portafolio y el CV, además de los vectores del sistema RAG. Prisma 7.10 con `@prisma/adapter-pg` será la única capa de acceso a estos datos, administrados desde el CMS.
+PostgreSQL almacenará las entidades estructuradas del portafolio y el CV, además de los vectores del sistema RAG. Prisma 7.10 con `@prisma/adapter-pg` será la capa de acceso de la aplicación a estos datos, administrados desde el CMS. Los scripts operativos de conectividad pueden usar `pg` directamente sin exponer consultas de dominio.
 
 Los datos independientes del idioma, como fechas, URLs, orden, visibilidad y telemetría, permanecerán en la entidad principal. Los campos localizables se almacenarán en tablas de traducción con una restricción única por entidad e idioma. Este modelo evita duplicar datos operativos y permite exigir versiones completas en español e inglés desde el CMS.
 
-**Modelos principales (pseudocódigo Prisma):**
+El esquema ejecutable se encuentra en `prisma/schema.prisma`. Sus decisiones principales son:
 
-```prisma
-enum Locale {
-  ES
-  EN
-}
+* Todas las entidades administrables usan UUID, un `slug` estable, orden, visibilidad y timestamps según corresponda.
+* `Profile`, `Experience`, `Education`, `Project`, `SkillCategory` y `Skill` separan los datos operativos de sus tablas de traducción.
+* `ProfileTranslation` contiene el título, la biografía pública y el mensaje editable de contacto. La presentación pública no mantiene una biografía corta adicional.
+* Las fechas de experiencia y educación se almacenan como `date`; los periodos proporcionados por mes usan el primer día para el inicio y el último día para el final, mientras la interfaz muestra únicamente mes y año.
+* Los proyectos se identifican por `slug`. `repositoryFullName` y las URLs son opcionales para permitir proyectos privados o sin repositorio publicado.
+* `ProjectStatus` normaliza el ciclo de vida y `progressPct` tiene una restricción SQL entre 0 y 100. `lastTelemetryAt` solo cambia al recibir telemetría y no al editar contenido.
+* `SkillPresentation` define categorías `ICON_TILES` o `BADGES`. Las claves de icono se resuelven mediante un registro permitido en la aplicación; la base de datos no almacena componentes ni SVG arbitrarios.
+* Las categorías de habilidades localizan su título y una descripción breve editable. Las tecnologías se presentan con iconos permitidos y las capacidades abstractas como badges de ancho adaptable.
+* pgvector se habilita una vez con el administrador de Supabase. La primera migración verifica esta precondición, pero no crea tablas vectoriales ni fija dimensiones hasta seleccionar el modelo de embeddings del módulo RAG.
 
-model Profile {
-  id           String               @id @default(uuid())
-  updatedAt    DateTime             @updatedAt
-  translations ProfileTranslation[]
-}
-
-model ProfileTranslation {
-  id        String  @id @default(uuid())
-  profileId String
-  locale    Locale
-  title     String
-  bioWeb    String  @db.Text
-  bioCv     String  @db.Text
-  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@unique([profileId, locale])
-}
-
-model Experience {
-  id           String                  @id @default(uuid())
-  company      String
-  startDate    DateTime
-  endDate      DateTime?
-  showOnCv     Boolean                 @default(true)
-  order        Int                     @default(0)
-  translations ExperienceTranslation[]
-}
-
-model ExperienceTranslation {
-  id           String     @id @default(uuid())
-  experienceId String
-  locale       Locale
-  role         String
-  description  String     @db.Text
-  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
-
-  @@unique([experienceId, locale])
-}
-
-model Education {
-  id           String                 @id @default(uuid())
-  institution  String
-  startDate    DateTime
-  endDate      DateTime?
-  showOnCv     Boolean                @default(true)
-  translations EducationTranslation[]
-}
-
-model EducationTranslation {
-  id          String    @id @default(uuid())
-  educationId String
-  locale      Locale
-  degree      String
-  education   Education @relation(fields: [educationId], references: [id], onDelete: Cascade)
-
-  @@unique([educationId, locale])
-}
-
-model Project {
-  id              String               @id @default(uuid())
-  repositoryName  String               @unique
-  demoUrl         String?
-  repositoryUrl   String?
-  techStack       String[]
-  showOnPortfolio Boolean              @default(true)
-  showOnCv        Boolean              @default(false)
-  translations    ProjectTranslation[]
-
-  // Campos gestionados mediante el webhook de telemetría
-  status          String               @default("Planning")
-  progressPct     Int                  @default(0)
-  lastTelemetryAt DateTime             @updatedAt
-}
-
-model ProjectTranslation {
-  id           String  @id @default(uuid())
-  projectId    String
-  locale       Locale
-  name         String
-  summary      String
-  detailedInfo String  @db.Text
-  project      Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@unique([projectId, locale])
-}
-
-model SkillCategory {
-  id           String                     @id @default(uuid())
-  order        Int                        @default(0)
-  skills       Skill[]
-  translations SkillCategoryTranslation[]
-}
-
-model SkillCategoryTranslation {
-  id          String        @id @default(uuid())
-  categoryId  String
-  locale      Locale
-  title       String
-  description String
-  category    SkillCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
-  @@unique([categoryId, locale])
-}
-
-model Skill {
-  id           String             @id @default(uuid())
-  iconName     String?
-  isBadge      Boolean            @default(false)
-  showOnCv     Boolean            @default(true)
-  categoryId   String
-  category     SkillCategory      @relation(fields: [categoryId], references: [id])
-  translations SkillTranslation[]
-}
-
-model SkillTranslation {
-  id      String @id @default(uuid())
-  skillId String
-  locale  Locale
-  name    String
-  skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
-
-  @@unique([skillId, locale])
-}
-```
+El seed inicial contiene perfil, una experiencia, una formación académica y tres categorías de habilidades: desarrollo de software e infraestructura con iconos, y habilidades de ingeniería con badges. No crea ni elimina proyectos, por lo que puede repetirse después de incorporar propuestas públicas.
 
 Las consultas públicas deben filtrar por el `Locale` solicitado. El CMS no debe publicar una entidad mientras falte una traducción requerida; por ello, el fallback a inglés aplica al enrutamiento, no a registros incompletos dentro de la base de datos.
+
+### 2.2 Acceso Público y Caché
+
+La ruta localizada conserva metadatos independientes de PostgreSQL para que el build no necesite credenciales. El Server Component de contenido llama a `connection()` antes del DAL, por lo que Prisma solo se ejecuta al recibir una petición. `unstable_cache` mantiene un DTO por idioma durante 300 segundos y usa la etiqueta `portfolio`, preparada para invalidación desde el futuro CMS.
+
+El DAL selecciona únicamente campos públicos, exige la traducción solicitada, convierte fechas y enums a valores serializables y valida URLs externas. Los componentes nunca reciben modelos Prisma ni acceden directamente a variables de entorno. Una inconsistencia de contenido produce el estado de error localizado en lugar de mezclar idiomas o presentar datos parciales.
+
+### 2.3 Presentación y Evolución de Proyectos
+
+Las cards de proyectos muestran nombre, resumen, espacio visual para una imagen y progreso. El detalle se expande de forma accesible para mostrar tecnologías, estado, repositorio, prototipo y la descripción extensa existente. Mientras no haya proyectos publicados, la sección conserva su posición y presenta un estado vacío.
+
+La etapa RAG ampliará este modelo sin almacenar HTML generado. Cada imagen deberá tener URL, texto alternativo, descripción contextual, orden y procedencia. La IA producirá una secuencia estructurada de bloques de texto y referencias a medios a partir de README, documentación y descripciones de imágenes. El servidor validará estas referencias antes de publicarlas; la colocación sugerida será editorial y no una garantía sobre hechos no presentes en las fuentes.
 
 ---
 
@@ -219,12 +112,13 @@ GitHub Actions automatizará la entrega con este flujo:
 1. Ejecutar pruebas, lint y build para cada cambio propuesto.
 2. Construir una imagen OCI a partir del `Dockerfile` al integrar cambios en la rama principal.
 3. Publicar la imagen en GitHub Container Registry con una etiqueta inmutable para el SHA del commit y la etiqueta móvil `latest` consumida por Render.
-4. Solicitar el despliegue de Render mediante un Deploy Hook después de publicar correctamente la imagen.
-5. Conservar en Render, GitHub y los proveedores de datos únicamente los secretos requeridos por cada servicio.
+4. Aplicar las migraciones pendientes con `DIRECT_URL` después de construir la imagen y antes de activar el despliegue.
+5. Solicitar el despliegue de Render mediante un Deploy Hook después de publicar correctamente la imagen y migrar la base.
+6. Conservar en Render, GitHub y los proveedores de datos únicamente los secretos requeridos por cada servicio.
 
 Render no reconstruirá la aplicación. El despliegue utilizará la imagen que haya superado las verificaciones de GitHub Actions para mantener trazabilidad entre código, artefacto y ejecución.
 
-Como las páginas localizadas se generan estáticamente, `SITE_URL` se proporcionará como variable pública de build para incorporar canonical y alternates correctos en los metadatos. Todas las credenciales y conexiones privadas permanecerán fuera de la imagen.
+Los metadatos localizados se generan durante el build y usan `SITE_URL` para incorporar canonical y alternates correctos. El contenido profesional se renderiza bajo demanda y recibe `DATABASE_URL` exclusivamente en runtime. Todas las credenciales y conexiones privadas permanecen fuera de la imagen.
 
 ### 5.2 Flujo de Tráfico
 
@@ -237,6 +131,8 @@ Visitante o webhook de GitHub
   -> Next.js (páginas y Route Handlers)
   -> Supabase / MongoDB Atlas / Gemini
 ```
+
+`/api/health/live` se utiliza como liveness del contenedor y no consulta dependencias. `/api/health/ready` verifica PostgreSQL, el perfil y las traducciones de todos los registros públicos; también devuelve el SHA incorporado en la imagen. GitHub Actions espera ese SHA después de solicitar el despliegue. Esta separación evita reiniciar la aplicación únicamente por una interrupción temporal de Supabase y evita aprobar una versión anterior todavía saludable.
 
 ### 5.3 Limitaciones del Nivel Gratuito
 

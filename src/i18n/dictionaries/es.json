@@ -5,9 +5,7 @@
   },
   "home": {
     "eyebrow": "Portafolio · Ingeniería de software",
-    "heading": "Construyo software con intención, claridad y alcance.",
-    "name": "David Yael Aranda Montes",
-    "introduction": "Este espacio reúne mi perfil, experiencia y proyectos. El contenido profesional se conectará a la base de datos bilingüe en la siguiente etapa."
+    "heading": "Construyo software con intención, claridad y alcance."
   },
   "navigation": {
     "menu": "Navegación",
@@ -33,42 +31,52 @@
   "sections": {
     "about": {
       "number": "01",
-      "title": "Sobre mí",
-      "description": "Perfil profesional, enfoque de trabajo y los principios que guían cada producto que construyo."
+      "title": "Sobre mí"
     },
     "skills": {
       "number": "02",
-      "title": "Habilidades",
-      "description": "Tecnologías, herramientas y capacidades organizadas por áreas de especialización."
+      "title": "Habilidades"
     },
     "projects": {
       "number": "03",
-      "title": "Proyectos",
-      "description": "Una selección de productos con su contexto, decisiones técnicas y estado actual."
+      "title": "Proyectos"
     },
     "experience": {
       "number": "04",
-      "title": "Experiencia",
-      "description": "Trayectoria profesional, responsabilidades y resultados relevantes."
+      "title": "Experiencia"
     },
     "education": {
       "number": "05",
-      "title": "Educación",
-      "description": "Formación académica y aprendizaje continuo que respaldan mi práctica profesional."
-    },
-    "contact": {
-      "number": "06",
-      "title": "Datos de contacto",
-      "description": "Conversemos sobre una oportunidad, una colaboración o un producto por construir."
+      "title": "Educación"
     }
   },
   "contact": {
+    "title": "Contáctame",
     "linkedin": "LinkedIn",
     "github": "GitHub",
-    "email": "Correo"
+    "email": "Correo",
+    "newTab": "Abre en una pestaña nueva"
   },
-  "chat": {
-    "label": "Abrir chat",
-    "unavailable": "Chat próximamente"
+  "projects": {
+    "empty": "Los proyectos públicos están en preparación.",
+    "imagePlaceholder": "Imagen del proyecto",
+    "expand": "Selecciona para consultar los detalles",
+    "progress": "Progreso",
+    "technologies": "Tecnologías",
+    "status": "Estado actual",
+    "details": "Desarrollo del proyecto",
+    "repository": "Repositorio",
+    "prototype": "Prototipo",
+    "newTab": "Abre en una pestaña nueva",
+    "statuses": {
+      "planned": "Planeado",
+      "inProgress": "En desarrollo",
+      "paused": "En pausa",
+      "completed": "Completado",
+      "archived": "Archivado"
+    }
+  },
+  "loading": {
+    "portfolio": "Cargando información del portafolio"
   }
 }

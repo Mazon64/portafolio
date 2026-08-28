@@ -54,7 +54,7 @@ export function SiteHeader({
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-5 sm:px-8">
+      <div className="mx-auto flex h-16 w-full max-w-[96rem] items-center gap-6 px-5 sm:px-8 lg:px-12">
         <Link
           href={`/${locale}`}
           aria-label={siteConfig.name}

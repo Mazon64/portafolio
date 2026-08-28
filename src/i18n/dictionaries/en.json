@@ -5,9 +5,7 @@
   },
   "home": {
     "eyebrow": "Portfolio · Software engineering",
-    "heading": "I build software with intention, clarity, and reach.",
-    "name": "David Yael Aranda Montes",
-    "introduction": "This space brings together my profile, experience, and projects. Professional content will connect to the bilingual database in the next stage."
+    "heading": "I build software with intention, clarity, and reach."
   },
   "navigation": {
     "menu": "Navigation",
@@ -33,42 +31,52 @@
   "sections": {
     "about": {
       "number": "01",
-      "title": "About",
-      "description": "Professional profile, working approach, and the principles behind every product I build."
+      "title": "About"
     },
     "skills": {
       "number": "02",
-      "title": "Skills",
-      "description": "Technologies, tools, and capabilities organized by areas of expertise."
+      "title": "Skills"
     },
     "projects": {
       "number": "03",
-      "title": "Projects",
-      "description": "A selection of products with their context, technical decisions, and current status."
+      "title": "Projects"
     },
     "experience": {
       "number": "04",
-      "title": "Experience",
-      "description": "Professional background, responsibilities, and relevant outcomes."
+      "title": "Experience"
     },
     "education": {
       "number": "05",
-      "title": "Education",
-      "description": "Academic background and continuous learning supporting my professional practice."
-    },
-    "contact": {
-      "number": "06",
-      "title": "Contact details",
-      "description": "Let's talk about an opportunity, a collaboration, or a product worth building."
+      "title": "Education"
     }
   },
   "contact": {
+    "title": "Get in touch",
     "linkedin": "LinkedIn",
     "github": "GitHub",
-    "email": "Email"
+    "email": "Email",
+    "newTab": "Opens in a new tab"
   },
-  "chat": {
-    "label": "Open chat",
-    "unavailable": "Chat coming soon"
+  "projects": {
+    "empty": "Public projects are being prepared.",
+    "imagePlaceholder": "Project image",
+    "expand": "Select to view the details",
+    "progress": "Progress",
+    "technologies": "Technologies",
+    "status": "Current status",
+    "details": "Project development",
+    "repository": "Repository",
+    "prototype": "Prototype",
+    "newTab": "Opens in a new tab",
+    "statuses": {
+      "planned": "Planned",
+      "inProgress": "In development",
+      "paused": "Paused",
+      "completed": "Completed",
+      "archived": "Archived"
+    }
+  },
+  "loading": {
+    "portfolio": "Loading portfolio information"
   }
 }
