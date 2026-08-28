@@ -1,6 +1,6 @@
 # Portafolio
 
-Este repositorio contiene mi portafolio bilingüe, desarrollado con Next.js para presentar mi perfil, habilidades, proyectos, experiencia, educación y datos de contacto. La aplicación incluye rutas localizadas, tema claro y oscuro, y una base preparada para consumir contenido administrable desde PostgreSQL.
+Este repositorio contiene mi portafolio bilingüe, desarrollado con Next.js para presentar mi perfil, habilidades, proyectos, experiencia, educación y datos de contacto. La aplicación incluye rutas localizadas, tema claro y oscuro, y contenido profesional administrable consumido desde PostgreSQL.
 
 ## Estado Actual
 
@@ -14,8 +14,15 @@ Actualmente incluye:
 - Diccionarios de interfaz cargados únicamente en el servidor.
 - Metadatos localizados y alternates dependientes del entorno.
 - Pruebas unitarias para la negociación de idioma y el Proxy.
+- Esquema relacional bilingüe administrado mediante Prisma y Supabase.
+- Datos iniciales de perfil, experiencia, educación y habilidades.
+- pgvector habilitado para la futura etapa RAG.
+- Secciones públicas conectadas a Supabase mediante un DAL server-only.
+- Caché de contenido por idioma con revalidación cada cinco minutos.
+- Cards de habilidades con logos permitidos y badges.
+- Estado vacío y estructura expandible para proyectos futuros.
 
-La base de datos, el CMS, el CV, la telemetría y el chatbot forman parte de las siguientes etapas y todavía no están implementados.
+El CMS, el CV, la telemetría y el chatbot forman parte de las siguientes etapas. La base inicial no publica proyectos; se incorporarán cuando existan propuestas propias que puedan mostrarse.
 
 ## Tecnologías
 
@@ -82,7 +89,7 @@ El Proxy procesa únicamente `/`:
 - Una ruta sin prefijo, como `/cv`, devuelve 404.
 - Un idioma no soportado, como `/fr`, devuelve 404.
 
-Los textos estructurales de la interfaz se encuentran en `src/i18n/dictionaries`. El contenido profesional administrable se almacenará en PostgreSQL y se consultará con un locale validado.
+Los textos estructurales de la interfaz se encuentran en `src/i18n/dictionaries`. El contenido profesional administrable se consulta desde PostgreSQL con un locale validado y se normaliza a DTOs antes de llegar a los componentes.
 
 ## Tema
 
@@ -115,7 +122,7 @@ Los contratos se encuentran en `.env.example` y `.env.docker.example`.
 | `MONGODB_URI` | Conexión a MongoDB Atlas. |
 | `CRON_SECRET` | Autorización de tareas programadas. |
 
-`.env` contiene la configuración del desarrollo nativo. `.env.docker` contiene la configuración independiente del contenedor y no se incluye en la imagen ni en Git. `SITE_URL` se proporciona durante el build porque las páginas localizadas generan metadatos estáticos, y también queda disponible en runtime. `HOSTNAME` y `PORT` se inyectan al ejecutar el contenedor, mientras que `HOST_PORT` solo lo consume Docker Compose. Las conexiones y credenciales se añadirán explícitamente al runtime cuando se implementen sus integraciones. `NODE_ENV=production` es una invariante de la imagen y no una variable configurable del entorno.
+`.env` contiene la configuración del desarrollo nativo. `.env.docker` contiene la configuración independiente del contenedor y no se incluye en la imagen ni en Git. `SITE_URL` se proporciona durante el build para los metadatos y también queda disponible en runtime. `HOSTNAME`, `PORT` y `DATABASE_URL` se inyectan al ejecutar el contenedor, mientras que `HOST_PORT` solo lo consume Docker Compose. El build genera el cliente Prisma con una URL ficticia no operativa y no se conecta a PostgreSQL. `NODE_ENV=production` es una invariante de la imagen y no una variable configurable del entorno.
 
 Las variables privadas permanecen en el servidor. El prefijo `NEXT_PUBLIC_` no se utiliza para secretos, ningún secreto se pasa como argumento de build y Git no contiene valores reales.
 
@@ -127,12 +134,21 @@ Las conexiones locales se configuran sin mostrar credenciales mediante:
 .\scripts\configure-supabase.ps1
 ```
 
+Antes de la primera migración, el administrador de Supabase debe habilitar pgvector y permitir que el rol de aplicación use el esquema de extensiones:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA extensions;
+GRANT USAGE ON SCHEMA extensions TO prisma;
+```
+
 Su estructura y conectividad se verifican con:
 
 ```bash
 npm run db:check
 npm run db:validate
 ```
+
+El seed es un bootstrap manual y no forma parte del despliegue automático. Una base nueva debe recibir migraciones y seed antes de atender tráfico; después, las migraciones se aplican sin volver a sobrescribir contenido desde el seed.
 
 ## Scripts
 
@@ -146,6 +162,10 @@ npm run lint   # ESLint
 npm run test   # Pruebas unitarias
 npm run db:check     # Conectividad de los dos endpoints PostgreSQL
 npm run db:generate  # Generación local del cliente Prisma
+npm run db:migrate   # Aplicación de migraciones pendientes
+npm run db:seed      # Carga idempotente de contenido profesional
+npm run db:smoke     # Integridad del esquema y los datos iniciales
+npm run db:status    # Estado de las migraciones
 npm run db:validate  # Validación del esquema Prisma
 ```
 
@@ -157,8 +177,10 @@ Estructura del código:
 src/
   app/[lang]/              Layout y página localizados
   components/              Componentes de aplicación
+  components/portfolio/    Secciones públicas y estados de carga
   components/ui/           Primitivas de shadcn/ui
   config/                  Configuración de sitio y entorno
+  data/                    DAL, normalización y DTOs públicos
   i18n/                    Locales, negociación y diccionarios
   proxy.ts                 Redirección de idioma para la raíz
 docs/
@@ -173,14 +195,17 @@ Mi portafolio y mis demás proyectos se desplegarán inicialmente en servicios c
 
 Render ejecutará la misma imagen construida por GitHub Actions. El workflow `.github/workflows/delivery.yml` ejecuta pruebas, lint y build para los pull requests y pushes a `main`. La ejecución manual también publica las etiquetas `latest` y `sha-<commit>` en GHCR y usa un Deploy Hook para solicitar el despliegue. Cloudflare administrará el dominio, el DNS y el proxy del tráfico público.
 
+Render debe definir `DATABASE_URL` en runtime, usar el puerto asignado por la plataforma y exponer `/api/health/live` como health check. El dominio personalizado configurado en Render debe coincidir con `SITE_URL`; Cloudflare puede apuntar a ese origen mediante el registro indicado por Render.
+
 La entrega requiere la siguiente configuración en GitHub:
 
 | Configuración | Tipo | Uso |
 | --- | --- | --- |
 | `SITE_URL` | Variable | URL pública incorporada en los metadatos durante el build. |
 | `RENDER_DEPLOY_HOOK_URL` | Secreto | Deploy Hook del servicio de Render. |
+| `DIRECT_URL` | Secreto | Conexión usada por la entrega manual para aplicar migraciones antes del despliegue. |
 
-Render debe consumir `ghcr.io/<usuario>/<repositorio>:latest`. Un paquete privado de GHCR requiere una credencial del registro con permiso de lectura. La ruta `/es` se utiliza como health check del servicio.
+Render debe consumir `ghcr.io/<usuario>/<repositorio>:latest`. Un paquete privado de GHCR requiere una credencial del registro con permiso de lectura. `/api/health/live` comprueba el proceso sin acoplarlo a Supabase; `/api/health/ready` comprueba además la conexión, el contenido bilingüe obligatorio y la versión desplegada. Render debe recibir `DATABASE_URL` como secreto de runtime.
 
 El nivel gratuito de Render puede suspender el servicio por inactividad y provocar arranques en frío. Una necesidad futura de disponibilidad continua o latencia estricta para los webhooks requerirá una instancia sin suspensión o un servicio separado para recibir eventos.
 
@@ -200,13 +225,11 @@ npm run build
 
 El desarrollo continuará en este orden:
 
-1. Configurar PostgreSQL/Supabase y Prisma.
-2. Crear migraciones y datos iniciales bilingües.
-3. Conectar las secciones públicas con la capa de datos.
-4. Implementar el CV localizado e imprimible.
-5. Añadir autenticación y CMS.
-6. Incorporar telemetría, RAG y chatbot.
-7. Implementar y automatizar el despliegue definido con Docker, GHCR, Render y GitHub Actions.
+1. Implementar el CV localizado e imprimible.
+2. Añadir autenticación y CMS.
+3. Incorporar propuestas propias y su progreso como proyectos públicos.
+4. Añadir medios y narrativa técnica estructurada para proyectos.
+5. Incorporar telemetría, RAG y chatbot.
 
 ## Documentación
 
