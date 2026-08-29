@@ -23,7 +23,7 @@ El formulario de contacto permanece deshabilitado mientras no se defina si los m
 4. Activa **Automatically expose System Environment Variables**. La ruta de readiness usa `VERCEL_GIT_COMMIT_SHA` para identificar la versión desplegada.
 5. Confirma que Production usa Node.js 24. `package.json` también fija `24.x`.
 
-`vercel.json` mantiene las funciones en `sfo1`, cerca de la base de datos de Supabase en Oregon. `next.config.ts` conserva `output: "standalone"` para Docker; Vercel procesa el proyecto con su integración nativa de Next.js.
+`vercel.json` mantiene las funciones en `sfo1`, cerca de la base de datos de Supabase en Oregon. `next.config.ts` genera `output: "standalone"` fuera de Vercel para Docker y lo desactiva en Vercel, donde el adaptador nativo genera su propia salida.
 
 ## 2. Variables De Vercel
 

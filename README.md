@@ -207,7 +207,7 @@ Vercel requiere esta configuración:
 
 `DIRECT_URL` no se configura en Vercel. GitHub lo almacena como secreto del environment protegido `production`; el workflow manual **Database Migrations** es el único que aplica migraciones. Los cambios de esquema se despliegan con una estrategia expand-contract para que el código publicado y la base permanezcan compatibles.
 
-Docker sigue siendo una ruta de despliegue mantenida e independiente. El workflow **Quality and Container** verifica pruebas, lint y build, y publica `latest` y `sha-<commit>` en GHCR después de cada push verificado a `main`. La imagen standalone puede ejecutarse en un VPS, NAS o proveedor de contenedores con `.env.docker`.
+Docker sigue siendo una ruta de despliegue mantenida e independiente. El workflow **Quality and Container** verifica pruebas, lint y build, y publica `latest` y `sha-<commit>` en GHCR después de cada push verificado a `main`. Next.js genera la imagen standalone fuera de Vercel; dentro de Vercel utiliza la salida de su adaptador nativo. La imagen Docker puede ejecutarse en un VPS, NAS o proveedor de contenedores con `.env.docker`.
 
 `/api/health/live` comprueba el proceso sin acoplarlo a Supabase. `/api/health/ready` comprueba además la conexión, el contenido bilingüe obligatorio y la versión desplegada, usando `VERCEL_GIT_COMMIT_SHA` en Vercel o `APP_VERSION` en Docker.
 
