@@ -94,8 +94,22 @@ export function normalizePortfolio(raw: RawPortfolioData): PortfolioDto {
     profile: {
       fullName: raw.profile.fullName,
       email: validEmail(raw.profile.email),
-      linkedinUrl: validHttpsUrl(raw.profile.linkedinUrl),
-      githubUrl: validHttpsUrl(raw.profile.githubUrl),
+      socialLinks: raw.profile.socialLinks.flatMap((link) => {
+        const url = validHttpsUrl(link.url);
+        const slug = link.slug.trim();
+        const label = link.label.trim();
+        if (!url || !slug || !label) return [];
+
+        return [
+          {
+            slug,
+            label,
+            detail: link.detail?.trim() || null,
+            url,
+            iconKey: link.iconKey?.trim() || null,
+          },
+        ];
+      }),
       ...profileTranslation,
     },
     experience: raw.experience.map((item) => ({

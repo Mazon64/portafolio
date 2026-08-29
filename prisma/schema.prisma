@@ -30,11 +30,28 @@ model Profile {
   slug         String               @unique
   fullName     String
   email        String?
-  linkedinUrl  String?
-  githubUrl    String?
   createdAt    DateTime             @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime             @updatedAt @db.Timestamptz(3)
+  socialLinks  SocialLink[]
   translations ProfileTranslation[]
+}
+
+model SocialLink {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId       String   @db.Uuid
+  slug            String
+  label           String
+  detail          String?
+  url             String
+  iconKey         String?
+  showOnPortfolio Boolean  @default(true)
+  order           Int      @default(0)
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @default(now()) @updatedAt @db.Timestamptz(3)
+  profile         Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, slug])
+  @@index([profileId, showOnPortfolio, order])
 }
 
 model ProfileTranslation {

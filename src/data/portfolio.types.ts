@@ -18,11 +18,18 @@ export interface PortfolioDto {
 export interface ProfileDto {
   fullName: string;
   email: string | null;
-  linkedinUrl: string | null;
-  githubUrl: string | null;
+  socialLinks: SocialLinkDto[];
   title: string;
   longBio: string;
   contactText: string;
+}
+
+export interface SocialLinkDto {
+  slug: string;
+  label: string;
+  detail: string | null;
+  url: string;
+  iconKey: string | null;
 }
 
 export interface ExperienceDto {
@@ -75,8 +82,13 @@ export interface RawPortfolioData {
   profile: {
     fullName: string;
     email: string | null;
-    linkedinUrl: string | null;
-    githubUrl: string | null;
+    socialLinks: readonly {
+      slug: string;
+      label: string;
+      detail: string | null;
+      url: string;
+      iconKey: string | null;
+    }[];
     translations: Translation<{
       title: string;
       longBio: string;

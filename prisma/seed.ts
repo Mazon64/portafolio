@@ -135,29 +135,54 @@ async function main() {
           slug: "main-profile",
           fullName: "David Yael Aranda Montes",
           email: "davidyaelam64@gmail.com",
-          linkedinUrl: "https://www.linkedin.com/in/david-yael/",
-          githubUrl: "https://github.com/Mazon64",
         },
         update: {
           fullName: "David Yael Aranda Montes",
           email: "davidyaelam64@gmail.com",
-          linkedinUrl: "https://www.linkedin.com/in/david-yael/",
-          githubUrl: "https://github.com/Mazon64",
         },
       });
+
+      const socialLinks = [
+        {
+          slug: "linkedin",
+          label: "LinkedIn",
+          detail: "@david-yael",
+          url: "https://www.linkedin.com/in/david-yael/",
+          iconKey: "linkedin",
+          order: 0,
+        },
+        {
+          slug: "github",
+          label: "GitHub",
+          detail: "@Mazon64",
+          url: "https://github.com/Mazon64",
+          iconKey: "github",
+          order: 1,
+        },
+      ];
+
+      for (const socialLink of socialLinks) {
+        await tx.socialLink.upsert({
+          where: {
+            profileId_slug: { profileId: profile.id, slug: socialLink.slug },
+          },
+          create: { profileId: profile.id, ...socialLink },
+          update: socialLink,
+        });
+      }
 
       const profileTranslations = [
         {
           locale: Locale.ES,
           title: "Ingeniero de Software",
           longBio: "Ingeniero de Software especializado en desarrollo backend, arquitectura de sistemas e integración de inteligencia artificial. Experiencia construyendo aplicaciones empresariales y sistemas institucionales desde el diseño hasta su despliegue en producción.\n\nTrabajo con Node.js, bases de datos relacionales, APIs, Docker y arquitecturas modulares, con énfasis en mantenibilidad, seguridad y escalabilidad. He implementado sistemas de autenticación multi-tenant y federada, diseñado APIs seguras e integrado modelos de lenguaje (LLMs) en aplicaciones empresariales mediante prompt engineering, programación determinista de LLMs y arquitecturas de IA con contexto en tiempo real.",
-          contactText: "¿Tienes una oportunidad, una colaboración o una idea por construir? Escríbeme y conversemos.",
+          contactText: "¿Tienes una oportunidad, una colaboración o una idea por construir? Cuéntame los detalles en el formulario y te responderé lo antes posible.",
         },
         {
           locale: Locale.EN,
           title: "Software Engineer",
           longBio: "Software Engineer specialized in backend development, system architecture, and artificial intelligence integration. Experienced in building enterprise and institutional applications from initial design to production deployment.\n\nI work with Node.js, relational databases, APIs, Docker, and modular architectures, with a strong focus on maintainability, security, and scalability. I have implemented multi-tenant and federated authentication systems, designed secure APIs, and integrated Large Language Models (LLMs) into enterprise applications using prompt engineering, deterministic LLM programming, and architectures that provide real-time contextual information.",
-          contactText: "Have an opportunity, a collaboration, or an idea worth building? Send me a message and let's talk.",
+          contactText: "Have an opportunity, a collaboration, or an idea worth building? Share the details in the form and I will get back to you as soon as possible.",
         },
       ];
 

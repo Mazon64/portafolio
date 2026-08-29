@@ -28,8 +28,17 @@ async function queryPortfolioContent(locale: AppLocale): Promise<PortfolioDto> {
         select: {
           fullName: true,
           email: true,
-          linkedinUrl: true,
-          githubUrl: true,
+          socialLinks: {
+            where: { showOnPortfolio: true },
+            orderBy: [{ order: "asc" }, { slug: "asc" }],
+            select: {
+              slug: true,
+              label: true,
+              detail: true,
+              url: true,
+              iconKey: true,
+            },
+          },
           translations: {
             ...translation,
             select: { title: true, longBio: true, contactText: true },

@@ -10,8 +10,22 @@ function rawPortfolio(): RawPortfolioData {
     profile: {
       fullName: "Ada Lovelace",
       email: " ada@example.com ",
-      linkedinUrl: "http://linkedin.example/ada",
-      githubUrl: " https://github.com/ada ",
+      socialLinks: [
+        {
+          slug: "linkedin",
+          label: "LinkedIn",
+          detail: "@ada",
+          url: "http://linkedin.example/ada",
+          iconKey: "linkedin",
+        },
+        {
+          slug: "github",
+          label: " GitHub ",
+          detail: " @ada ",
+          url: " https://github.com/ada ",
+          iconKey: " github ",
+        },
+      ],
       translations: [
         { title: "Engineer", longBio: "Long", contactText: "Contact copy" },
       ],
@@ -72,8 +86,15 @@ describe("normalizePortfolio", () => {
     expect(result.profile).toEqual({
       fullName: "Ada Lovelace",
       email: "ada@example.com",
-      linkedinUrl: null,
-      githubUrl: "https://github.com/ada",
+      socialLinks: [
+        {
+          slug: "github",
+          label: "GitHub",
+          detail: "@ada",
+          url: "https://github.com/ada",
+          iconKey: "github",
+        },
+      ],
       title: "Engineer",
       longBio: "Long",
       contactText: "Contact copy",
@@ -108,12 +129,13 @@ describe("normalizePortfolio", () => {
     const raw = rawPortfolio();
     if (!raw.profile) throw new Error("Fixture profile is required.");
     raw.profile.email = "not-an-email";
-    raw.profile.githubUrl = "https://user:secret@example.com/profile";
+    raw.profile.socialLinks[1].url =
+      "https://user:secret@example.com/profile";
 
     const result = normalizePortfolio(raw);
 
     expect(result.profile.email).toBeNull();
-    expect(result.profile.githubUrl).toBeNull();
+    expect(result.profile.socialLinks).toEqual([]);
   });
 
   it("rejects email values containing URI parameters", () => {
