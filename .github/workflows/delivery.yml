@@ -44,37 +44,18 @@ jobs:
       - name: Build application
         run: npm run build
         env:
-          SITE_URL: ${{ vars.SITE_URL }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://davidaranda.dev' }}
 
   publish:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name != 'pull_request'
     needs: verify
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     steps:
-      - name: Validate delivery configuration
-        env:
-          SITE_URL: ${{ vars.SITE_URL }}
-          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
-        run: |
-          test -n "$SITE_URL" || { echo "Missing repository variable: SITE_URL"; exit 1; }
-          test -n "$RENDER_DEPLOY_HOOK_URL" || { echo "Missing repository secret: RENDER_DEPLOY_HOOK_URL"; exit 1; }
-          test -n "$DIRECT_URL" || { echo "Missing repository secret: DIRECT_URL"; exit 1; }
-
       - name: Check out repository
         uses: actions/checkout@v7
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      - name: Install migration dependencies
-        run: npm ci
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -101,12 +82,39 @@ jobs:
           context: .
           push: true
           build-args: |
-            SITE_URL=${{ vars.SITE_URL }}
+            SITE_URL=${{ vars.SITE_URL || 'https://davidaranda.dev' }}
             APP_VERSION=${{ github.sha }}
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch'
+    needs: [verify, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Validate deployment configuration
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          test -n "$RENDER_DEPLOY_HOOK_URL" || { echo "Missing repository secret: RENDER_DEPLOY_HOOK_URL"; exit 1; }
+          test -n "$DIRECT_URL" || { echo "Missing repository secret: DIRECT_URL"; exit 1; }
+
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install migration dependencies
+        run: npm ci
 
       - name: Apply database migrations
         run: npm run db:migrate
@@ -120,7 +128,7 @@ jobs:
 
       - name: Verify deployed version
         env:
-          SITE_URL: ${{ vars.SITE_URL }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://davidaranda.dev' }}
         run: |
           health_url="${SITE_URL%/}/api/health/ready"
           for attempt in {1..36}; do

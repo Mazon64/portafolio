@@ -198,7 +198,7 @@ docs/
 
 Mi portafolio y mis demás proyectos se desplegarán inicialmente en servicios con niveles gratuitos. Cada aplicación estará dockerizada y GitHub Actions verificará el código, construirá una imagen OCI y la publicará en GitHub Container Registry.
 
-Render ejecutará la misma imagen construida por GitHub Actions. El workflow `.github/workflows/delivery.yml` ejecuta pruebas, lint y build para los pull requests y pushes a `main`. La ejecución manual también publica las etiquetas `latest` y `sha-<commit>` en GHCR y usa un Deploy Hook para solicitar el despliegue. Cloudflare administrará el dominio, el DNS y el proxy del tráfico público.
+Render ejecutará la misma imagen construida por GitHub Actions. El workflow `.github/workflows/delivery.yml` ejecuta pruebas, lint y build para los pull requests. Cada push a `main` también publica las etiquetas `latest` y `sha-<commit>` en GHCR. La ejecución manual aplica migraciones y usa un Deploy Hook para solicitar el despliegue. Cloudflare administrará `davidaranda.dev`, el DNS y el proxy del tráfico público.
 
 Render debe definir `DATABASE_URL` en runtime, usar el puerto asignado por la plataforma y exponer `/api/health/live` como health check. El dominio personalizado configurado en Render debe coincidir con `SITE_URL`; Cloudflare puede apuntar a ese origen mediante el registro indicado por Render.
 
@@ -209,6 +209,8 @@ La entrega requiere la siguiente configuración en GitHub:
 | `SITE_URL` | Variable | URL pública incorporada en los metadatos durante el build. |
 | `RENDER_DEPLOY_HOOK_URL` | Secreto | Deploy Hook del servicio de Render. |
 | `DIRECT_URL` | Secreto | Conexión usada por la entrega manual para aplicar migraciones antes del despliegue. |
+
+La guía operativa para crear GHCR, Render y enlazar el dominio se encuentra en [`docs/deployment.md`](docs/deployment.md).
 
 Render debe consumir `ghcr.io/<usuario>/<repositorio>:latest`. Un paquete privado de GHCR requiere una credencial del registro con permiso de lectura. `/api/health/live` comprueba el proceso sin acoplarlo a Supabase; `/api/health/ready` comprueba además la conexión, el contenido bilingüe obligatorio y la versión desplegada. Render debe recibir `DATABASE_URL` como secreto de runtime.
 
