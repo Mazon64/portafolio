@@ -25,9 +25,17 @@ El primer push crea automáticamente el paquete en GitHub Packages. Para que Ren
 
 ## 2. Web Service En Render
 
+El Blueprint `render.yaml` versiona la configuración del servicio. Después de hacer pública la imagen de GHCR, abre:
+
+[Crear servicio desde el Blueprint de Render](https://render.com/deploy?repo=https://github.com/Mazon64/portafolio)
+
+Render solicitará únicamente el valor secreto de `DATABASE_URL`. El Blueprint configura la imagen, el plan gratuito, la región de Oregon, el health check, el dominio y las variables públicas.
+
+Si prefieres crear el servicio manualmente:
+
 1. Crea un **New Web Service** desde una imagen existente.
 2. Usa `ghcr.io/mazon64/portafolio:latest` como imagen.
-3. Selecciona una región cercana a la base de datos de Supabase.
+3. Selecciona la región de Oregon, cercana a la base de datos actual de Supabase.
 4. Configura `/api/health/live` como health check.
 5. Define las variables de runtime:
 
