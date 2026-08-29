@@ -1,6 +1,8 @@
 import "server-only";
 
 import { PrismaPg } from "@prisma/adapter-pg";
+import { attachDatabasePool } from "@vercel/functions";
+import { Pool } from "pg";
 
 import { PrismaClient } from "@/generated/prisma/client";
 
@@ -14,13 +16,17 @@ function createPrismaClient() {
     throw new Error("DATABASE_URL is required to access PostgreSQL.");
   }
 
-  const adapter = new PrismaPg({
+  const pool = new Pool({
     connectionString,
     connectionTimeoutMillis: 10_000,
     max: 5,
   });
 
-  return new PrismaClient({ adapter });
+  if (process.env.VERCEL) {
+    attachDatabasePool(pool);
+  }
+
+  return new PrismaClient({ adapter: new PrismaPg(pool) });
 }
 
 export function getPrisma() {

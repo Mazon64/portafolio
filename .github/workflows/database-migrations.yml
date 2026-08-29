@@ -1,0 +1,43 @@
+name: Database Migrations
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: production-database-migrations
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Validate migration configuration
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: test -n "$DIRECT_URL" || { echo "Missing production secret: DIRECT_URL"; exit 1; }
+
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install migration dependencies
+        run: npm ci
+
+      - name: Apply database migrations
+        run: npm run db:migrate
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
+      - name: Check migration status
+        run: npm run db:status
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}

@@ -2,81 +2,103 @@
 
 ## Topología
 
-El portafolio público utilizará `https://davidaranda.dev`. Los demás proyectos podrán usar subdominios como `proyecto.davidaranda.dev`, evitando acoplar sus rutas, assets y APIs a un único despliegue.
+El portafolio público utiliza `https://davidaranda.dev`. Los demás proyectos pueden usar subdominios como `proyecto.davidaranda.dev` sin compartir rutas, assets ni APIs con este despliegue.
 
 ```text
 Internet
-  -> Cloudflare DNS y proxy
-  -> Render Web Service
-  -> ghcr.io/mazon64/portafolio:latest
+  -> Cloudflare DNS
+  -> Vercel (Next.js y Vercel Functions)
   -> Supabase PostgreSQL
 ```
 
+Vercel es el destino principal del frontend y despliega directamente desde GitHub. Docker y GHCR se mantienen como una ruta independiente para VPS, NAS u otro proveedor de contenedores.
+
 El formulario de contacto permanece deshabilitado mientras no se defina si los mensajes se enviarán por correo o se almacenarán en la aplicación. No se deben configurar las variables de Resend hasta tomar esa decisión.
 
-## 1. Imagen En GHCR
+## 1. Proyecto En Vercel
 
-Cada push a `main` verifica la aplicación y publica dos etiquetas:
+1. Importa el repositorio `Mazon64/portafolio` desde el panel de Vercel.
+2. Conserva `main` como Production Branch y el directorio raíz predeterminado.
+3. Usa el preset de Next.js y deja los comandos de instalación y build en sus valores automáticos.
+4. Activa **Automatically expose System Environment Variables**. La ruta de readiness usa `VERCEL_GIT_COMMIT_SHA` para identificar la versión desplegada.
+5. Confirma que Production usa Node.js 24. `package.json` también fija `24.x`.
+
+`vercel.json` mantiene las funciones en `sfo1`, cerca de la base de datos de Supabase en Oregon. `next.config.ts` conserva `output: "standalone"` para Docker; Vercel procesa el proyecto con su integración nativa de Next.js.
+
+## 2. Variables De Vercel
+
+Configura estas variables en **Settings > Environment Variables**:
+
+| Variable | Entornos | Valor |
+| --- | --- | --- |
+| `SITE_URL` | Production y Preview | `https://davidaranda.dev` |
+| `DATABASE_URL` | Production y Preview | Transaction Pooler de Supabase, puerto `6543` |
+
+No configures `DIRECT_URL` en Vercel. `postinstall` genera Prisma con una URL ficticia que no establece ninguna conexión. Las migraciones se ejecutan exclusivamente desde GitHub Actions con el pooler de sesión.
+
+Mientras el portafolio sea de solo lectura, Preview puede consultar la misma base mediante `DATABASE_URL`. Antes de habilitar CMS, escrituras o seeds desde previews, se debe crear una base o un rol aislado para ese entorno.
+
+No configures todavía `RESEND_API_KEY`, `CONTACT_FROM_EMAIL` ni `CONTACT_TO_EMAIL`.
+
+## 3. Migraciones
+
+En GitHub crea un environment llamado `production` y define dentro de el:
+
+| Nombre | Tipo | Valor |
+| --- | --- | --- |
+| `DIRECT_URL` | Secret | Session Pooler de Supabase, puerto `5432` |
+
+El workflow manual **Database Migrations** ejecuta `prisma migrate deploy` y comprueba el estado final. Si el environment tiene revisores requeridos, GitHub solicitará aprobación antes de acceder al secreto.
+
+Vercel nunca aplica migraciones durante el build. Para un cambio de esquema:
+
+1. Crea y verifica una migración compatible con la versión publicada.
+2. Ejecuta **Database Migrations** desde la rama o commit que contiene esa migración.
+3. Fusiona el código que empieza a depender del nuevo esquema.
+4. Realiza eliminaciones incompatibles en un cambio posterior, después de retirar todos sus usos.
+
+## 4. Calidad E Imagen Docker
+
+El workflow **Quality and Container** ejecuta pruebas, lint y build en pull requests y pushes a `main`. Después de verificar un push a `main`, publica:
 
 - `ghcr.io/mazon64/portafolio:latest`
 - `ghcr.io/mazon64/portafolio:sha-<commit>`
 
-El primer push crea automáticamente el paquete en GitHub Packages. Para que Render lo consuma sin credenciales, abre el paquete `portafolio`, entra a **Package settings**, selecciona **Change visibility** y cámbialo a público. Si se mantiene privado, Render necesitará una credencial de registro con permiso `read:packages`.
+También se puede ejecutar manualmente para volver a publicar la imagen de un commit. Vercel no consume esta imagen.
 
-## 2. Web Service En Render
+Para probar la ruta portable localmente, crea `.env.docker` desde `.env.docker.example` y ejecuta:
 
-El Blueprint `render.yaml` versiona la configuración del servicio. Después de hacer pública la imagen de GHCR, abre:
+```bash
+docker compose --env-file .env.docker up --build
+```
 
-[Crear servicio desde el Blueprint de Render](https://render.com/deploy?repo=https://github.com/Mazon64/portafolio)
+La imagen standalone conserva `/api/health/live` como health check y recibe `DATABASE_URL` solamente durante su ejecución.
 
-Render solicitará únicamente el valor secreto de `DATABASE_URL`. El Blueprint configura la imagen, el plan gratuito, la región de Oregon, el health check, el dominio y las variables públicas.
+## 5. Dominio Y Cloudflare
 
-Si prefieres crear el servicio manualmente:
+Realiza el corte solo después de verificar el deployment temporal `*.vercel.app`:
 
-1. Crea un **New Web Service** desde una imagen existente.
-2. Usa `ghcr.io/mazon64/portafolio:latest` como imagen.
-3. Selecciona la región de Oregon, cercana a la base de datos actual de Supabase.
-4. Configura `/api/health/live` como health check.
-5. Define las variables de runtime:
+1. En Vercel, abre **Settings > Domains** y agrega `davidaranda.dev`.
+2. Agrega también `www.davidaranda.dev` y configúralo para redirigir al dominio apex si se desea soportar esa variante.
+3. Copia exactamente los registros que Vercel indique para ambos dominios.
+4. En Cloudflare reemplaza el registro que apunta a Render por el destino de Vercel.
+5. Mantén esos registros en modo **DNS only** para evitar un doble proxy delante del CDN de Vercel.
+6. Espera a que Vercel confirme DNS y TLS antes de retirar el servicio anterior.
 
-| Variable | Valor |
-| --- | --- |
-| `SITE_URL` | `https://davidaranda.dev` |
-| `HOSTNAME` | `0.0.0.0` |
-| `DATABASE_URL` | Transaction Pooler de Supabase, puerto `6543` |
+Cloudflare puede continuar administrando la zona y los demás subdominios. No es necesario cambiar sus nameservers a Vercel.
 
-Render proporciona `PORT`; no debe fijarse manualmente. No configures todavía `RESEND_API_KEY`, `CONTACT_FROM_EMAIL` ni `CONTACT_TO_EMAIL`.
+## 6. Verificación Y Retiro De Render
 
-Después del primer despliegue, crea un **Deploy Hook** del servicio.
+Comprueba en el dominio temporal y después en el dominio final:
 
-## 3. Entrega Desde GitHub
+- `/es`
+- `/en`
+- `/api/health/live`, que debe devolver `204`
+- `/api/health/ready`, que debe devolver `status: ready` y el SHA desplegado
+- Canonical, alternates, assets, tema y navegación móvil
 
-En **Settings > Secrets and variables > Actions** configura:
+Conserva Render activo durante el corte para poder restaurar el registro DNS si aparece un problema. Cuando el dominio final funcione de forma estable:
 
-| Nombre | Tipo | Valor |
-| --- | --- | --- |
-| `SITE_URL` | Variable | `https://davidaranda.dev` |
-| `DIRECT_URL` | Secret | Session Pooler de Supabase, puerto `5432` |
-| `RENDER_DEPLOY_HOOK_URL` | Secret | Deploy Hook generado por Render |
-
-El workflow manual **Delivery** publica la imagen, aplica migraciones, solicita el despliegue y espera que `/api/health/ready` reporte el SHA publicado.
-
-## 4. Dominio En Render Y Cloudflare
-
-1. Añade `davidaranda.dev` como custom domain en Render.
-2. Copia el destino DNS indicado por Render.
-3. En Cloudflare crea el registro para el apex `@` usando ese destino. Cloudflare aplica CNAME flattening en el dominio raíz.
-4. Mantén el proxy desactivado durante la validación inicial de Render.
-5. Cuando Render confirme el dominio y TLS, activa el proxy de Cloudflare.
-6. Añade `www.davidaranda.dev` y redirígelo permanentemente a `https://davidaranda.dev` si se desea soportar esa variante.
-
-## 5. Verificación
-
-Comprueba:
-
-- `https://davidaranda.dev/es`
-- `https://davidaranda.dev/en`
-- `https://davidaranda.dev/api/health/live`
-- `https://davidaranda.dev/api/health/ready`
-
-Readiness debe devolver `status: ready` y la versión debe coincidir con el SHA desplegado.
+1. Elimina el Web Service de Render.
+2. Elimina el secreto de GitHub `RENDER_DEPLOY_HOOK_URL` si todavía existe.
+3. Conserva `DIRECT_URL` dentro del environment protegido `production`.

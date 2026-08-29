@@ -196,25 +196,22 @@ docs/
 
 ## Despliegue
 
-Mi portafolio y mis demás proyectos se desplegarán inicialmente en servicios con niveles gratuitos. Cada aplicación estará dockerizada y GitHub Actions verificará el código, construirá una imagen OCI y la publicará en GitHub Container Registry.
+Vercel despliega el frontend directamente desde GitHub: cada rama puede producir un Preview y cada push a `main` produce el deployment de Production. `vercel.json` ubica las funciones en `sfo1`, cerca de Supabase, mientras `package.json` fija Node.js 24 y genera Prisma durante `postinstall` sin conectarse a PostgreSQL.
 
-Render ejecutará la misma imagen construida por GitHub Actions. El workflow `.github/workflows/delivery.yml` ejecuta pruebas, lint y build para los pull requests. Cada push a `main` también publica las etiquetas `latest` y `sha-<commit>` en GHCR. La ejecución manual aplica migraciones y usa un Deploy Hook para solicitar el despliegue. Cloudflare administrará `davidaranda.dev`, el DNS y el proxy del tráfico público.
-
-Render debe definir `DATABASE_URL` en runtime, usar el puerto asignado por la plataforma y exponer `/api/health/live` como health check. El dominio personalizado configurado en Render debe coincidir con `SITE_URL`; Cloudflare puede apuntar a ese origen mediante el registro indicado por Render.
-
-La entrega requiere la siguiente configuración en GitHub:
+Vercel requiere esta configuración:
 
 | Configuración | Tipo | Uso |
 | --- | --- | --- |
 | `SITE_URL` | Variable | URL pública incorporada en los metadatos durante el build. |
-| `RENDER_DEPLOY_HOOK_URL` | Secreto | Deploy Hook del servicio de Render. |
-| `DIRECT_URL` | Secreto | Conexión usada por la entrega manual para aplicar migraciones antes del despliegue. |
+| `DATABASE_URL` | Secreto | Transaction Pooler de Supabase usado por el runtime. |
 
-La guía operativa para crear GHCR, Render y enlazar el dominio se encuentra en [`docs/deployment.md`](docs/deployment.md).
+`DIRECT_URL` no se configura en Vercel. GitHub lo almacena como secreto del environment protegido `production`; el workflow manual **Database Migrations** es el único que aplica migraciones. Los cambios de esquema se despliegan con una estrategia expand-contract para que el código publicado y la base permanezcan compatibles.
 
-Render debe consumir `ghcr.io/<usuario>/<repositorio>:latest`. Un paquete privado de GHCR requiere una credencial del registro con permiso de lectura. `/api/health/live` comprueba el proceso sin acoplarlo a Supabase; `/api/health/ready` comprueba además la conexión, el contenido bilingüe obligatorio y la versión desplegada. Render debe recibir `DATABASE_URL` como secreto de runtime.
+Docker sigue siendo una ruta de despliegue mantenida e independiente. El workflow **Quality and Container** verifica pruebas, lint y build, y publica `latest` y `sha-<commit>` en GHCR después de cada push verificado a `main`. La imagen standalone puede ejecutarse en un VPS, NAS o proveedor de contenedores con `.env.docker`.
 
-El nivel gratuito de Render puede suspender el servicio por inactividad y provocar arranques en frío. Una necesidad futura de disponibilidad continua o latencia estricta para los webhooks requerirá una instancia sin suspensión o un servicio separado para recibir eventos.
+`/api/health/live` comprueba el proceso sin acoplarlo a Supabase. `/api/health/ready` comprueba además la conexión, el contenido bilingüe obligatorio y la versión desplegada, usando `VERCEL_GIT_COMMIT_SHA` en Vercel o `APP_VERSION` en Docker.
+
+Cloudflare conserva la zona DNS, pero el dominio del portafolio apunta directamente a Vercel en modo DNS only. La guía operativa de importación, variables, migraciones, GHCR y corte de dominio se encuentra en [`docs/deployment.md`](docs/deployment.md).
 
 El webhook definido en este ecosistema permitirá que las actualizaciones de mis otros repositorios alimenten la telemetría y el contexto del portafolio.
 

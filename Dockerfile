@@ -3,15 +3,17 @@
 FROM node:24-alpine AS dependencies
 WORKDIR /app
 COPY package.json package-lock.json ./
+COPY prisma.config.ts ./
+COPY prisma/schema.prisma ./prisma/schema.prisma
 RUN npm ci
 
 FROM node:24-alpine AS builder
 WORKDIR /app
 ARG SITE_URL
 COPY --from=dependencies /app/node_modules ./node_modules
+COPY --from=dependencies /app/src/generated/prisma ./src/generated/prisma
 COPY . .
-RUN DIRECT_URL="postgresql://prisma:prisma@127.0.0.1:5432/postgres" npm run db:generate \
-  && test -n "$SITE_URL" \
+RUN test -n "$SITE_URL" \
   && SITE_URL="$SITE_URL" npm run build
 
 FROM node:24-alpine AS runner

@@ -79,7 +79,13 @@ export async function GET() {
     }
 
     return Response.json(
-      { status: "ready", version: process.env.APP_VERSION ?? "unknown" },
+      {
+        status: "ready",
+        version:
+          process.env.APP_VERSION ??
+          process.env.VERCEL_GIT_COMMIT_SHA ??
+          "unknown",
+      },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
