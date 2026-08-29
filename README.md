@@ -125,6 +125,8 @@ Los contratos se encuentran en `.env.example` y `.env.docker.example`.
 | `MONGODB_URI` | Conexión a MongoDB Atlas. |
 | `CRON_SECRET` | Autorización de tareas programadas. |
 
+El formulario se muestra deshabilitado mientras `RESEND_API_KEY`, `CONTACT_FROM_EMAIL` y `CONTACT_TO_EMAIL` no estén configuradas. El adaptador de correo queda disponible, pero su activación se pospone hasta decidir si los mensajes se entregarán por correo o se persistirán en la aplicación.
+
 `.env` contiene la configuración del desarrollo nativo. `.env.docker` contiene la configuración independiente del contenedor y no se incluye en la imagen ni en Git. `SITE_URL` se proporciona durante el build para los metadatos y también queda disponible en runtime. `HOSTNAME`, `PORT` y `DATABASE_URL` se inyectan al ejecutar el contenedor, mientras que `HOST_PORT` solo lo consume Docker Compose. El build genera el cliente Prisma con una URL ficticia no operativa y no se conecta a PostgreSQL. `NODE_ENV=production` es una invariante de la imagen y no una variable configurable del entorno.
 
 Las variables privadas permanecen en el servidor. El prefijo `NEXT_PUBLIC_` no se utiliza para secretos, ningún secreto se pasa como argumento de build y Git no contiene valores reales.

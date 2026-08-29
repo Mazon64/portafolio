@@ -11,11 +11,18 @@ type ContactFormCopy = {
   message: string;
   send: string;
   sending: string;
+  pending: string;
   success: string;
   error: string;
 };
 
-export function ContactForm({ copy }: { copy: ContactFormCopy }) {
+export function ContactForm({
+  copy,
+  enabled,
+}: {
+  copy: ContactFormCopy;
+  enabled: boolean;
+}) {
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">(
     "idle",
   );
@@ -52,65 +59,69 @@ export function ContactForm({ copy }: { copy: ContactFormCopy }) {
   return (
     <form
       onSubmit={submitMessage}
-      className="mx-auto mt-12 w-full max-w-3xl text-left"
+      className="mx-auto mt-10 w-full max-w-3xl text-left"
     >
-      <div className="grid gap-5 sm:grid-cols-2">
-        <label className="text-sm font-medium text-background/80">
-          {copy.name}
-          <input
+      <fieldset disabled={!enabled || status === "sending"}>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <label className="text-sm font-medium text-background/80">
+            {copy.name}
+            <input
+              required
+              name="name"
+              type="text"
+              autoComplete="name"
+              minLength={2}
+              maxLength={100}
+              className={fieldClassName}
+            />
+          </label>
+          <label className="text-sm font-medium text-background/80">
+            {copy.email}
+            <input
+              required
+              name="email"
+              type="email"
+              autoComplete="email"
+              maxLength={254}
+              className={fieldClassName}
+            />
+          </label>
+        </div>
+
+        <label className="mt-5 block text-sm font-medium text-background/80">
+          {copy.message}
+          <textarea
             required
-            name="name"
-            type="text"
-            autoComplete="name"
-            minLength={2}
-            maxLength={100}
-            className={fieldClassName}
+            name="message"
+            rows={6}
+            minLength={10}
+            maxLength={5000}
+            className={`${fieldClassName} resize-y`}
           />
         </label>
-        <label className="text-sm font-medium text-background/80">
-          {copy.email}
-          <input
-            required
-            name="email"
-            type="email"
-            autoComplete="email"
-            maxLength={254}
-            className={fieldClassName}
-          />
+
+        <label className="absolute -left-[9999px]" aria-hidden="true">
+          Website
+          <input name="website" type="text" tabIndex={-1} autoComplete="off" />
         </label>
-      </div>
 
-      <label className="mt-5 block text-sm font-medium text-background/80">
-        {copy.message}
-        <textarea
-          required
-          name="message"
-          rows={6}
-          minLength={10}
-          maxLength={5000}
-          className={`${fieldClassName} resize-y`}
-        />
-      </label>
-
-      <label className="absolute -left-[9999px]" aria-hidden="true">
-        Website
-        <input name="website" type="text" tabIndex={-1} autoComplete="off" />
-      </label>
-
-      <div className="mt-6 flex flex-col items-center gap-4">
-        <Button
-          type="submit"
-          size="lg"
-          disabled={status === "sending"}
-          className="min-w-40 bg-background text-foreground hover:bg-background/85"
-        >
-          <SendIcon aria-hidden="true" />
-          {status === "sending" ? copy.sending : copy.send}
-        </Button>
+        <div className="mt-6 flex flex-col items-center gap-4">
+          <Button
+            type="submit"
+            size="lg"
+            className="min-w-40 bg-background text-foreground hover:bg-background/85"
+          >
+            <SendIcon aria-hidden="true" />
+            {status === "sending" ? copy.sending : copy.send}
+          </Button>
+        </div>
+      </fieldset>
+      <div className="mt-4 flex flex-col items-center">
         <p
           aria-live="polite"
           className="min-h-5 text-center text-sm text-background/70"
         >
+          {!enabled && copy.pending}
           {status === "success" && copy.success}
           {status === "error" && copy.error}
         </p>

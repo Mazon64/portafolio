@@ -47,9 +47,8 @@ export type Dictionary = {
   contact: {
     number: string;
     title: string;
-    linkedin: string;
-    github: string;
     email: string;
+    socialTitle: string;
     newTab: string;
     form: {
       name: string;
@@ -57,6 +56,7 @@ export type Dictionary = {
       message: string;
       send: string;
       sending: string;
+      pending: string;
       success: string;
       error: string;
     };

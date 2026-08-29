@@ -53,9 +53,8 @@
   "contact": {
     "number": "06",
     "title": "Contáctame",
-    "linkedin": "LinkedIn",
-    "github": "GitHub",
     "email": "Correo",
+    "socialTitle": "Dónde encontrarme",
     "newTab": "Abre en una pestaña nueva",
     "form": {
       "name": "Nombre",
@@ -63,6 +62,7 @@
       "message": "Mensaje",
       "send": "Enviar mensaje",
       "sending": "Enviando...",
+      "pending": "El envío directo de mensajes estará disponible próximamente.",
       "success": "Tu mensaje fue enviado correctamente.",
       "error": "No se pudo enviar el mensaje. Inténtalo nuevamente más tarde."
     }
