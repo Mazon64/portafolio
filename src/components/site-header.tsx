@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { MenuIcon } from "lucide-react";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
@@ -40,15 +40,6 @@ export function SiteHeader({
 }: SiteHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeHref, setActiveHref] = useState<string | null>(null);
-  const [drawerOffset, setDrawerOffset] = useState(0);
-  const [drawerDragging, setDrawerDragging] = useState(false);
-  const drawerCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const edgeSwipeRef = useRef<{ startX: number; startY: number } | null>(null);
-  const drawerSwipeRef = useRef<{
-    startX: number;
-    startY: number;
-    offset: number;
-  } | null>(null);
   const preferenceLabels = {
     language: labels.language,
     spanish: labels.spanish,
@@ -90,15 +81,6 @@ export function SiteHeader({
     };
   }, [navigation]);
 
-  useEffect(
-    () => () => {
-      if (drawerCloseTimerRef.current) {
-        clearTimeout(drawerCloseTimerRef.current);
-      }
-    },
-    [],
-  );
-
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur-xl max-xl:pointer-events-none max-xl:fixed max-xl:inset-x-0 max-xl:border-0 max-xl:bg-transparent max-xl:backdrop-blur-none">
       <div className="mx-auto flex h-16 w-full max-w-[96rem] items-center gap-6 px-5 sm:px-8 lg:px-12 max-xl:h-0 max-xl:p-0">
@@ -134,74 +116,22 @@ export function SiteHeader({
         </div>
 
         <div className="pointer-events-auto fixed top-3 right-3 z-10 xl:hidden">
-          <Sheet
-            open={menuOpen}
-            onOpenChange={(open) => {
-              setMenuOpen(open);
-              if (!open) {
-                setDrawerOffset(0);
-                setDrawerDragging(false);
-              }
-            }}
-          >
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger
               render={
-                <Button variant="ghost" size="icon" aria-label={labels.menu} />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label={labels.menu}
+                  className="bg-background/90 shadow-sm backdrop-blur"
+                />
               }
             >
               <MenuIcon />
             </SheetTrigger>
             <SheetContent
-              className={`w-[min(88vw,24rem)] touch-pan-y overflow-hidden ${drawerDragging ? "transition-none" : ""}`}
+              className="w-[min(88vw,24rem)] overflow-hidden"
               closeLabel={labels.close}
-              style={{
-                transform:
-                  drawerOffset > 0
-                    ? `translateX(${drawerOffset}px)`
-                    : undefined,
-              }}
-              onPointerDown={(event) => {
-                if (event.pointerType !== "touch") return;
-                drawerSwipeRef.current = {
-                  startX: event.clientX,
-                  startY: event.clientY,
-                  offset: 0,
-                };
-              }}
-              onPointerMove={(event) => {
-                const swipe = drawerSwipeRef.current;
-                if (!swipe) return;
-
-                const deltaX = Math.max(0, event.clientX - swipe.startX);
-                const deltaY = Math.abs(event.clientY - swipe.startY);
-                if (deltaY > deltaX) return;
-
-                swipe.offset = deltaX;
-                setDrawerDragging(true);
-                setDrawerOffset(deltaX);
-              }}
-              onPointerUp={(event) => {
-                const offset = drawerSwipeRef.current?.offset ?? 0;
-                drawerSwipeRef.current = null;
-                setDrawerDragging(false);
-                if (offset >= 80) {
-                  setDrawerOffset(event.currentTarget.getBoundingClientRect().width);
-                  if (drawerCloseTimerRef.current) {
-                    clearTimeout(drawerCloseTimerRef.current);
-                  }
-                  drawerCloseTimerRef.current = setTimeout(() => {
-                    setMenuOpen(false);
-                    setDrawerOffset(0);
-                  }, 200);
-                } else {
-                  setDrawerOffset(0);
-                }
-              }}
-              onPointerCancel={() => {
-                drawerSwipeRef.current = null;
-                setDrawerDragging(false);
-                setDrawerOffset(0);
-              }}
             >
               <SheetHeader className="shrink-0 border-b border-border px-6 py-5">
                 <SheetTitle>{labels.menu}</SheetTitle>
@@ -235,35 +165,6 @@ export function SiteHeader({
           </Sheet>
         </div>
       </div>
-      <div
-        aria-hidden="true"
-        className="pointer-events-auto fixed inset-y-0 right-0 w-3 touch-pan-y xl:hidden"
-        onPointerDown={(event) => {
-          if (event.pointerType !== "touch" || menuOpen) return;
-          event.currentTarget.setPointerCapture(event.pointerId);
-          edgeSwipeRef.current = {
-            startX: event.clientX,
-            startY: event.clientY,
-          };
-        }}
-        onPointerMove={(event) => {
-          const swipe = edgeSwipeRef.current;
-          if (!swipe) return;
-
-          const deltaX = swipe.startX - event.clientX;
-          const deltaY = Math.abs(event.clientY - swipe.startY);
-          if (deltaX >= 64 && deltaX > deltaY) {
-            edgeSwipeRef.current = null;
-            setMenuOpen(true);
-          }
-        }}
-        onPointerUp={() => {
-          edgeSwipeRef.current = null;
-        }}
-        onPointerCancel={() => {
-          edgeSwipeRef.current = null;
-        }}
-      />
     </header>
   );
 }
