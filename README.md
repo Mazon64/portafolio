@@ -22,6 +22,7 @@ Actualmente incluye:
 - Cards de habilidades con logos permitidos y badges.
 - Estado vacío y estructura expandible para proyectos futuros.
 - Formulario de contacto protegido por Cloudflare Turnstile y entregado mediante Resend.
+- Analítica web sin cookies mediante Vercel Web Analytics.
 
 El CMS, el CV, la telemetría y el chatbot forman parte de las siguientes etapas. La base inicial no publica proyectos; se incorporarán cuando existan propuestas propias que puedan mostrarse.
 
@@ -40,6 +41,7 @@ Tecnologías utilizadas:
 - Vitest para pruebas unitarias.
 - Prisma 7.10 con el adaptador PostgreSQL.
 - React Email y Resend para notificaciones de contacto.
+- Vercel Web Analytics para métricas de tráfico y navegación.
 
 ## Requisitos
 
@@ -203,7 +205,9 @@ docs/
 
 ## Despliegue
 
-Vercel despliega el frontend directamente desde GitHub: cada rama puede producir un Preview y cada push a `main` produce el deployment de Production. `vercel.json` ubica las funciones en `sfo1`, cerca de Supabase, mientras `package.json` fija Node.js 24 y genera Prisma durante `postinstall` sin conectarse a PostgreSQL.
+Vercel despliega el frontend directamente desde GitHub. `develop` es la rama de integración y siempre produce un Preview para pruebas; `main` está protegida, representa exclusivamente el código publicado y cada merge en ella produce el deployment de Production. `vercel.json` ubica las funciones en `sfo1`, cerca de Supabase, mientras `package.json` fija Node.js 24 y genera Prisma durante `postinstall` sin conectarse a PostgreSQL.
+
+El trabajo cotidiano parte de `develop`, opcionalmente en ramas `feature/*` o `fix/*`, y vuelve a `develop` mediante pull request. Una versión se promueve con un pull request de `develop` a `main` solo después de verificar el Preview, CI y los cambios de base de datos aplicables. No se realizan pushes directos a `main`.
 
 Vercel requiere esta configuración:
 
@@ -212,9 +216,11 @@ Vercel requiere esta configuración:
 | `SITE_URL` | Variable | URL pública incorporada en los metadatos durante el build. |
 | `DATABASE_URL` | Secreto | Transaction Pooler de Supabase usado por el runtime. |
 
+Vercel Web Analytics está habilitado en el proyecto y se instrumenta desde el root layout con `@vercel/analytics`. No requiere claves, cookies ni variables de entorno adicionales.
+
 `DIRECT_URL` no se configura en Vercel. GitHub lo almacena como secreto del environment protegido `production`; el workflow manual **Database Migrations** es el único que aplica migraciones. Los cambios de esquema se despliegan con una estrategia expand-contract para que el código publicado y la base permanezcan compatibles.
 
-Docker sigue siendo una ruta de despliegue mantenida e independiente. El workflow **Quality and Container** verifica pruebas, lint y build, y publica `latest` y `sha-<commit>` en GHCR después de cada push verificado a `main`. Next.js genera la imagen standalone fuera de Vercel; dentro de Vercel utiliza la salida de su adaptador nativo. La imagen Docker puede ejecutarse en un VPS, NAS o proveedor de contenedores con `.env.docker`.
+Docker sigue siendo una ruta de despliegue mantenida e independiente. El workflow **Quality and Container** verifica pruebas, lint y build en `develop`, `main` y sus pull requests, pero publica `latest` y `sha-<commit>` en GHCR únicamente después de cada push verificado a `main`. Next.js genera la imagen standalone fuera de Vercel; dentro de Vercel utiliza la salida de su adaptador nativo. La imagen Docker puede ejecutarse en un VPS, NAS o proveedor de contenedores con `.env.docker`.
 
 `/api/health/live` comprueba el proceso sin acoplarlo a Supabase. `/api/health/ready` comprueba además la conexión, el contenido bilingüe obligatorio y la versión desplegada, usando `VERCEL_GIT_COMMIT_SHA` en Vercel o `APP_VERSION` en Docker.
 

@@ -15,13 +15,16 @@ Vercel es el destino principal del frontend y despliega directamente desde GitHu
 
 El formulario de contacto entrega una notificación a Gmail mediante Resend, está protegido por Cloudflare Turnstile y no persiste mensajes en PostgreSQL.
 
+Vercel Web Analytics recopila páginas vistas y navegación mediante la integración oficial para Next.js. La instrumentación no requiere secretos ni variables adicionales.
+
 ## 1. Proyecto En Vercel
 
 1. Importa el repositorio `Mazon64/portafolio` desde el panel de Vercel.
-2. Conserva `main` como Production Branch y el directorio raíz predeterminado.
+2. Conserva `main` como Production Branch y el directorio raíz predeterminado. `develop` utiliza el entorno Preview integrado de Vercel.
 3. Usa el preset de Next.js y deja los comandos de instalación y build en sus valores automáticos.
 4. Activa **Automatically expose System Environment Variables**. La ruta de readiness usa `VERCEL_GIT_COMMIT_SHA` para identificar la versión desplegada.
 5. Confirma que Production usa Node.js 24. `package.json` también fija `24.x`.
+6. En la sección **Analytics** del proyecto, confirma que Web Analytics está habilitado.
 
 `vercel.json` mantiene las funciones en `sfo1`, cerca de la base de datos de Supabase en Oregon. `next.config.ts` genera `output: "standalone"` fuera de Vercel para Docker y lo desactiva en Vercel, donde el adaptador nativo genera su propia salida.
 
@@ -44,6 +47,8 @@ No configures `DIRECT_URL` en Vercel. `postinstall` genera Prisma con una URL fi
 Mientras el portafolio sea de solo lectura, Preview puede consultar la misma base mediante `DATABASE_URL`. Antes de habilitar CMS, escrituras o seeds desde previews, se debe crear una base o un rol aislado para ese entorno.
 
 Las integraciones de contacto se limitan a Production para que los previews no envíen mensajes ni requieran registrar hostnames efímeros en Turnstile. Cuando falte cualquier variable, `/api/contact` no expone la site key y el formulario permanece deshabilitado.
+
+`SITE_URL` conserva el dominio público también en Preview para que canonical y alternates nunca anuncien una URL temporal. Vercel evita por defecto que sus Preview Deployments sean indexados. Si el formulario debe probarse fuera de local, se deben crear credenciales separadas de Resend y Turnstile para Preview; nunca se copian los secretos de Production.
 
 ### Correo Y Protección Del Formulario
 
@@ -81,9 +86,28 @@ Vercel nunca aplica migraciones durante el build. Para un cambio de esquema:
 3. Fusiona el código que empieza a depender del nuevo esquema.
 4. Realiza eliminaciones incompatibles en un cambio posterior, después de retirar todos sus usos.
 
-## 4. Calidad E Imagen Docker
+## 4. Flujo De Ramas Y Promoción
 
-El workflow **Quality and Container** ejecuta pruebas, lint y build en pull requests y pushes a `main`. Después de verificar un push a `main`, publica:
+- `develop` es la rama de integración y su URL de Vercel siempre apunta al último Preview de esa rama.
+- Las ramas `feature/*` y `fix/*` parten de `develop` y vuelven a ella mediante pull request.
+- `main` está protegida contra pushes directos y solo recibe promociones revisadas desde `develop`.
+- El check `verify` debe aprobar pruebas, lint y build antes de fusionar en `main`.
+- Antes de promover, se revisan `/es`, `/en`, navegación responsive y los endpoints de salud en el Preview.
+- Los cambios de esquema siguen la estrategia expand-contract y se aplican con el workflow manual antes de publicar código que dependa de ellos.
+
+Flujo habitual:
+
+```bash
+git switch develop
+git pull --ff-only
+git switch -c feature/nombre-breve
+# implementar, verificar y abrir PR hacia develop
+# cuando develop esté listo, abrir PR de develop hacia main
+```
+
+## 5. Calidad E Imagen Docker
+
+El workflow **Quality and Container** ejecuta pruebas, lint y build en pull requests y pushes a `develop` y `main`. Un push verificado a `develop` valida el candidato sin publicar imagen. Únicamente después de un merge verificado en `main` publica:
 
 - `ghcr.io/mazon64/portafolio:latest`
 - `ghcr.io/mazon64/portafolio:sha-<commit>`
@@ -98,7 +122,7 @@ docker compose --env-file .env.docker up --build
 
 La imagen standalone conserva `/api/health/live` como health check y recibe `DATABASE_URL` solamente durante su ejecución.
 
-## 5. Dominio Y Cloudflare
+## 6. Dominio Y Cloudflare
 
 Realiza el corte solo después de verificar el deployment temporal `*.vercel.app`:
 
@@ -111,7 +135,7 @@ Realiza el corte solo después de verificar el deployment temporal `*.vercel.app
 
 Cloudflare puede continuar administrando la zona y los demás subdominios. No es necesario cambiar sus nameservers a Vercel.
 
-## 6. Verificación Y Retiro De Render
+## 7. Verificación Y Retiro De Render
 
 Comprueba en el dominio temporal y después en el dominio final:
 
