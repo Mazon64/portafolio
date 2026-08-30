@@ -134,11 +134,11 @@ async function main() {
         create: {
           slug: "main-profile",
           fullName: "David Yael Aranda Montes",
-          email: "davidyaelam64@gmail.com",
+          email: "contacto@davidaranda.dev",
         },
         update: {
           fullName: "David Yael Aranda Montes",
-          email: "davidyaelam64@gmail.com",
+          email: "contacto@davidaranda.dev",
         },
       });
 

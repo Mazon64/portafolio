@@ -13,7 +13,7 @@ Internet
 
 Vercel es el destino principal del frontend y despliega directamente desde GitHub. Docker y GHCR se mantienen como una ruta independiente para VPS, NAS u otro proveedor de contenedores.
 
-El formulario de contacto permanece deshabilitado mientras no se defina si los mensajes se enviarán por correo o se almacenarán en la aplicación. No se deben configurar las variables de Resend hasta tomar esa decisión.
+El formulario de contacto entrega una notificación a Gmail mediante Resend, está protegido por Cloudflare Turnstile y no persiste mensajes en PostgreSQL.
 
 ## 1. Proyecto En Vercel
 
@@ -33,12 +33,34 @@ Configura estas variables en **Settings > Environment Variables**:
 | --- | --- | --- |
 | `SITE_URL` | Production y Preview | `https://davidaranda.dev` |
 | `DATABASE_URL` | Production y Preview | Transaction Pooler de Supabase, puerto `6543` |
+| `RESEND_API_KEY` | Production | API key de Resend con permiso de envío |
+| `CONTACT_FROM_EMAIL` | Production | `Portafolio <contact@mail.davidaranda.dev>` |
+| `CONTACT_TO_EMAIL` | Production | `contacto@davidaranda.dev` |
+| `TURNSTILE_SITE_KEY` | Production | Site key del widget de Turnstile |
+| `TURNSTILE_SECRET_KEY` | Production | Secret key del widget de Turnstile |
 
 No configures `DIRECT_URL` en Vercel. `postinstall` genera Prisma con una URL ficticia que no establece ninguna conexión. Las migraciones se ejecutan exclusivamente desde GitHub Actions con el pooler de sesión.
 
 Mientras el portafolio sea de solo lectura, Preview puede consultar la misma base mediante `DATABASE_URL`. Antes de habilitar CMS, escrituras o seeds desde previews, se debe crear una base o un rol aislado para ese entorno.
 
-No configures todavía `RESEND_API_KEY`, `CONTACT_FROM_EMAIL` ni `CONTACT_TO_EMAIL`.
+Las integraciones de contacto se limitan a Production para que los previews no envíen mensajes ni requieran registrar hostnames efímeros en Turnstile. Cuando falte cualquier variable, `/api/contact` no expone la site key y el formulario permanece deshabilitado.
+
+### Correo Y Protección Del Formulario
+
+1. En Resend agrega `mail.davidaranda.dev` como dominio de envío y copia exactamente sus registros DNS a Cloudflare.
+2. Espera a que Resend confirme SPF y DKIM antes de utilizar `contact@mail.davidaranda.dev`.
+3. En Cloudflare Turnstile crea un widget Managed limitado a `davidaranda.dev`.
+4. Configura en Vercel las cinco variables de Production indicadas arriba y vuelve a desplegar.
+5. Envía una prueba desde cada idioma y confirma que llega a `contacto@davidaranda.dev` y que **Responder** apunta al correo del visitante.
+
+Para desarrollo local se pueden usar las claves de prueba que Cloudflare documenta como **always passes**:
+
+```env
+TURNSTILE_SITE_KEY=1x00000000000000000000AA
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+```
+
+La site key se entrega al cliente desde `GET /api/contact` en runtime para conservar la portabilidad de la imagen Docker. La secret key y las credenciales de Resend permanecen exclusivamente en el Route Handler. El endpoint verifica además la acción `contact`, el hostname, el origen, el tamaño, el honeypot y el límite básico por IP antes de solicitar la entrega.
 
 ## 3. Migraciones
 

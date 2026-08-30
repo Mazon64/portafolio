@@ -1,5 +1,9 @@
 const MAX_BODY_BYTES = 16_000;
 const RATE_LIMIT_MS = 60_000;
+const TURNSTILE_ACTION = "contact";
+const TURNSTILE_TOKEN_MAX_LENGTH = 2048;
+const TURNSTILE_VERIFY_URL =
+  "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 const globalForContact = globalThis as unknown as {
   contactSubmissions?: Map<string, number>;
@@ -11,6 +15,15 @@ globalForContact.contactSubmissions = contactSubmissions;
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+export function GET() {
+  const configuration = getContactConfiguration();
+
+  return Response.json(
+    { turnstileSiteKey: configuration?.turnstileSiteKey ?? null },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+}
 
 export async function POST(request: Request) {
   const contentLength = Number(request.headers.get("content-length") ?? 0);
@@ -44,10 +57,8 @@ export async function POST(request: Request) {
     return Response.json({ status: "accepted" }, { status: 202 });
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.CONTACT_FROM_EMAIL;
-  const to = process.env.CONTACT_TO_EMAIL;
-  if (!apiKey || !from || !to) {
+  const configuration = getContactConfiguration();
+  if (!configuration) {
     return Response.json({ status: "unavailable" }, { status: 503 });
   }
 
@@ -62,6 +73,20 @@ export async function POST(request: Request) {
     }
   }
 
+  if (!isTurnstileToken(body.turnstileToken)) {
+    return Response.json({ status: "verification_failed" }, { status: 400 });
+  }
+
+  const turnstileVerified = await verifyTurnstile(
+    body.turnstileToken,
+    configuration.turnstileSecretKey,
+    identifier,
+    new URL(request.url).hostname,
+  );
+  if (!turnstileVerified) {
+    return Response.json({ status: "verification_failed" }, { status: 400 });
+  }
+
   const name = body.name.trim();
   const email = body.email.trim();
   const message = body.message.trim();
@@ -70,12 +95,12 @@ export async function POST(request: Request) {
     response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${configuration.apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from,
-        to: [to],
+        from: configuration.from,
+        to: [configuration.to],
         reply_to: email,
         subject: `Portfolio message from ${name.replace(/[\r\n]/g, " ")}`,
         text: `Name: ${name}\nEmail: ${email}\n\n${message}`,
@@ -98,7 +123,13 @@ export async function POST(request: Request) {
 
 function isContactBody(
   value: unknown,
-): value is { name: string; email: string; message: string; website: string } {
+): value is {
+  name: string;
+  email: string;
+  message: string;
+  website: string;
+  turnstileToken?: unknown;
+} {
   if (!value || typeof value !== "object") return false;
 
   const body = value as Record<string, unknown>;
@@ -116,4 +147,62 @@ function isContactBody(
     body.message.trim().length <= 5000 &&
     typeof body.website === "string"
   );
+}
+
+function getContactConfiguration() {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const from = process.env.CONTACT_FROM_EMAIL?.trim();
+  const to = process.env.CONTACT_TO_EMAIL?.trim();
+  const turnstileSiteKey = process.env.TURNSTILE_SITE_KEY?.trim();
+  const turnstileSecretKey = process.env.TURNSTILE_SECRET_KEY?.trim();
+
+  if (!apiKey || !from || !to || !turnstileSiteKey || !turnstileSecretKey) {
+    return null;
+  }
+
+  return { apiKey, from, to, turnstileSiteKey, turnstileSecretKey };
+}
+
+function isTurnstileToken(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= TURNSTILE_TOKEN_MAX_LENGTH
+  );
+}
+
+async function verifyTurnstile(
+  token: string,
+  secretKey: string,
+  remoteIp: string | undefined,
+  expectedHostname: string,
+) {
+  const payload = new URLSearchParams({ secret: secretKey, response: token });
+  if (remoteIp) payload.set("remoteip", remoteIp);
+
+  try {
+    const response = await fetch(TURNSTILE_VERIFY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: payload,
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!response.ok) {
+      console.error("Turnstile verification request failed.", response.status);
+      return false;
+    }
+
+    const result: unknown = await response.json();
+    if (!result || typeof result !== "object") return false;
+
+    const verification = result as Record<string, unknown>;
+    return (
+      verification.success === true &&
+      verification.action === TURNSTILE_ACTION &&
+      verification.hostname === expectedHostname
+    );
+  } catch (error) {
+    console.error("Turnstile verification request failed.", error);
+    return false;
+  }
 }

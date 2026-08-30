@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { SendIcon } from "lucide-react";
+import Script from "next/script";
 
 import { Button } from "@/components/ui/button";
 
@@ -16,16 +17,105 @@ type ContactFormCopy = {
   error: string;
 };
 
-export function ContactForm({
-  copy,
-  enabled,
-}: {
-  copy: ContactFormCopy;
-  enabled: boolean;
-}) {
+type TurnstileApi = {
+  render: (
+    container: HTMLElement,
+    options: {
+      sitekey: string;
+      action: string;
+      appearance: "interaction-only";
+      size: "flexible";
+      theme: "dark";
+      callback: (token: string) => void;
+      "error-callback": () => void;
+      "expired-callback": () => void;
+      "timeout-callback": () => void;
+    },
+  ) => string;
+  remove: (widgetId: string) => void;
+  reset: (widgetId: string) => void;
+};
+
+declare global {
+  interface Window {
+    turnstile?: TurnstileApi;
+  }
+}
+
+export function ContactForm({ copy }: { copy: ContactFormCopy }) {
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">(
     "idle",
   );
+  const [turnstileSiteKey, setTurnstileSiteKey] = useState<
+    string | null | undefined
+  >();
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileContainerRef = useRef<HTMLDivElement>(null);
+  const turnstileWidgetIdRef = useRef<string>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    void fetch("/api/contact", { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Contact configuration failed.");
+        return (await response.json()) as { turnstileSiteKey?: unknown };
+      })
+      .then(({ turnstileSiteKey: siteKey }) => {
+        setTurnstileSiteKey(
+          typeof siteKey === "string" && siteKey ? siteKey : null,
+        );
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.name === "AbortError") return;
+        setTurnstileSiteKey(null);
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  useEffect(
+    () => () => {
+      const widgetId = turnstileWidgetIdRef.current;
+      if (widgetId) {
+        window.turnstile?.remove(widgetId);
+        turnstileWidgetIdRef.current = null;
+      }
+    },
+    [],
+  );
+
+  function renderTurnstile() {
+    if (
+      !turnstileSiteKey ||
+      !turnstileContainerRef.current ||
+      !window.turnstile ||
+      turnstileWidgetIdRef.current
+    ) {
+      return;
+    }
+
+    turnstileWidgetIdRef.current = window.turnstile.render(
+      turnstileContainerRef.current,
+      {
+        sitekey: turnstileSiteKey,
+        action: "contact",
+        appearance: "interaction-only",
+        size: "flexible",
+        theme: "dark",
+        callback: setTurnstileToken,
+        "error-callback": () => setTurnstileToken(""),
+        "expired-callback": () => setTurnstileToken(""),
+        "timeout-callback": () => setTurnstileToken(""),
+      },
+    );
+  }
+
+  function resetTurnstile() {
+    setTurnstileToken("");
+    const widgetId = turnstileWidgetIdRef.current;
+    if (widgetId) window.turnstile?.reset(widgetId);
+  }
 
   async function submitMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -42,6 +132,7 @@ export function ContactForm({
           email: data.get("email"),
           message: data.get("message"),
           website: data.get("website"),
+          turnstileToken,
         }),
       });
 
@@ -50,6 +141,8 @@ export function ContactForm({
       setStatus("success");
     } catch {
       setStatus("error");
+    } finally {
+      resetTurnstile();
     }
   }
 
@@ -61,7 +154,7 @@ export function ContactForm({
       onSubmit={submitMessage}
       className="mx-auto mt-10 w-full max-w-3xl text-left"
     >
-      <fieldset disabled={!enabled || status === "sending"}>
+      <fieldset disabled={!turnstileSiteKey || status === "sending"}>
         <div className="grid gap-5 sm:grid-cols-2">
           <label className="text-sm font-medium text-background/80">
             {copy.name}
@@ -105,10 +198,23 @@ export function ContactForm({
           <input name="website" type="text" tabIndex={-1} autoComplete="off" />
         </label>
 
+        {turnstileSiteKey && (
+          <div className="mx-auto mt-6 w-full max-w-80">
+            <Script
+              id="cloudflare-turnstile"
+              src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+              strategy="afterInteractive"
+              onReady={renderTurnstile}
+            />
+            <div ref={turnstileContainerRef} />
+          </div>
+        )}
+
         <div className="mt-6 flex flex-col items-center gap-4">
           <Button
             type="submit"
             size="lg"
+            disabled={!turnstileToken}
             className="min-w-40 bg-background text-foreground hover:bg-background/85"
           >
             <SendIcon aria-hidden="true" />
@@ -121,7 +227,7 @@ export function ContactForm({
           aria-live="polite"
           className="min-h-5 text-center text-sm text-background/70"
         >
-          {!enabled && copy.pending}
+          {turnstileSiteKey === null && copy.pending}
           {status === "success" && copy.success}
           {status === "error" && copy.error}
         </p>
