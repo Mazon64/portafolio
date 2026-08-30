@@ -18,7 +18,11 @@ jobs:
       - name: Validate migration configuration
         env:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
-        run: test -n "$DIRECT_URL" || { echo "Missing production secret: DIRECT_URL"; exit 1; }
+        run: |
+          test -n "$DIRECT_URL" || {
+            echo "Missing production secret: DIRECT_URL"
+            exit 1
+          }
 
       - name: Check out repository
         uses: actions/checkout@v7
