@@ -5,6 +5,7 @@ import { SendIcon } from "lucide-react";
 import Script from "next/script";
 
 import { Button } from "@/components/ui/button";
+import type { Locale } from "@/i18n/config";
 
 type ContactFormCopy = {
   name: string;
@@ -42,7 +43,13 @@ declare global {
   }
 }
 
-export function ContactForm({ copy }: { copy: ContactFormCopy }) {
+export function ContactForm({
+  copy,
+  locale,
+}: {
+  copy: ContactFormCopy;
+  locale: Locale;
+}) {
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">(
     "idle",
   );
@@ -133,6 +140,7 @@ export function ContactForm({ copy }: { copy: ContactFormCopy }) {
           message: data.get("message"),
           website: data.get("website"),
           turnstileToken,
+          locale,
         }),
       });
 

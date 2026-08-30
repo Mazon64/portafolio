@@ -23,6 +23,7 @@ const validMessage = {
   message: "I would like to discuss a software project.",
   website: "",
   turnstileToken: "valid-turnstile-token",
+  locale: "en",
 };
 
 function stubContactEnvironment() {
@@ -70,6 +71,14 @@ describe("contact route", () => {
     expect(response.status).toBe(400);
   });
 
+  it("rejects unsupported locales", async () => {
+    const response = await POST(
+      contactRequest({ ...validMessage, locale: "fr" }),
+    );
+
+    expect(response.status).toBe(400);
+  });
+
   it("accepts honeypot submissions without delivering them", async () => {
     const response = await POST(
       contactRequest({ ...validMessage, website: "https://spam.example" }),
@@ -109,7 +118,12 @@ describe("contact route", () => {
     const delivery = vi
       .fn()
       .mockResolvedValueOnce(successfulTurnstileResponse())
-      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "email-id" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
     vi.stubGlobal("fetch", delivery);
 
     const response = await POST(contactRequest(validMessage, "203.0.113.11"));
@@ -123,8 +137,19 @@ describe("contact route", () => {
       "https://api.resend.com/emails",
       expect.objectContaining({
         method: "POST",
-        body: expect.stringContaining('"reply_to":"ada@example.com"'),
       }),
     );
+
+    const resendRequest = delivery.mock.calls[1]?.[1] as RequestInit;
+    const payload = JSON.parse(String(resendRequest.body)) as Record<
+      string,
+      unknown
+    >;
+    expect(payload).toMatchObject({
+      reply_to: "ada@example.com",
+      subject: "New portfolio message: Ada Lovelace",
+      text: expect.stringContaining("Sent from the English version"),
+    });
+    expect(payload.html).toEqual(expect.stringContaining("DAVID ARANDA"));
   });
 });

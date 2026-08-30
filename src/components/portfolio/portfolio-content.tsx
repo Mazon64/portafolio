@@ -92,7 +92,7 @@ export async function PortfolioContent({
         />
       </PortfolioSection>
 
-      <ContactSection profile={profile} copy={dictionary.contact} />
+      <ContactSection profile={profile} copy={dictionary.contact} locale={locale} />
 
       <footer className="border-t border-border">
         <div className="mx-auto flex w-full max-w-[96rem] items-center justify-between px-5 py-8 text-xs text-muted-foreground sm:px-8 lg:px-12">

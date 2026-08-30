@@ -53,6 +53,8 @@ Las integraciones de contacto se limitan a Production para que los previews no e
 4. Configura en Vercel las cinco variables de Production indicadas arriba y vuelve a desplegar.
 5. Envía una prueba desde cada idioma y confirma que llega a `contacto@davidaranda.dev` y que **Responder** apunta al correo del visitante.
 
+La notificación usa React Email con una composición editorial monocromática, wordmark tipográfico y fallback de texto plano. El asunto y las etiquetas siguen el locale de origen (`/es` o `/en`); los valores introducidos por el visitante se escapan durante el render de React.
+
 Para desarrollo local se pueden usar las claves de prueba que Cloudflare documenta como **always passes**:
 
 ```env

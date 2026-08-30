@@ -39,6 +39,7 @@ Tecnologías utilizadas:
 - React Icons para marcas.
 - Vitest para pruebas unitarias.
 - Prisma 7.10 con el adaptador PostgreSQL.
+- React Email y Resend para notificaciones de contacto.
 
 ## Requisitos
 
@@ -128,7 +129,9 @@ Los contratos se encuentran en `.env.example` y `.env.docker.example`.
 | `MONGODB_URI` | Conexión a MongoDB Atlas. |
 | `CRON_SECRET` | Autorización de tareas programadas. |
 
-El formulario se muestra deshabilitado mientras no estén configuradas las tres variables de Resend y las dos de Turnstile. El navegador obtiene en runtime únicamente `TURNSTILE_SITE_KEY` desde `/api/contact`; los demás valores nunca se exponen. Cada envío se valida con Turnstile y después genera una sola notificación dirigida a `contacto@davidaranda.dev`, con el correo del visitante como `reply_to`. Los mensajes no se duplican en PostgreSQL.
+El formulario se muestra deshabilitado mientras no estén configuradas las tres variables de Resend y las dos de Turnstile. El navegador obtiene en runtime únicamente `TURNSTILE_SITE_KEY` desde `/api/contact`; los demás valores nunca se exponen. Cada envío se valida con Turnstile y después genera una sola notificación editorial y localizada dirigida a `contacto@davidaranda.dev`, con el correo del visitante como `replyTo`. Los mensajes no se duplican en PostgreSQL.
+
+En archivos `.env`, las URLs de PostgreSQL y `CONTACT_FROM_EMAIL` se escriben entre comillas dobles; las claves y direcciones simples no las necesitan. En el panel de Vercel los valores nunca incluyen comillas externas, porque la interfaz las conservaría literalmente.
 
 `.env` contiene la configuración del desarrollo nativo. `.env.docker` contiene la configuración independiente del contenedor y no se incluye en la imagen ni en Git. `SITE_URL` se proporciona durante el build para los metadatos y también queda disponible en runtime. `HOSTNAME`, `PORT` y `DATABASE_URL` se inyectan al ejecutar el contenedor, mientras que `HOST_PORT` solo lo consume Docker Compose. El build genera el cliente Prisma con una URL ficticia no operativa y no se conecta a PostgreSQL. `NODE_ENV=production` es una invariante de la imagen y no una variable configurable del entorno.
 
@@ -168,6 +171,7 @@ npm run build  # Build de producción y validación de tipos
 npm run start  # Servidor de producción
 npm run lint   # ESLint
 npm run test   # Pruebas unitarias
+npm run email:dev    # Previsualización local de las plantillas de correo
 npm run db:check     # Conectividad de los dos endpoints PostgreSQL
 npm run db:generate  # Generación local del cliente Prisma
 npm run db:migrate   # Aplicación de migraciones pendientes

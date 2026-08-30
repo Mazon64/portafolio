@@ -1,3 +1,12 @@
+import { Resend } from "resend";
+
+import {
+  ContactNotificationEmail,
+  getContactEmailSubject,
+  getContactEmailText,
+} from "../../../emails/contact-notification";
+import { hasLocale, type Locale } from "../../../i18n/config";
+
 const MAX_BODY_BYTES = 16_000;
 const RATE_LIMIT_MS = 60_000;
 const TURNSTILE_ACTION = "contact";
@@ -90,29 +99,33 @@ export async function POST(request: Request) {
   const name = body.name.trim();
   const email = body.email.trim();
   const message = body.message.trim();
-  let response: Response;
+  const emailProps = { locale: body.locale, name, email, message };
+  let deliveryError: { name: string; message: string } | null;
   try {
-    response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${configuration.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: configuration.from,
-        to: [configuration.to],
-        reply_to: email,
-        subject: `Portfolio message from ${name.replace(/[\r\n]/g, " ")}`,
-        text: `Name: ${name}\nEmail: ${email}\n\n${message}`,
-      }),
+    const delivery = await new Resend(configuration.apiKey).emails.send({
+      from: configuration.from,
+      to: [configuration.to],
+      replyTo: email,
+      subject: getContactEmailSubject(body.locale, name),
+      react: ContactNotificationEmail(emailProps),
+      text: getContactEmailText(emailProps),
+      tags: [
+        { name: "category", value: "contact" },
+        { name: "locale", value: body.locale },
+      ],
     });
+    deliveryError = delivery.error;
   } catch (error) {
     console.error("Contact message delivery request failed.", error);
     return Response.json({ status: "delivery_failed" }, { status: 502 });
   }
 
-  if (!response.ok) {
-    console.error("Contact message delivery failed.", response.status);
+  if (deliveryError) {
+    console.error(
+      "Contact message delivery failed.",
+      deliveryError.name,
+      deliveryError.message,
+    );
     return Response.json({ status: "delivery_failed" }, { status: 502 });
   }
 
@@ -129,6 +142,7 @@ function isContactBody(
   message: string;
   website: string;
   turnstileToken?: unknown;
+  locale: Locale;
 } {
   if (!value || typeof value !== "object") return false;
 
@@ -145,7 +159,9 @@ function isContactBody(
     typeof body.message === "string" &&
     body.message.trim().length >= 10 &&
     body.message.trim().length <= 5000 &&
-    typeof body.website === "string"
+    typeof body.website === "string" &&
+    typeof body.locale === "string" &&
+    hasLocale(body.locale)
   );
 }
 

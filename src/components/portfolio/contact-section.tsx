@@ -1,6 +1,7 @@
 import { ArrowUpRightIcon } from "lucide-react";
 
 import type { ProfileDto } from "@/data/portfolio.types";
+import type { Locale } from "@/i18n/config";
 
 import { ContactForm } from "./contact-form";
 import { SocialIcon } from "./social-icon";
@@ -26,9 +27,11 @@ type ContactCopy = {
 export function ContactSection({
   profile,
   copy,
+  locale,
 }: {
   profile: ProfileDto;
   copy: ContactCopy;
+  locale: Locale;
 }) {
   const socialLinks = profile.socialLinks.map((link) => ({
     ...link,
@@ -67,7 +70,7 @@ export function ContactSection({
           <p className="mx-auto max-w-2xl text-balance text-lg leading-8 text-background/70">
             {profile.contactText}
           </p>
-          <ContactForm copy={copy.form} />
+          <ContactForm copy={copy.form} locale={locale} />
 
           <div className="mt-16 inline-block max-w-full text-left">
             <p className="font-mono text-xs tracking-[0.18em] text-background/55 uppercase">
