@@ -17,7 +17,8 @@
     "projects": "Projects",
     "experience": "Experience",
     "education": "Education",
-    "contact": "Contact"
+    "contact": "Contact",
+    "cv": "CV"
   },
   "preferences": {
     "language": "Language",
@@ -62,7 +63,6 @@
       "message": "Message",
       "send": "Send message",
       "sending": "Sending...",
-      "pending": "Direct message delivery will be available soon.",
       "success": "Your message was sent successfully.",
       "error": "The message could not be sent. Please try again later."
     }
@@ -90,6 +90,25 @@
       "completed": "Completed",
       "archived": "Archived"
     }
+  },
+  "cv": {
+    "metadata": {
+      "title": "David Yael Aranda's Résumé",
+      "description": "Localized and printable résumé for David Yael Aranda, Software Engineer."
+    },
+    "eyebrow": "Curriculum vitae",
+    "summary": "Professional summary",
+    "experience": "Experience",
+    "education": "Education",
+    "skills": "Skills",
+    "projects": "Selected projects",
+    "print": "Print or save as PDF",
+    "backToPortfolio": "Back to portfolio",
+    "website": "Website",
+    "repository": "Repository",
+    "prototype": "Prototype",
+    "newTab": "Opens in a new tab",
+    "loading": "Loading résumé"
   },
   "loading": {
     "portfolio": "Loading portfolio information"

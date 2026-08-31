@@ -9,6 +9,7 @@ services:
       HOSTNAME: ${HOSTNAME:?HOSTNAME must be defined in .env.docker}
       PORT: ${PORT:?PORT must be defined in .env.docker}
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be defined in .env.docker}
+      CONTACT_DELIVERY_ENABLED: ${CONTACT_DELIVERY_ENABLED:-false}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       CONTACT_FROM_EMAIL: ${CONTACT_FROM_EMAIL:-}
       CONTACT_TO_EMAIL: ${CONTACT_TO_EMAIL:-}

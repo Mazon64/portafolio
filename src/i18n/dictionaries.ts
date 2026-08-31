@@ -27,6 +27,7 @@ export type Dictionary = {
     experience: string;
     education: string;
     contact: string;
+    cv: string;
   };
   preferences: {
     language: string;
@@ -56,7 +57,6 @@ export type Dictionary = {
       message: string;
       send: string;
       sending: string;
-      pending: string;
       success: string;
       error: string;
     };
@@ -84,6 +84,25 @@ export type Dictionary = {
       completed: string;
       archived: string;
     };
+  };
+  cv: {
+    metadata: {
+      title: string;
+      description: string;
+    };
+    eyebrow: string;
+    summary: string;
+    experience: string;
+    education: string;
+    skills: string;
+    projects: string;
+    print: string;
+    backToPortfolio: string;
+    website: string;
+    repository: string;
+    prototype: string;
+    newTab: string;
+    loading: string;
   };
   loading: {
     portfolio: string;
