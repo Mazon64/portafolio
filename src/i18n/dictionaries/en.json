@@ -62,7 +62,6 @@
       "message": "Message",
       "send": "Send message",
       "sending": "Sending...",
-      "pending": "Direct message delivery will be available soon.",
       "success": "Your message was sent successfully.",
       "error": "The message could not be sent. Please try again later."
     }

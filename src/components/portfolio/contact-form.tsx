@@ -13,7 +13,6 @@ type ContactFormCopy = {
   message: string;
   send: string;
   sending: string;
-  pending: string;
   success: string;
   error: string;
 };
@@ -162,7 +161,7 @@ export function ContactForm({
       onSubmit={submitMessage}
       className="mx-auto mt-10 w-full max-w-3xl text-left"
     >
-      <fieldset disabled={!turnstileSiteKey || status === "sending"}>
+      <fieldset disabled={status === "sending"}>
         <div className="grid gap-5 sm:grid-cols-2">
           <label className="text-sm font-medium text-background/80">
             {copy.name}
@@ -222,7 +221,10 @@ export function ContactForm({
           <Button
             type="submit"
             size="lg"
-            disabled={!turnstileToken}
+            disabled={
+              turnstileSiteKey === undefined ||
+              (Boolean(turnstileSiteKey) && !turnstileToken)
+            }
             className="min-w-40 bg-background text-foreground hover:bg-background/85"
           >
             <SendIcon aria-hidden="true" />
@@ -235,7 +237,6 @@ export function ContactForm({
           aria-live="polite"
           className="min-h-5 text-center text-sm text-background/70"
         >
-          {turnstileSiteKey === null && copy.pending}
           {status === "success" && copy.success}
           {status === "error" && copy.error}
         </p>

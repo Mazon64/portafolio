@@ -27,6 +27,7 @@ const validMessage = {
 };
 
 function stubContactEnvironment() {
+  vi.stubEnv("CONTACT_DELIVERY_ENABLED", "true");
   vi.stubEnv("RESEND_API_KEY", "test-key");
   vi.stubEnv("CONTACT_FROM_EMAIL", "Portfolio <contact@example.com>");
   vi.stubEnv("CONTACT_TO_EMAIL", "owner@example.com");
@@ -63,6 +64,23 @@ describe("contact route", () => {
     expect(await GET().json()).toEqual({
       turnstileSiteKey: "test-site-key",
     });
+  });
+
+  it("does not call external services when delivery is disabled", async () => {
+    stubContactEnvironment();
+    vi.stubEnv("CONTACT_DELIVERY_ENABLED", "false");
+    const externalRequest = vi.fn();
+    vi.stubGlobal("fetch", externalRequest);
+
+    expect(await GET().json()).toEqual({ turnstileSiteKey: null });
+
+    const response = await POST(
+      contactRequest(validMessage, "203.0.113.14"),
+    );
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ status: "unavailable" });
+    expect(externalRequest).not.toHaveBeenCalled();
   });
 
   it("rejects invalid contact data", async () => {

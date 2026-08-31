@@ -123,6 +123,7 @@ Los contratos se encuentran en `.env.example` y `.env.docker.example`.
 | `ADMIN_GITHUB_ID` | Cuenta autorizada para el CMS. |
 | `GITHUB_WEBHOOK_SECRET` | Firma de webhooks de GitHub. |
 | `GEMINI_API_KEY` | Acceso a Google Gemini. |
+| `CONTACT_DELIVERY_ENABLED` | Habilita explícitamente la entrega de mensajes cuando vale `true`. |
 | `RESEND_API_KEY` | Credencial server-only para enviar mensajes del formulario. |
 | `CONTACT_FROM_EMAIL` | Remitente verificado utilizado por Resend. |
 | `CONTACT_TO_EMAIL` | Buzón privado que recibe los mensajes de contacto. |
@@ -131,7 +132,7 @@ Los contratos se encuentran en `.env.example` y `.env.docker.example`.
 | `MONGODB_URI` | Conexión a MongoDB Atlas. |
 | `CRON_SECRET` | Autorización de tareas programadas. |
 
-El formulario se muestra deshabilitado mientras no estén configuradas las tres variables de Resend y las dos de Turnstile. El navegador obtiene en runtime únicamente `TURNSTILE_SITE_KEY` desde `/api/contact`; los demás valores nunca se exponen. Cada envío se valida con Turnstile y después genera una sola notificación editorial y localizada dirigida a `contacto@davidaranda.dev`, con el correo del visitante como `replyTo`. Los mensajes no se duplican en PostgreSQL.
+La interfaz del formulario permanece disponible en todos los entornos. La entrega solo se activa con `CONTACT_DELIVERY_ENABLED=true` y las tres variables de Resend y dos de Turnstile configuradas; de lo contrario, el endpoint rechaza el envío sin llamar a servicios externos. El navegador obtiene en runtime únicamente `TURNSTILE_SITE_KEY` desde `/api/contact`; los demás valores nunca se exponen. Cada envío habilitado se valida con Turnstile y después genera una sola notificación editorial y localizada dirigida a `contacto@davidaranda.dev`, con el correo del visitante como `replyTo`. Los mensajes no se duplican en PostgreSQL.
 
 En archivos `.env`, las URLs de PostgreSQL y `CONTACT_FROM_EMAIL` se escriben entre comillas dobles; las claves y direcciones simples no las necesitan. En el panel de Vercel los valores nunca incluyen comillas externas, porque la interfaz las conservaría literalmente.
 
@@ -205,7 +206,9 @@ docs/
 
 ## Despliegue
 
-Vercel despliega el frontend directamente desde GitHub. `develop` es la rama de integración y siempre produce un Preview para pruebas; `main` está protegida, representa exclusivamente el código publicado y cada merge en ella produce el deployment de Production. `vercel.json` ubica las funciones en `sfo1`, cerca de Supabase, mientras `package.json` fija Node.js 24 y genera Prisma durante `postinstall` sin conectarse a PostgreSQL.
+Vercel despliega el frontend directamente desde GitHub. `develop` es la rama de integración y siempre produce un Preview para pruebas en `https://preview.davidaranda.dev`; `main` está protegida, representa exclusivamente el código publicado y cada merge en ella produce el deployment de Production. `vercel.json` ubica las funciones en `sfo1`, cerca de Supabase, mientras `package.json` fija Node.js 24 y genera Prisma durante `postinstall` sin conectarse a PostgreSQL.
+
+Standard Protection limita los Preview mediante Vercel Authentication. Una regla WAF deniega todos los hosts `*.vercel.app`, por lo que el acceso operativo utiliza exclusivamente `davidaranda.dev`, `www.davidaranda.dev` y `preview.davidaranda.dev`.
 
 El trabajo cotidiano parte de `develop`, opcionalmente en ramas `feature/*` o `fix/*`, y vuelve a `develop` mediante pull request. Una versión se promueve con un pull request de `develop` a `main` solo después de verificar el Preview, CI y los cambios de base de datos aplicables. No se realizan pushes directos a `main`.
 
