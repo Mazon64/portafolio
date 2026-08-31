@@ -14,9 +14,16 @@ const databaseLocale: Record<AppLocale, Locale> = {
   en: Locale.EN,
 };
 
-async function queryPortfolioContent(locale: AppLocale): Promise<PortfolioDto> {
+type ContentSurface = "portfolio" | "cv";
+
+async function queryPortfolioContent(
+  locale: AppLocale,
+  surface: ContentSurface,
+): Promise<PortfolioDto> {
   const prisma = getPrisma();
   const selectedLocale = databaseLocale[locale];
+  const visibility =
+    surface === "cv" ? { showOnCv: true } : { showOnPortfolio: true };
   const translation = {
     where: { locale: selectedLocale },
   } as const;
@@ -46,7 +53,7 @@ async function queryPortfolioContent(locale: AppLocale): Promise<PortfolioDto> {
         },
       }),
       prisma.experience.findMany({
-        where: { showOnPortfolio: true },
+        where: visibility,
         orderBy: [
           { order: "asc" },
           { startDate: "desc" },
@@ -64,7 +71,7 @@ async function queryPortfolioContent(locale: AppLocale): Promise<PortfolioDto> {
         },
       }),
       prisma.education.findMany({
-        where: { showOnPortfolio: true },
+        where: visibility,
         orderBy: [
           { order: "asc" },
           { startDate: "desc" },
@@ -82,7 +89,7 @@ async function queryPortfolioContent(locale: AppLocale): Promise<PortfolioDto> {
         },
       }),
       prisma.project.findMany({
-        where: { showOnPortfolio: true },
+        where: visibility,
         orderBy: [
           { order: "asc" },
           { createdAt: "desc" },
@@ -103,7 +110,7 @@ async function queryPortfolioContent(locale: AppLocale): Promise<PortfolioDto> {
         },
       }),
       prisma.skillCategory.findMany({
-        where: { showOnPortfolio: true },
+        where: visibility,
         orderBy: [{ order: "asc" }, { slug: "asc" }],
         select: {
           slug: true,
@@ -113,7 +120,7 @@ async function queryPortfolioContent(locale: AppLocale): Promise<PortfolioDto> {
             select: { title: true, description: true },
           },
           skills: {
-            where: { showOnPortfolio: true },
+            where: visibility,
             orderBy: [{ order: "asc" }, { slug: "asc" }],
             select: {
               slug: true,
@@ -138,8 +145,14 @@ async function queryPortfolioContent(locale: AppLocale): Promise<PortfolioDto> {
 }
 
 const getCachedPortfolioContent = unstable_cache(
-  queryPortfolioContent,
+  (locale: AppLocale) => queryPortfolioContent(locale, "portfolio"),
   ["portfolio"],
+  { tags: ["portfolio"], revalidate: 300 },
+);
+
+const getCachedCvContent = unstable_cache(
+  (locale: AppLocale) => queryPortfolioContent(locale, "cv"),
+  ["cv"],
   { tags: ["portfolio"], revalidate: 300 },
 );
 
@@ -148,6 +161,11 @@ export async function getPortfolioContent(
 ): Promise<PortfolioDto> {
   await connection();
   return getCachedPortfolioContent(locale);
+}
+
+export async function getCvContent(locale: AppLocale): Promise<PortfolioDto> {
+  await connection();
+  return getCachedCvContent(locale);
 }
 
 export type { PortfolioDto } from "./portfolio.types";

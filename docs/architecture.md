@@ -43,9 +43,9 @@ El seed inicial contiene perfil, una experiencia, una formación académica y tr
 
 Las consultas públicas deben filtrar por el `Locale` solicitado. El CMS no debe publicar una entidad mientras falte una traducción requerida; por ello, el fallback a inglés aplica al enrutamiento, no a registros incompletos dentro de la base de datos.
 
-### 2.2 Acceso Público y Caché
+### 2.2 Acceso Público, CV Y Caché
 
-La ruta localizada conserva metadatos independientes de PostgreSQL para que el build no necesite credenciales. El Server Component de contenido llama a `connection()` antes del DAL, por lo que Prisma solo se ejecuta al recibir una petición. `unstable_cache` mantiene un DTO por idioma durante 300 segundos y usa la etiqueta `portfolio`, preparada para invalidación desde el futuro CMS.
+Las rutas localizadas conservan metadatos independientes de PostgreSQL para que el build no necesite credenciales. El Server Component de contenido llama a `connection()` antes del DAL, por lo que Prisma solo se ejecuta al recibir una petición. `unstable_cache` mantiene DTOs separados para el portafolio y el CV por idioma durante 300 segundos; ambos usan la etiqueta `portfolio`, preparada para invalidación desde el futuro CMS. El portafolio filtra mediante `showOnPortfolio`, mientras `/es/cv` y `/en/cv` filtran mediante `showOnCv` y ofrecen una composición HTML optimizada para impresión A4.
 
 El DAL selecciona únicamente campos públicos, exige la traducción solicitada, convierte fechas y enums a valores serializables y valida URLs externas. Los componentes nunca reciben modelos Prisma ni acceden directamente a variables de entorno. Una inconsistencia de contenido produce el estado de error localizado en lugar de mezclar idiomas o presentar datos parciales.
 

@@ -17,7 +17,8 @@
     "projects": "Proyectos",
     "experience": "Experiencia",
     "education": "Educación",
-    "contact": "Contacto"
+    "contact": "Contacto",
+    "cv": "CV"
   },
   "preferences": {
     "language": "Idioma",
@@ -89,6 +90,25 @@
       "completed": "Completado",
       "archived": "Archivado"
     }
+  },
+  "cv": {
+    "metadata": {
+      "title": "Currículum de David Yael Aranda",
+      "description": "Currículum localizado e imprimible de David Yael Aranda, Ingeniero de Software."
+    },
+    "eyebrow": "Currículum vitae",
+    "summary": "Perfil profesional",
+    "experience": "Experiencia",
+    "education": "Educación",
+    "skills": "Habilidades",
+    "projects": "Proyectos seleccionados",
+    "print": "Imprimir o guardar como PDF",
+    "backToPortfolio": "Volver al portafolio",
+    "website": "Sitio web",
+    "repository": "Repositorio",
+    "prototype": "Prototipo",
+    "newTab": "Abre en una pestaña nueva",
+    "loading": "Cargando currículum"
   },
   "loading": {
     "portfolio": "Cargando información del portafolio"

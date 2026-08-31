@@ -72,6 +72,7 @@ export default async function RootLayout({
     { href: "#experience", label: navigation.experience },
     { href: "#education", label: navigation.education },
     { href: "#contact", label: navigation.contact },
+    { href: `/${lang}/cv`, label: navigation.cv },
   ];
 
   return (
@@ -90,6 +91,7 @@ export default async function RootLayout({
           <div className="min-h-screen bg-background text-foreground">
             <a
               href="#main-content"
+              data-print-hidden
               className="fixed top-3 left-3 z-50 -translate-y-20 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-lg transition-transform focus:translate-y-0 focus:outline-none focus:ring-2 focus:ring-ring"
             >
               {navigation.skipToContent}

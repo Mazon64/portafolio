@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { MenuIcon } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,8 @@ export function SiteHeader({
   navigation,
   labels,
 }: SiteHeaderProps) {
+  const pathname = usePathname();
+  const portfolioPath = `/${locale}`;
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeHref, setActiveHref] = useState<string | null>(null);
   const preferenceLabels = {
@@ -58,6 +61,7 @@ export function SiteHeader({
       let activeSection: string | null = null;
 
       for (const item of navigation) {
+        if (!item.href.startsWith("#")) continue;
         const section = document.getElementById(item.href.slice(1));
         if (!section) continue;
 
@@ -81,11 +85,24 @@ export function SiteHeader({
     };
   }, [navigation]);
 
+  function resolvedHref(href: string) {
+    return href.startsWith("#") && pathname !== portfolioPath
+      ? `${portfolioPath}${href}`
+      : href;
+  }
+
+  function isCurrent(href: string) {
+    return href.startsWith("#") ? activeHref === href : pathname === href;
+  }
+
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur-xl max-xl:pointer-events-none max-xl:fixed max-xl:inset-x-0 max-xl:border-0 max-xl:bg-transparent max-xl:backdrop-blur-none">
+    <header
+      data-print-hidden
+      className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur-xl max-xl:pointer-events-none max-xl:fixed max-xl:inset-x-0 max-xl:border-0 max-xl:bg-transparent max-xl:backdrop-blur-none"
+    >
       <div className="mx-auto flex h-16 w-full max-w-[96rem] items-center gap-6 px-5 sm:px-8 lg:px-12 max-xl:h-0 max-xl:p-0">
         <a
-          href="#hero"
+          href={pathname === portfolioPath ? "#hero" : `${portfolioPath}#hero`}
           aria-label={siteConfig.name}
           className="hidden shrink-0 items-center gap-3 font-heading xl:flex"
         >
@@ -101,9 +118,15 @@ export function SiteHeader({
           {navigation.map((item) => (
             <a
               key={item.href}
-              href={item.href}
-              aria-current={activeHref === item.href ? "location" : undefined}
-              className={`rounded-md px-2.5 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${activeHref === item.href ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+              href={resolvedHref(item.href)}
+              aria-current={
+                isCurrent(item.href)
+                  ? item.href.startsWith("#")
+                    ? "location"
+                    : "page"
+                  : undefined
+              }
+              className={`rounded-md px-2.5 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${isCurrent(item.href) ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
             >
               {item.label}
             </a>
@@ -142,13 +165,19 @@ export function SiteHeader({
                 {navigation.map((item, index) => (
                   <a
                     key={item.href}
-                    href={item.href}
-                    aria-current={activeHref === item.href ? "location" : undefined}
+                    href={resolvedHref(item.href)}
+                    aria-current={
+                      isCurrent(item.href)
+                        ? item.href.startsWith("#")
+                          ? "location"
+                          : "page"
+                        : undefined
+                    }
                     onClick={() => setMenuOpen(false)}
-                    className={`flex items-center gap-4 border-b border-border px-2 py-4 text-base font-medium transition-colors ${activeHref === item.href ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    className={`flex items-center gap-4 border-b border-border px-2 py-4 text-base font-medium transition-colors ${isCurrent(item.href) ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}
                   >
                     <span
-                      className={`font-mono text-xs ${activeHref === item.href ? "text-foreground" : "text-muted-foreground"}`}
+                      className={`font-mono text-xs ${isCurrent(item.href) ? "text-foreground" : "text-muted-foreground"}`}
                     >
                       {String(index + 1).padStart(2, "0")}
                     </span>
