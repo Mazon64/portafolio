@@ -166,6 +166,8 @@ function isContactBody(
 }
 
 function getContactConfiguration() {
+  if (process.env.CONTACT_DELIVERY_ENABLED !== "true") return null;
+
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const from = process.env.CONTACT_FROM_EMAIL?.trim();
   const to = process.env.CONTACT_TO_EMAIL?.trim();

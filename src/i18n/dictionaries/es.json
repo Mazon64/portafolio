@@ -62,7 +62,6 @@
       "message": "Mensaje",
       "send": "Enviar mensaje",
       "sending": "Enviando...",
-      "pending": "El envío directo de mensajes estará disponible próximamente.",
       "success": "Tu mensaje fue enviado correctamente.",
       "error": "No se pudo enviar el mensaje. Inténtalo nuevamente más tarde."
     }

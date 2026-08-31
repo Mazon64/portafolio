@@ -18,7 +18,6 @@ type ContactCopy = {
     message: string;
     send: string;
     sending: string;
-    pending: string;
     success: string;
     error: string;
   };
