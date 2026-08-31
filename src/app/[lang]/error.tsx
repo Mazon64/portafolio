@@ -9,14 +9,14 @@ import { Button } from "@/components/ui/button";
 const copy = {
   es: {
     eyebrow: "Error de contenido",
-    title: "No fue posible cargar el portafolio.",
+    title: "No fue posible cargar el contenido.",
     description:
       "La información no está disponible temporalmente. Intenta nuevamente en unos momentos.",
     retry: "Reintentar",
   },
   en: {
     eyebrow: "Content error",
-    title: "The portfolio could not be loaded.",
+    title: "The content could not be loaded.",
     description:
       "The information is temporarily unavailable. Please try again in a moment.",
     retry: "Try again",

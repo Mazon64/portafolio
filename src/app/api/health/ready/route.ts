@@ -20,7 +20,7 @@ export async function GET() {
         AND NOT EXISTS (
           SELECT 1
           FROM "Experience" experience
-          WHERE experience."showOnPortfolio"
+          WHERE (experience."showOnPortfolio" OR experience."showOnCv")
             AND (
               SELECT COUNT(DISTINCT translation.locale)
               FROM "ExperienceTranslation" translation
@@ -30,7 +30,7 @@ export async function GET() {
         AND NOT EXISTS (
           SELECT 1
           FROM "Education" education
-          WHERE education."showOnPortfolio"
+          WHERE (education."showOnPortfolio" OR education."showOnCv")
             AND (
               SELECT COUNT(DISTINCT translation.locale)
               FROM "EducationTranslation" translation
@@ -40,7 +40,7 @@ export async function GET() {
         AND NOT EXISTS (
           SELECT 1
           FROM "Project" project
-          WHERE project."showOnPortfolio"
+          WHERE (project."showOnPortfolio" OR project."showOnCv")
             AND (
               SELECT COUNT(DISTINCT translation.locale)
               FROM "ProjectTranslation" translation
@@ -50,7 +50,7 @@ export async function GET() {
         AND NOT EXISTS (
           SELECT 1
           FROM "SkillCategory" category
-          WHERE category."showOnPortfolio"
+          WHERE (category."showOnPortfolio" OR category."showOnCv")
             AND (
               SELECT COUNT(DISTINCT translation.locale)
               FROM "SkillCategoryTranslation" translation
@@ -61,8 +61,10 @@ export async function GET() {
           SELECT 1
           FROM "Skill" skill
           JOIN "SkillCategory" category ON category.id = skill."categoryId"
-          WHERE skill."showOnPortfolio"
-            AND category."showOnPortfolio"
+          WHERE (
+              (skill."showOnPortfolio" AND category."showOnPortfolio")
+              OR (skill."showOnCv" AND category."showOnCv")
+            )
             AND (
               SELECT COUNT(DISTINCT translation.locale)
               FROM "SkillTranslation" translation

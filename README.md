@@ -23,8 +23,9 @@ Actualmente incluye:
 - Estado vacío y estructura expandible para proyectos futuros.
 - Formulario de contacto protegido por Cloudflare Turnstile y entregado mediante Resend.
 - Analítica web sin cookies mediante Vercel Web Analytics.
+- CV localizado e imprimible alimentado por el mismo contenido profesional.
 
-El CMS, el CV, la telemetría y el chatbot forman parte de las siguientes etapas. La base inicial no publica proyectos; se incorporarán cuando existan propuestas propias que puedan mostrarse.
+El CMS, la telemetría y el chatbot forman parte de las siguientes etapas. La base inicial no publica proyectos; se incorporarán cuando existan propuestas propias que puedan mostrarse.
 
 ## Tecnologías
 
@@ -90,6 +91,7 @@ El Proxy procesa únicamente `/`:
 - Si el navegador tiene español como idioma principal, `/` redirige a `/es`.
 - Para cualquier otro idioma, `/` redirige a `/en`.
 - `/es` y `/en` son las rutas públicas válidas.
+- `/es/cv` y `/en/cv` presentan el CV localizado y permiten imprimirlo o guardarlo como PDF.
 - Una ruta sin prefijo, como `/cv`, devuelve 404.
 - Un idioma no soportado, como `/fr`, devuelve 404.
 
@@ -191,6 +193,8 @@ Estructura del código:
 ```text
 src/
   app/[lang]/              Layout y página localizados
+  app/[lang]/cv/           CV localizado e imprimible
+  components/cv/           Documento y controles de impresión del CV
   components/              Componentes de aplicación
   components/portfolio/    Secciones públicas y estados de carga
   components/ui/           Primitivas de shadcn/ui
@@ -245,11 +249,10 @@ npm run build
 
 El desarrollo continuará en este orden:
 
-1. Implementar el CV localizado e imprimible.
-2. Añadir autenticación y CMS.
-3. Incorporar propuestas propias y su progreso como proyectos públicos.
-4. Añadir medios y narrativa técnica estructurada para proyectos.
-5. Incorporar telemetría, RAG y chatbot.
+1. Añadir autenticación y CMS.
+2. Incorporar propuestas propias y su progreso como proyectos públicos.
+3. Añadir medios y narrativa técnica estructurada para proyectos.
+4. Incorporar telemetría, RAG y chatbot.
 
 ## Documentación
 
