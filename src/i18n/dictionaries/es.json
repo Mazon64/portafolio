@@ -5,7 +5,9 @@
   },
   "home": {
     "eyebrow": "Portafolio · Ingeniería de software",
-    "heading": "Construyo software con intención, claridad y alcance."
+    "heading": "Construyo software con intención, claridad y alcance.",
+    "viewCv": "Ver currículum",
+    "viewProjects": "Ver proyectos"
   },
   "navigation": {
     "menu": "Navegación",
@@ -18,7 +20,7 @@
     "experience": "Experiencia",
     "education": "Educación",
     "contact": "Contacto",
-    "cv": "CV"
+    "cv": "Ver CV"
   },
   "preferences": {
     "language": "Idioma",
@@ -101,6 +103,11 @@
     "experience": "Experiencia",
     "education": "Educación",
     "skills": "Habilidades",
+    "languages": "Idiomas",
+    "languageItems": [
+      { "name": "Español", "proficiency": "Lengua materna" },
+      { "name": "Inglés", "proficiency": "Comunicación fluida en entornos profesionales" }
+    ],
     "projects": "Proyectos seleccionados",
     "print": "Imprimir o guardar como PDF",
     "backToPortfolio": "Volver al portafolio",

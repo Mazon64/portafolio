@@ -9,6 +9,12 @@ services:
       HOSTNAME: ${HOSTNAME:?HOSTNAME must be defined in .env.docker}
       PORT: ${PORT:?PORT must be defined in .env.docker}
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be defined in .env.docker}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      AUTH_GITHUB_ID: ${AUTH_GITHUB_ID:-}
+      AUTH_GITHUB_SECRET: ${AUTH_GITHUB_SECRET:-}
+      ADMIN_GITHUB_ID: ${ADMIN_GITHUB_ID:-}
+      CMS_WRITES_ENABLED: ${CMS_WRITES_ENABLED:-false}
       CONTACT_DELIVERY_ENABLED: ${CONTACT_DELIVERY_ENABLED:-false}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       CONTACT_FROM_EMAIL: ${CONTACT_FROM_EMAIL:-}

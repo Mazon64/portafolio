@@ -15,6 +15,8 @@ export type Dictionary = {
   home: {
     eyebrow: string;
     heading: string;
+    viewCv: string;
+    viewProjects: string;
   };
   navigation: {
     menu: string;
@@ -95,6 +97,11 @@ export type Dictionary = {
     experience: string;
     education: string;
     skills: string;
+    languages: string;
+    languageItems: Array<{
+      name: string;
+      proficiency: string;
+    }>;
     projects: string;
     print: string;
     backToPortfolio: string;
