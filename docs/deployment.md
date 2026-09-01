@@ -29,7 +29,7 @@ Vercel Web Analytics recopila páginas vistas y navegación mediante la integrac
 8. Vincula `preview.davidaranda.dev` al entorno Preview y a la rama `develop`.
 9. Publica una regla WAF `host ends with .vercel.app -> deny` para que la aplicación solo se sirva mediante dominios propios.
 
-`vercel.json` mantiene las funciones en `sfo1`, cerca de la base de datos de Supabase en Oregon. `next.config.ts` genera `output: "standalone"` fuera de Vercel para Docker y lo desactiva en Vercel, donde el adaptador nativo genera su propia salida.
+`vercel.json` mantiene las funciones en `sfo1`, cerca de la base de datos de Supabase en Oregon, e ignora builds de ramas distintas de `develop` y `main`. `next.config.ts` genera `output: "standalone"` fuera de Vercel para Docker y lo desactiva en Vercel, donde el adaptador nativo genera su propia salida.
 
 ## 2. Variables De Vercel
 
@@ -94,6 +94,8 @@ GitHub OAuth Apps admite una URL de callback por aplicación. Crea tres aplicaci
 
 Genera un `AUTH_SECRET` independiente para cada entorno y guarda client secrets exclusivamente en el proveedor correspondiente. `ADMIN_GITHUB_ID` debe ser el ID numérico inmutable, no el login `Mazon64`; se puede consultar mediante la API pública de GitHub y debe verificarse antes de habilitar el CMS.
 
+Inicia siempre el acceso administrativo desde el dominio canónico de cada entorno. Si un alias alternativo alcanza la aplicación, `/admin/*` y `/api/auth/*` se redirigen hacia `NEXTAUTH_URL` antes de comenzar OAuth, porque la cookie de estado y el callback deben pertenecer al mismo origen. Los hosts `*.vercel.app` permanecen denegados por WAF antes de llegar a esta capa.
+
 El panel está disponible en `/admin/es` y `/admin/en`; `/admin` detecta el idioma. NextAuth.js rechaza cualquier proveedor distinto de GitHub y cualquier ID fuera de la whitelist. El DAL y las Server Actions repiten la autorización para no depender del layout. Las escrituras actualizan el perfil y sus dos traducciones en una transacción, rechazan versiones obsoletas e invalidan la caché pública solo después del commit.
 
 Para preparar Preview:
@@ -127,6 +129,7 @@ Vercel nunca aplica migraciones durante el build. Para un cambio de esquema:
 
 - `develop` es la rama de integración y `https://preview.davidaranda.dev` siempre apunta al último Preview de esa rama.
 - Las ramas `feature/*` y `fix/*` parten de `develop` y vuelven a ella mediante pull request.
+- Los pushes a ramas de trabajo se validan en GitHub Actions, pero `ignoreCommand` evita deployments Vercel adicionales. Vercel solo construye `develop` como Preview y `main` como Production.
 - `main` está protegida contra pushes directos y solo recibe promociones revisadas desde `develop`.
 - El check `verify` debe aprobar pruebas, lint y build antes de fusionar en `main`.
 - Antes de promover, se revisan `/es`, `/en`, `/admin/es`, `/admin/en`, navegación responsive, autenticación y lectura administrativa sin mutaciones, y los endpoints de salud en Preview.

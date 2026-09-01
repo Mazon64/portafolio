@@ -1,9 +1,17 @@
-import type { Profile } from "next-auth";
+import type { Account } from "next-auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { isAllowedGithubProfile, isSessionWithinAbsoluteLifetime } from "./auth";
+import { isAllowedGithubAccount, isSessionWithinAbsoluteLifetime } from "./auth";
+
+function githubAccount(id: string): Account {
+  return {
+    provider: "github",
+    type: "oauth",
+    providerAccountId: id,
+  };
+}
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -29,20 +37,23 @@ describe("GitHub authorization", () => {
   it("accepts only the configured numeric GitHub ID", () => {
     vi.stubEnv("ADMIN_GITHUB_ID", "123456");
 
-    expect(isAllowedGithubProfile({ id: 123456 } as Profile)).toBe(true);
-    expect(isAllowedGithubProfile({ id: 654321 } as Profile)).toBe(false);
-    expect(isAllowedGithubProfile(undefined)).toBe(false);
+    expect(isAllowedGithubAccount(githubAccount("123456"))).toBe(true);
+    expect(isAllowedGithubAccount(githubAccount("654321"))).toBe(false);
+    expect(isAllowedGithubAccount(null)).toBe(false);
+    expect(
+      isAllowedGithubAccount({ ...githubAccount("123456"), provider: "google" }),
+    ).toBe(false);
   });
 
   it("fails closed when the administrator is not configured", () => {
     vi.stubEnv("ADMIN_GITHUB_ID", "");
-    expect(isAllowedGithubProfile({ id: 123456 } as Profile)).toBe(false);
+    expect(isAllowedGithubAccount(githubAccount("123456"))).toBe(false);
   });
 
   it("rejects a mutable login name instead of treating it as an ID", () => {
     vi.stubEnv("ADMIN_GITHUB_ID", "Mazon64");
-    expect(() =>
-      isAllowedGithubProfile({ id: "Mazon64" } as unknown as Profile),
-    ).toThrow("ADMIN_GITHUB_ID must be a numeric GitHub user ID");
+    expect(() => isAllowedGithubAccount(githubAccount("Mazon64"))).toThrow(
+      "ADMIN_GITHUB_ID must be a numeric GitHub user ID",
+    );
   });
 });
