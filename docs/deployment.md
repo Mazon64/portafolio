@@ -59,6 +59,8 @@ No configures `DIRECT_URL` en Vercel. `postinstall` genera Prisma con una URL fi
 
 Preview y Production comparten `DATABASE_URL`, pero Preview debe mantener `CMS_WRITES_ENABLED=false`. El código interpreta cualquier valor distinto de `true` como escrituras deshabilitadas y, como defensa adicional, rechaza mutaciones cuando `VERCEL_ENV=preview` aunque el flag se herede o configure erróneamente. Preview no recibe `DIRECT_URL` y nunca ejecuta migraciones ni seeds.
 
+Los cambios de variables en Vercel solo se aplican a deployments nuevos. Después de editar una variable de Production, crea un Redeploy del último deployment de `main` o promueve un nuevo commit verificado; volver a ejecutar únicamente GitHub Actions no actualiza el runtime. Confirma siempre el target **Production** y deja Preview con sus valores propios.
+
 Las integraciones de contacto se limitan a Production mediante `CONTACT_DELIVERY_ENABLED`. En Preview la interfaz permanece disponible, pero `/api/contact` no expone la site key ni llama a Turnstile o Resend y rechaza cualquier intento de entrega con el error genérico del formulario.
 
 `SITE_URL` conserva el dominio público también en Preview para que canonical y alternates nunca anuncien una URL temporal. Vercel evita por defecto que sus Preview Deployments sean indexados. Si el formulario debe probarse fuera de local, se deben crear credenciales separadas de Resend y Turnstile para Preview; nunca se copian los secretos de Production.
