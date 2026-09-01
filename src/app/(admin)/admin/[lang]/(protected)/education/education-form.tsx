@@ -1,0 +1,85 @@
+"use client";
+
+import { SaveIcon, Trash2Icon } from "lucide-react";
+import { useActionState } from "react";
+
+import { Button } from "@/components/ui/button";
+import type { AdminEducation } from "@/data/admin/education";
+import type { AdminCopy } from "@/i18n/admin";
+import {
+  deleteEducationAction,
+  initialEducationState,
+  saveEducationAction,
+} from "./actions";
+
+const fieldClass =
+  "mt-2 w-full rounded-lg border border-input bg-background px-3 py-2 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20";
+
+const emptyEducation: AdminEducation = {
+  id: "",
+  updatedAt: "",
+  slug: "",
+  institution: "",
+  startDate: "",
+  endDate: "",
+  showOnPortfolio: true,
+  showOnCv: true,
+  order: 0,
+  esDegree: "",
+  enDegree: "",
+};
+
+export function EducationForm({
+  education = emptyEducation,
+  copy,
+}: {
+  education?: AdminEducation;
+  copy: AdminCopy["education"];
+}) {
+  const [state, action, pending] = useActionState(
+    saveEducationAction,
+    initialEducationState,
+  );
+  const message = state.status === "idle" ? null : copy.status[state.status];
+
+  return (
+    <div className="rounded-3xl border border-border bg-card p-6 text-card-foreground">
+      <form action={action} className="space-y-6">
+        <input type="hidden" name="id" value={education.id} />
+        <input type="hidden" name="updatedAt" value={education.updatedAt} />
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          <Field name="slug" label={copy.slug} value={education.slug} required />
+          <Field name="institution" label={copy.institution} value={education.institution} required />
+          <Field name="startDate" label={copy.startDate} value={education.startDate} type="date" required />
+          <Field name="endDate" label={copy.endDate} value={education.endDate} type="date" />
+          <Field name="order" label={copy.order} value={String(education.order)} type="number" required />
+          <Check name="showOnPortfolio" label={copy.portfolio} checked={education.showOnPortfolio} />
+          <Check name="showOnCv" label={copy.cv} checked={education.showOnCv} />
+        </div>
+        <div className="grid gap-5 md:grid-cols-2">
+          <Field name="esDegree" label={`${copy.degree} · ${copy.spanish}`} value={education.esDegree} required />
+          <Field name="enDegree" label={`${copy.degree} · ${copy.english}`} value={education.enDegree} required />
+        </div>
+        {message && <p role="status" className="text-sm text-muted-foreground">{message}</p>}
+        <Button type="submit" disabled={pending}><SaveIcon />{pending ? copy.saving : copy.save}</Button>
+      </form>
+      {education.id && (
+        <form action={deleteEducationAction} className="mt-4 border-t border-border pt-4">
+          <input type="hidden" name="id" value={education.id} />
+          <input type="hidden" name="updatedAt" value={education.updatedAt} />
+          <Button type="submit" variant="destructive" onClick={(event) => { if (!window.confirm(copy.confirmDelete)) event.preventDefault(); }}>
+            <Trash2Icon />{copy.remove}
+          </Button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+function Field({ name, label, value, type = "text", required = false }: { name: string; label: string; value: string; type?: string; required?: boolean }) {
+  return <label className="text-sm font-medium">{label}<input className={fieldClass} name={name} type={type} defaultValue={value} required={required} min={type === "number" ? 0 : undefined} /></label>;
+}
+
+function Check({ name, label, checked }: { name: string; label: string; checked: boolean }) {
+  return <label className="flex items-center gap-3 self-end rounded-lg border border-border px-3 py-2 text-sm font-medium"><input name={name} type="checkbox" defaultChecked={checked} />{label}</label>;
+}
