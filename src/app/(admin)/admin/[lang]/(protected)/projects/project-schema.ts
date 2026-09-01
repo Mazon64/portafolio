@@ -1,7 +1,13 @@
 import { z } from "zod";
 
 const optionalUrl = z.string().trim().max(2_000).refine(
-  (value) => !value || z.url().safeParse(value).success,
+  (value) => {
+    if (!value) return true;
+    const result = z.url().safeParse(value);
+    if (!result.success) return false;
+    const protocol = new URL(value).protocol;
+    return protocol === "http:" || protocol === "https:";
+  },
 );
 
 export const projectSchema = z.object({

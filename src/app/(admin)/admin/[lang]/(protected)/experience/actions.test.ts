@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { requireAdminMock, saveMock, updateTagMock } = vi.hoisted(() => ({
+const { requireAdminMock, saveMock, deleteMock, updateTagMock } = vi.hoisted(() => ({
   requireAdminMock: vi.fn(),
   saveMock: vi.fn(),
+  deleteMock: vi.fn(),
   updateTagMock: vi.fn(),
 }));
 
@@ -10,10 +11,15 @@ vi.mock("next/cache", () => ({ updateTag: updateTagMock }));
 vi.mock("@/lib/auth/authorization", () => ({ requireAdmin: requireAdminMock }));
 vi.mock("@/data/admin/experience", () => ({
   saveAdminExperience: saveMock,
-  deleteAdminExperience: vi.fn(),
+  deleteAdminExperience: deleteMock,
 }));
 
-import { initialExperienceState, saveExperienceAction } from "./actions";
+import { initialDeleteState } from "@/components/admin/delete-form";
+import {
+  deleteExperienceAction,
+  initialExperienceState,
+  saveExperienceAction,
+} from "./actions";
 
 function formData() {
   const data = new FormData();
@@ -44,12 +50,22 @@ describe("experience actions", () => {
       updatedAt: "2026-08-31T20:00:00.000Z",
     });
     updateTagMock.mockReset();
+    deleteMock.mockReset().mockResolvedValue(true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
 
   it("authorizes, saves both locales, and invalidates public content", async () => {
     await expect(
       saveExperienceAction(initialExperienceState, formData()),
-    ).resolves.toEqual({ status: "success" });
+    ).resolves.toEqual({
+      status: "success",
+      id: "2eb66473-aca8-4f1f-a312-9a697b75a2e3",
+      updatedAt: "2026-08-31T20:00:00.000Z",
+    });
     expect(saveMock).toHaveBeenCalledWith(
       expect.objectContaining({
         es: { role: "Ingeniero", description: "Descripción" },
@@ -72,6 +88,46 @@ describe("experience actions", () => {
     await expect(
       saveExperienceAction(initialExperienceState, formData()),
     ).resolves.toEqual({ status: "conflict" });
+    expect(updateTagMock).not.toHaveBeenCalled();
+  });
+
+  it("preserves the committed version when cache invalidation fails", async () => {
+    updateTagMock.mockImplementation(() => {
+      throw new Error("Cache unavailable");
+    });
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(
+      saveExperienceAction(initialExperienceState, formData()),
+    ).resolves.toEqual({
+      status: "cache-error",
+      id: "2eb66473-aca8-4f1f-a312-9a697b75a2e3",
+      updatedAt: "2026-08-31T20:00:00.000Z",
+    });
+  });
+
+  it("returns an explicit delete conflict", async () => {
+    deleteMock.mockResolvedValue(false);
+    const data = new FormData();
+    data.set("id", "2eb66473-aca8-4f1f-a312-9a697b75a2e3");
+    data.set("updatedAt", "2026-08-31T20:00:00.000Z");
+
+    await expect(
+      deleteExperienceAction(initialDeleteState, data),
+    ).resolves.toEqual({ status: "conflict" });
+    expect(updateTagMock).not.toHaveBeenCalled();
+  });
+
+  it("returns an explicit error when delete persistence fails", async () => {
+    deleteMock.mockRejectedValue(new Error("Database unavailable"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const data = new FormData();
+    data.set("id", "2eb66473-aca8-4f1f-a312-9a697b75a2e3");
+    data.set("updatedAt", "2026-08-31T20:00:00.000Z");
+
+    await expect(
+      deleteExperienceAction(initialDeleteState, data),
+    ).resolves.toEqual({ status: "error" });
     expect(updateTagMock).not.toHaveBeenCalled();
   });
 });

@@ -57,7 +57,7 @@ Configura estas variables en **Settings > Environment Variables**:
 
 No configures `DIRECT_URL` en Vercel. `postinstall` genera Prisma con una URL ficticia que no establece ninguna conexión. Las migraciones se ejecutan exclusivamente desde GitHub Actions con el pooler de sesión almacenado en el environment `production`.
 
-Preview y Production comparten `DATABASE_URL`, pero Preview debe mantener `CMS_WRITES_ENABLED=false`. El código interpreta cualquier valor distinto de `true` como escrituras deshabilitadas. Preview no recibe `DIRECT_URL` y nunca ejecuta migraciones ni seeds.
+Preview y Production comparten `DATABASE_URL`, pero Preview debe mantener `CMS_WRITES_ENABLED=false`. El código interpreta cualquier valor distinto de `true` como escrituras deshabilitadas y, como defensa adicional, rechaza mutaciones cuando `VERCEL_ENV=preview` aunque el flag se herede o configure erróneamente. Preview no recibe `DIRECT_URL` y nunca ejecuta migraciones ni seeds.
 
 Las integraciones de contacto se limitan a Production mediante `CONTACT_DELIVERY_ENABLED`. En Preview la interfaz permanece disponible, pero `/api/contact` no expone la site key ni llama a Turnstile o Resend y rechaza cualquier intento de entrega con el error genérico del formulario.
 

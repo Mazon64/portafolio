@@ -1,9 +1,11 @@
 "use client";
 
-import { SaveIcon, Trash2Icon } from "lucide-react";
-import { useActionState } from "react";
+import { SaveIcon } from "lucide-react";
+import { useActionState, useEffect, useEffectEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { DeleteForm } from "@/components/admin/delete-form";
 import type { AdminExperience } from "@/data/admin/experience";
 import type { AdminCopy } from "@/i18n/admin";
 import {
@@ -32,21 +34,32 @@ const emptyExperience: AdminExperience = {
 export function ExperienceForm({
   experience = emptyExperience,
   copy,
+  onCreated,
 }: {
   experience?: AdminExperience;
   copy: AdminCopy["experience"];
+  onCreated?: () => void;
 }) {
   const [state, action, pending] = useActionState(
     saveExperienceAction,
     initialExperienceState,
   );
+  const router = useRouter();
   const message = state.status === "idle" ? null : copy.status[state.status];
+  const finishCreate = useEffectEvent(() => {
+    onCreated?.();
+    router.refresh();
+  });
+
+  useEffect(() => {
+    if (!experience.id && state.status === "success") finishCreate();
+  }, [experience.id, state.status]);
 
   return (
     <div className="rounded-3xl border border-border bg-card p-6 text-card-foreground">
       <form action={action} className="space-y-6">
-        <input type="hidden" name="id" value={experience.id} />
-        <input type="hidden" name="updatedAt" value={experience.updatedAt} />
+        <input type="hidden" name="id" value={state.id ?? experience.id} />
+        <input type="hidden" name="updatedAt" value={state.updatedAt ?? experience.updatedAt} />
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           <Field name="slug" label={copy.slug} value={experience.slug} required />
           <Field name="company" label={copy.company} value={experience.company} required />
@@ -66,22 +79,22 @@ export function ExperienceForm({
         </Button>
       </form>
       {experience.id && (
-        <form action={deleteExperienceAction} className="mt-4 border-t border-border pt-4">
-          <input type="hidden" name="id" value={experience.id} />
-          <input type="hidden" name="updatedAt" value={experience.updatedAt} />
-          <Button
-            type="submit"
-            variant="destructive"
-            onClick={(event) => {
-              if (!window.confirm(copy.confirmDelete)) event.preventDefault();
-            }}
-          >
-            <Trash2Icon /> {copy.remove}
-          </Button>
-        </form>
+        <DeleteForm
+          action={deleteExperienceAction}
+          id={state.id ?? experience.id}
+          updatedAt={state.updatedAt ?? experience.updatedAt}
+          label={copy.remove}
+          confirmText={copy.confirmDelete}
+          messages={copy.deleteStatus}
+        />
       )}
     </div>
   );
+}
+
+export function NewExperienceForm({ copy }: { copy: AdminCopy["experience"] }) {
+  const [resetKey, setResetKey] = useState(0);
+  return <ExperienceForm key={resetKey} copy={copy} onCreated={() => setResetKey((key) => key + 1)} />;
 }
 
 function Field({ name, label, value, type = "text", required = false }: { name: string; label: string; value: string; type?: string; required?: boolean }) {

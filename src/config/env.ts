@@ -23,5 +23,8 @@ export function getAdminGithubId(): string | undefined {
 }
 
 export function isCmsWriteEnabled(): boolean {
-  return process.env.CMS_WRITES_ENABLED?.trim() === "true";
+  if (process.env.CMS_WRITES_ENABLED?.trim() !== "true") return false;
+
+  const vercelEnvironment = process.env.VERCEL_ENV?.trim();
+  return !vercelEnvironment || vercelEnvironment === "production";
 }

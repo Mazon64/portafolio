@@ -63,9 +63,11 @@ Cada origen utiliza una aplicación OAuth independiente.
 
 ## 3. Mutaciones Del CMS
 
-Las mutaciones administrativas se implementan como Server Actions y no como una API pública versionada. Deben tratarse como endpoints expuestos: vuelven a autorizar la sesión, verifican `CMS_WRITES_ENABLED`, validan con Zod y escriben mediante transacciones Prisma.
+Las mutaciones administrativas se implementan como Server Actions y no como una API pública versionada. Deben tratarse como endpoints expuestos: vuelven a autorizar la sesión, verifican `CMS_WRITES_ENABLED`, rechazan siempre `VERCEL_ENV=preview`, validan con Zod y escriben mediante transacciones Prisma.
 
-La actualización del perfil modifica los campos compartidos y las traducciones `ES` y `EN` de `main-profile` en una sola transacción. El formulario envía `updatedAt` como versión optimista y recibe `conflict` si el registro cambió desde su lectura. Después de un commit exitoso invalida la etiqueta `portfolio`; un error de validación o persistencia nunca invalida la caché. Si la invalidación falla después del commit, devuelve `cache-error` con la nueva versión para dejar claro que los datos sí se guardaron.
+El CMS ofrece CRUD de perfil, experiencia, educación, categorías de habilidades, habilidades y proyectos. Cada escritura localizable conserva `ES` y `EN` dentro de la misma transacción. Los formularios existentes envían `updatedAt` como versión optimista y reciben `conflict` si el registro cambió desde su lectura; las categorías también cambian de versión cuando se crea, mueve, edita o elimina una habilidad hija.
+
+Después de un commit exitoso se invalida la etiqueta `portfolio`; un error de validación, autorización, concurrencia o persistencia nunca invalida la caché. Si la invalidación falla después del commit, la acción devuelve `cache-error` y conserva la nueva versión. Los borrados devuelven estados explícitos `deleted`, `disabled`, `conflict`, `cache-error` o `error`. Las URLs públicas de proyectos solo aceptan los protocolos HTTP y HTTPS.
 
 ## 4. Webhook De Telemetría (Planificado)
 

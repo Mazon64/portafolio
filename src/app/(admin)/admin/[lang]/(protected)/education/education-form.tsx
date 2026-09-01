@@ -1,9 +1,11 @@
 "use client";
 
-import { SaveIcon, Trash2Icon } from "lucide-react";
-import { useActionState } from "react";
+import { SaveIcon } from "lucide-react";
+import { useActionState, useEffect, useEffectEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { DeleteForm } from "@/components/admin/delete-form";
 import type { AdminEducation } from "@/data/admin/education";
 import type { AdminCopy } from "@/i18n/admin";
 import {
@@ -32,21 +34,32 @@ const emptyEducation: AdminEducation = {
 export function EducationForm({
   education = emptyEducation,
   copy,
+  onCreated,
 }: {
   education?: AdminEducation;
   copy: AdminCopy["education"];
+  onCreated?: () => void;
 }) {
   const [state, action, pending] = useActionState(
     saveEducationAction,
     initialEducationState,
   );
+  const router = useRouter();
   const message = state.status === "idle" ? null : copy.status[state.status];
+  const finishCreate = useEffectEvent(() => {
+    onCreated?.();
+    router.refresh();
+  });
+
+  useEffect(() => {
+    if (!education.id && state.status === "success") finishCreate();
+  }, [education.id, state.status]);
 
   return (
     <div className="rounded-3xl border border-border bg-card p-6 text-card-foreground">
       <form action={action} className="space-y-6">
-        <input type="hidden" name="id" value={education.id} />
-        <input type="hidden" name="updatedAt" value={education.updatedAt} />
+        <input type="hidden" name="id" value={state.id ?? education.id} />
+        <input type="hidden" name="updatedAt" value={state.updatedAt ?? education.updatedAt} />
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           <Field name="slug" label={copy.slug} value={education.slug} required />
           <Field name="institution" label={copy.institution} value={education.institution} required />
@@ -64,16 +77,15 @@ export function EducationForm({
         <Button type="submit" disabled={pending}><SaveIcon />{pending ? copy.saving : copy.save}</Button>
       </form>
       {education.id && (
-        <form action={deleteEducationAction} className="mt-4 border-t border-border pt-4">
-          <input type="hidden" name="id" value={education.id} />
-          <input type="hidden" name="updatedAt" value={education.updatedAt} />
-          <Button type="submit" variant="destructive" onClick={(event) => { if (!window.confirm(copy.confirmDelete)) event.preventDefault(); }}>
-            <Trash2Icon />{copy.remove}
-          </Button>
-        </form>
+        <DeleteForm action={deleteEducationAction} id={state.id ?? education.id} updatedAt={state.updatedAt ?? education.updatedAt} label={copy.remove} confirmText={copy.confirmDelete} messages={copy.deleteStatus} />
       )}
     </div>
   );
+}
+
+export function NewEducationForm({ copy }: { copy: AdminCopy["education"] }) {
+  const [resetKey, setResetKey] = useState(0);
+  return <EducationForm key={resetKey} copy={copy} onCreated={() => setResetKey((key) => key + 1)} />;
 }
 
 function Field({ name, label, value, type = "text", required = false }: { name: string; label: string; value: string; type?: string; required?: boolean }) {

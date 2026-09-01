@@ -104,6 +104,7 @@ export const adminCopy = {
       saving: "Guardando...",
       remove: "Eliminar",
       confirmDelete: "¿Eliminar esta experiencia?",
+      deleteStatus: { deleted: "Experiencia eliminada.", disabled: "Las escrituras están deshabilitadas.", conflict: "El registro cambió; recarga la página.", "cache-error": "Se eliminó, pero la vista no pudo actualizarse.", error: "No fue posible eliminar." },
       status: { success: "Experiencia guardada.", invalid: "Revisa los campos.", disabled: "Las escrituras están deshabilitadas.", conflict: "El registro cambió; recarga la página.", "cache-error": "Se guardó, pero la caché no pudo invalidarse.", error: "No fue posible guardar.", idle: "" },
     },
     education: {
@@ -125,6 +126,7 @@ export const adminCopy = {
       saving: "Guardando...",
       remove: "Eliminar",
       confirmDelete: "¿Eliminar esta formación?",
+      deleteStatus: { deleted: "Formación eliminada.", disabled: "Las escrituras están deshabilitadas.", conflict: "El registro cambió; recarga la página.", "cache-error": "Se eliminó, pero la vista no pudo actualizarse.", error: "No fue posible eliminar." },
       status: { success: "Formación guardada.", invalid: "Revisa los campos.", disabled: "Las escrituras están deshabilitadas.", conflict: "El registro cambió; recarga la página.", "cache-error": "Se guardó, pero la caché no pudo invalidarse.", error: "No fue posible guardar.", idle: "" },
     },
     skills: {
@@ -150,6 +152,7 @@ export const adminCopy = {
       removeSkill: "Eliminar habilidad",
       confirmCategory: "¿Eliminar la categoría y todas sus habilidades?",
       confirmSkill: "¿Eliminar esta habilidad?",
+      deleteStatus: { deleted: "Registro eliminado.", disabled: "Las escrituras están deshabilitadas.", conflict: "La categoría o habilidad cambió; recarga la página.", "cache-error": "Se eliminó, pero la vista no pudo actualizarse.", error: "No fue posible eliminar." },
       status: { success: "Cambios guardados.", invalid: "Revisa los campos.", disabled: "Las escrituras están deshabilitadas.", conflict: "El registro cambió; recarga la página.", "cache-error": "Se guardó, pero la caché no pudo invalidarse.", error: "No fue posible guardar.", idle: "" },
     },
     projects: {
@@ -174,6 +177,7 @@ export const adminCopy = {
       saving: "Guardando...",
       remove: "Eliminar",
       confirmDelete: "¿Eliminar este proyecto?",
+      deleteStatus: { deleted: "Proyecto eliminado.", disabled: "Las escrituras están deshabilitadas.", conflict: "El registro cambió; recarga la página.", "cache-error": "Se eliminó, pero la vista no pudo actualizarse.", error: "No fue posible eliminar." },
       statuses: { PLANNED: "Planeado", IN_PROGRESS: "En progreso", PAUSED: "Pausado", COMPLETED: "Completado", ARCHIVED: "Archivado" },
       actionStatus: { success: "Proyecto guardado.", invalid: "Revisa los campos.", disabled: "Las escrituras están deshabilitadas.", conflict: "El registro cambió; recarga la página.", "cache-error": "Se guardó, pero la caché no pudo invalidarse.", error: "No fue posible guardar.", idle: "" },
     },
@@ -281,6 +285,7 @@ export const adminCopy = {
       saving: "Saving...",
       remove: "Delete",
       confirmDelete: "Delete this experience?",
+      deleteStatus: { deleted: "Experience deleted.", disabled: "Writes are disabled.", conflict: "The record changed; reload the page.", "cache-error": "Deleted, but the view could not refresh.", error: "The record could not be deleted." },
       status: { success: "Experience saved.", invalid: "Review the fields.", disabled: "Writes are disabled.", conflict: "The record changed; reload the page.", "cache-error": "Saved, but the cache could not be invalidated.", error: "The record could not be saved.", idle: "" },
     },
     education: {
@@ -302,6 +307,7 @@ export const adminCopy = {
       saving: "Saving...",
       remove: "Delete",
       confirmDelete: "Delete this education record?",
+      deleteStatus: { deleted: "Education deleted.", disabled: "Writes are disabled.", conflict: "The record changed; reload the page.", "cache-error": "Deleted, but the view could not refresh.", error: "The record could not be deleted." },
       status: { success: "Education saved.", invalid: "Review the fields.", disabled: "Writes are disabled.", conflict: "The record changed; reload the page.", "cache-error": "Saved, but the cache could not be invalidated.", error: "The record could not be saved.", idle: "" },
     },
     skills: {
@@ -327,6 +333,7 @@ export const adminCopy = {
       removeSkill: "Delete skill",
       confirmCategory: "Delete the category and all its skills?",
       confirmSkill: "Delete this skill?",
+      deleteStatus: { deleted: "Record deleted.", disabled: "Writes are disabled.", conflict: "The category or skill changed; reload the page.", "cache-error": "Deleted, but the view could not refresh.", error: "The record could not be deleted." },
       status: { success: "Changes saved.", invalid: "Review the fields.", disabled: "Writes are disabled.", conflict: "The record changed; reload the page.", "cache-error": "Saved, but the cache could not be invalidated.", error: "The record could not be saved.", idle: "" },
     },
     projects: {
@@ -351,6 +358,7 @@ export const adminCopy = {
       saving: "Saving...",
       remove: "Delete",
       confirmDelete: "Delete this project?",
+      deleteStatus: { deleted: "Project deleted.", disabled: "Writes are disabled.", conflict: "The record changed; reload the page.", "cache-error": "Deleted, but the view could not refresh.", error: "The record could not be deleted." },
       statuses: { PLANNED: "Planned", IN_PROGRESS: "In progress", PAUSED: "Paused", COMPLETED: "Completed", ARCHIVED: "Archived" },
       actionStatus: { success: "Project saved.", invalid: "Review the fields.", disabled: "Writes are disabled.", conflict: "The record changed; reload the page.", "cache-error": "Saved, but the cache could not be invalidated.", error: "The record could not be saved.", idle: "" },
     },

@@ -50,9 +50,9 @@ Mi portafolio es una aplicación fullstack desarrollada en Next.js. Su alcance a
 ### 2.4 Módulo de Autenticación y Panel de Administración
 * **RF-14: Autenticación OAuth.** El sistema debe integrar el inicio de sesión exclusivamente mediante GitHub y usar sesiones JWT cifradas sin almacenar contraseñas.
 * **RF-15: Autorización Estricta.** El acceso a `/admin` debe restringirse a mi cuenta mediante el ID numérico estable de GitHub. La autorización debe repetirse en el DAL y en cada mutación, sin depender únicamente de layouts o controles de cliente.
-* **RF-16: Gestión de Contenido.** El CMS debe permitir consultar y actualizar el perfil bilingüe y evolucionar hacia la gestión de experiencias, educación, habilidades, proyectos y sus traducciones. Las mutaciones deben conservar completas las versiones en español e inglés.
+* **RF-16: Gestión de Contenido.** El CMS debe permitir crear, consultar, actualizar y eliminar perfil, experiencias, educación, categorías de habilidades, habilidades, proyectos y sus traducciones. Las mutaciones deben conservar completas las versiones en español e inglés.
 * **RF-16.1: Interfaz Administrativa Bilingüe.** El CMS debe ofrecer interfaz en español e inglés mediante `/admin/es` y `/admin/en`, sin duplicar los datos editables.
-* **RF-16.2: Aislamiento De Escrituras.** Las mutaciones deben requerir una habilitación explícita del servidor. Preview puede compartir la base de Production únicamente con escrituras, migraciones y seeds deshabilitados.
+* **RF-16.2: Aislamiento De Escrituras.** Las mutaciones deben requerir una habilitación explícita del servidor. Preview puede compartir la base de Production únicamente con escrituras, migraciones y seeds deshabilitados; `VERCEL_ENV=preview` debe bloquear escrituras incluso si el flag se configura erróneamente.
 * **RF-16.3: Consistencia De Edición.** El CMS debe rechazar formularios basados en una versión obsoleta, invalidar la caché pública solo después del commit y distinguir un fallo de invalidación de un fallo de persistencia.
 * **RF-17: Gestión de Chats.** El CMS debe permitir visualizar conversaciones, eliminarlas y marcarlas como fijadas.
 

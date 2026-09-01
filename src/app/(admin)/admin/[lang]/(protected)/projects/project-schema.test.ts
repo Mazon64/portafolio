@@ -9,4 +9,9 @@ describe("project schema", () => {
     expect(projectSchema.safeParse({ ...valid, progressPct: "101" }).success).toBe(false);
     expect(projectSchema.safeParse({ ...valid, repositoryFullName: "invalid" }).success).toBe(false);
   });
+  it("rejects non-web URL schemes", () => {
+    for (const demoUrl of ["javascript:alert(1)", "data:text/html,test", "file:///tmp/test"]) {
+      expect(projectSchema.safeParse({ ...valid, demoUrl }).success).toBe(false);
+    }
+  });
 });

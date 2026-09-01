@@ -78,9 +78,11 @@ callbacks: {
 }
 ```
 
-`/admin` detecta el idioma y redirige a `/admin/es` o `/admin/en`. El login permanece fuera del layout protegido, mientras el dashboard y cada consulta administrativa exigen autorización server-side. Las mutaciones usan Server Actions consideradas endpoints públicos: autorizan nuevamente, validan con Zod y ejecutan una transacción Prisma. `Profile.updatedAt` actúa como versión optimista para impedir que una pestaña obsoleta sobrescriba una edición reciente. Después del commit se llama `updateTag("portfolio")`; si solo falla esa invalidación, la interfaz confirma que el guardado ocurrió y conserva la nueva versión.
+`/admin` detecta el idioma y redirige a `/admin/es` o `/admin/en`. El login permanece fuera del layout protegido, mientras el dashboard y cada consulta administrativa exigen autorización server-side. El CMS ofrece CRUD de perfil, experiencia, educación, categorías de habilidades, habilidades y proyectos. Las mutaciones usan Server Actions consideradas endpoints públicos: autorizan nuevamente, validan con Zod y ejecutan transacciones Prisma que conservan juntas las traducciones ES/EN.
 
-`CMS_WRITES_ENABLED` es una segunda barrera operacional y falla de forma segura. Preview comparte la base Supabase exclusivamente para lecturas; sus mutaciones permanecen deshabilitadas para impedir que una prueba modifique datos públicos.
+`updatedAt` actúa como versión optimista para impedir que una pestaña obsoleta sobrescriba una edición reciente. Las categorías reciben además una nueva versión cuando cambia una habilidad hija, para proteger los borrados en cascada. Después del commit se llama `updateTag("portfolio")`; si solo falla esa invalidación, la interfaz confirma que el guardado ocurrió y conserva la nueva versión.
+
+`CMS_WRITES_ENABLED` es una segunda barrera operacional y falla de forma segura. Preview comparte la base Supabase exclusivamente para lecturas: aunque el flag se configure accidentalmente en `true`, `VERCEL_ENV=preview` bloquea las mutaciones. Preview tampoco recibe `DIRECT_URL`, ejecuta migraciones ni ejecuta seeds.
 
 ---
 

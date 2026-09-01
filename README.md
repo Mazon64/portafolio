@@ -20,14 +20,15 @@ Actualmente incluye:
 - Secciones públicas conectadas a Supabase mediante un DAL server-only.
 - Caché de contenido por idioma con revalidación cada cinco minutos.
 - Cards de habilidades con logos permitidos y badges.
-- Estado vacío y estructura expandible para proyectos futuros.
+- Proyectos opcionales con estado vacío cuando todavía no existen publicaciones.
 - Formulario de contacto protegido por Cloudflare Turnstile y entregado mediante Resend.
 - Analítica web sin cookies mediante Vercel Web Analytics.
 - CV localizado e imprimible alimentado por el mismo contenido profesional.
 - Acceso administrativo bilingüe mediante GitHub OAuth y whitelist por ID estable.
-- Edición atómica del perfil y sus traducciones desde el CMS.
+- CMS CRUD para perfil, experiencia, educación, categorías de habilidades, habilidades y proyectos.
+- Escrituras bilingües atómicas, control de concurrencia y borrados con confirmación.
 
-El CMS comienza con la edición del perfil principal. La experiencia, educación, habilidades y proyectos se incorporarán como módulos posteriores; la telemetría y el chatbot permanecen en etapas futuras. La base inicial no publica proyectos hasta que existan propuestas propias que puedan mostrarse.
+El CMS administra el contenido profesional completo que alimenta el portafolio y el CV. La telemetría, las imágenes editoriales, RAG y el chatbot permanecen en etapas futuras. La base inicial no publica proyectos hasta que existan propuestas propias que puedan mostrarse.
 
 ## Tecnologías
 
@@ -142,7 +143,7 @@ Los contratos se encuentran en `.env.example` y `.env.docker.example`.
 
 La interfaz del formulario permanece disponible en todos los entornos. La entrega solo se activa con `CONTACT_DELIVERY_ENABLED=true` y las tres variables de Resend y dos de Turnstile configuradas; de lo contrario, el endpoint rechaza el envío sin llamar a servicios externos. El navegador obtiene en runtime únicamente `TURNSTILE_SITE_KEY` desde `/api/contact`; los demás valores nunca se exponen. Cada envío habilitado se valida con Turnstile y después genera una sola notificación editorial y localizada dirigida a `contacto@davidaranda.dev`, con el correo del visitante como `replyTo`. Los mensajes no se duplican en PostgreSQL.
 
-El CMS exige una sesión GitHub cuyo ID coincida con `ADMIN_GITHUB_ID`. La autorización vuelve a comprobarse en el DAL y en cada Server Action; `CMS_WRITES_ENABLED` falla de forma segura cuando falta o no vale exactamente `true`. Preview comparte la base Supabase de Production únicamente para lectura y mantiene las mutaciones deshabilitadas de forma permanente.
+El CMS exige una sesión GitHub cuyo ID coincida con `ADMIN_GITHUB_ID`. La autorización vuelve a comprobarse en el DAL y en cada Server Action; `CMS_WRITES_ENABLED` falla de forma segura cuando falta o no vale exactamente `true`. Preview comparte la base Supabase de Production únicamente para lectura: además del flag en `false`, el código rechaza escrituras siempre que Vercel declare `VERCEL_ENV=preview`.
 
 En archivos `.env`, las URLs de PostgreSQL y `CONTACT_FROM_EMAIL` se escriben entre comillas dobles; las claves y direcciones simples no las necesitan. En el panel de Vercel los valores nunca incluyen comillas externas, porque la interfaz las conservaría literalmente.
 

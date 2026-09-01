@@ -135,6 +135,9 @@ export async function saveAdminSkill(input: SkillInput) {
   await requireAdmin();
   return getPrisma().$transaction(async (tx) => {
     let id = input.id;
+    const previous = id
+      ? await tx.skill.findUnique({ where: { id }, select: { categoryId: true } })
+      : null;
     const data = {
       categoryId: input.categoryId,
       slug: input.slug,
@@ -162,6 +165,16 @@ export async function saveAdminSkill(input: SkillInput) {
         });
       }),
     );
+    await tx.skillCategory.update({
+      where: { id: input.categoryId },
+      data: { updatedAt: new Date() },
+    });
+    if (previous && previous.categoryId !== input.categoryId) {
+      await tx.skillCategory.update({
+        where: { id: previous.categoryId },
+        data: { updatedAt: new Date() },
+      });
+    }
     const saved = await tx.skill.findUniqueOrThrow({
       where: { id },
       select: { updatedAt: true },
@@ -177,5 +190,20 @@ export async function deleteAdminSkillCategory(id: string, updatedAt: string) {
 
 export async function deleteAdminSkill(id: string, updatedAt: string) {
   await requireAdmin();
-  return (await getPrisma().skill.deleteMany({ where: { id, updatedAt: new Date(updatedAt) } })).count === 1;
+  return getPrisma().$transaction(async (tx) => {
+    const skill = await tx.skill.findFirst({
+      where: { id, updatedAt: new Date(updatedAt) },
+      select: { categoryId: true },
+    });
+    if (!skill) return false;
+    const result = await tx.skill.deleteMany({
+      where: { id, updatedAt: new Date(updatedAt) },
+    });
+    if (result.count !== 1) return false;
+    await tx.skillCategory.update({
+      where: { id: skill.categoryId },
+      data: { updatedAt: new Date() },
+    });
+    return true;
+  });
 }
