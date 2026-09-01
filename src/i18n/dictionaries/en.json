@@ -5,7 +5,9 @@
   },
   "home": {
     "eyebrow": "Portfolio · Software engineering",
-    "heading": "I build software with intention, clarity, and reach."
+    "heading": "I build software with intention, clarity, and reach.",
+    "viewCv": "View résumé",
+    "viewProjects": "View projects"
   },
   "navigation": {
     "menu": "Navigation",
@@ -18,7 +20,7 @@
     "experience": "Experience",
     "education": "Education",
     "contact": "Contact",
-    "cv": "CV"
+    "cv": "View CV"
   },
   "preferences": {
     "language": "Language",

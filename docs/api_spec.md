@@ -1,39 +1,84 @@
-# Especificación de APIs
+# Especificación De APIs
 ## Proyecto: Portafolio
-**Versión:** 1.1.0
+**Versión:** 1.2.0
 
 ---
 
-## 1. Webhook de Telemetría (GitHub)
+## 1. Contacto
 
-Este endpoint funciona como puente asíncrono entre mis repositorios de GitHub y el sistema RAG. Recibe eventos del ciclo de vida del desarrollo, delega su procesamiento y actualiza la base de datos vectorial para que el chatbot disponga de contexto reciente.
+### 1.1 `GET /api/contact`
 
-### 1.1 `POST /api/webhooks/github`
+Entrega al navegador únicamente la configuración pública necesaria para presentar Turnstile.
 
-**Descripción:** Recibe payloads JSON de GitHub para eventos configurados, como push, pull request e issues.
-
-**Headers requeridos:**
-*   `Content-Type: application/json`
-*   `X-GitHub-Event: <tipo_de_evento>` (por ejemplo, `push` o `pull_request`)
-*   `X-Hub-Signature-256: sha256=<hash_hmac>` (debe validarse antes de aceptar el evento)
-
-**Cuerpo de la petición (ejemplo resumido de un evento `push`):**
 ```json
 {
-  "ref": "refs/heads/main",
-  "repository": {
-    "name": "sistema-tickets-ia",
-    "full_name": "tu_usuario/sistema-tickets-ia"
-  },
-  "commits": [
-    {
-      "id": "1a2b3c4d",
-      "message": "feat(auth): integrar pasarela de pagos con Stripe",
-      "author": {
-        "username": "tu_usuario"
-      },
-      "added": ["src/payments/stripe.ts"],
-      "modified": ["src/app.module.ts"]
-    }
-  ]
+  "turnstileSiteKey": "site-key-o-null"
 }
+```
+
+La respuesta usa `Cache-Control: no-store`. Cuando `CONTACT_DELIVERY_ENABLED` no vale exactamente `true` o falta cualquier credencial requerida, devuelve `null` y no expone información parcial.
+
+### 1.2 `POST /api/contact`
+
+Recibe un mensaje público, valida origen, tamaño, honeypot, formato, límite básico por IP y Turnstile, y entrega una notificación mediante Resend. No persiste el mensaje en PostgreSQL.
+
+```json
+{
+  "name": "Ada Lovelace",
+  "email": "ada@example.com",
+  "message": "Me gustaría conversar sobre un proyecto.",
+  "website": "",
+  "turnstileToken": "token",
+  "locale": "es"
+}
+```
+
+| Código | Estado | Significado |
+| --- | --- | --- |
+| `202` | `accepted` | Mensaje aceptado o honeypot descartado silenciosamente. |
+| `400` | `invalid` / `verification_failed` | Payload o desafío inválido. |
+| `403` | `forbidden` | El origen no coincide. |
+| `413` | `invalid` | El cuerpo excede el límite. |
+| `429` | `rate_limited` | La IP envió otro mensaje dentro de la ventana básica. |
+| `502` | `delivery_failed` | Resend no confirmó la entrega. |
+| `503` | `unavailable` | La entrega está deshabilitada o incompleta. |
+
+## 2. Autenticación Administrativa
+
+### 2.1 `/api/auth/[...nextauth]`
+
+NextAuth.js administra los endpoints internos de OAuth, callback, CSRF, sesión y cierre de sesión. El único proveedor permitido es GitHub. No se define un contrato público adicional sobre las respuestas internas de la librería.
+
+La admisión exige que el `profile.id` numérico coincida con `ADMIN_GITHUB_ID`. La sesión JWT conserva ese ID y el DAL vuelve a compararlo con la configuración vigente en cada acceso. El CMS no acepta tokens bearer propios ni autenticación por correo o login de GitHub.
+
+Los callbacks registrados en GitHub son:
+
+```text
+http://localhost:3000/api/auth/callback/github
+https://preview.davidaranda.dev/api/auth/callback/github
+https://davidaranda.dev/api/auth/callback/github
+```
+
+Cada origen utiliza una aplicación OAuth independiente.
+
+## 3. Mutaciones Del CMS
+
+Las mutaciones administrativas se implementan como Server Actions y no como una API pública versionada. Deben tratarse como endpoints expuestos: vuelven a autorizar la sesión, verifican `CMS_WRITES_ENABLED`, validan con Zod y escriben mediante transacciones Prisma.
+
+La actualización del perfil modifica los campos compartidos y las traducciones `ES` y `EN` de `main-profile` en una sola transacción. El formulario envía `updatedAt` como versión optimista y recibe `conflict` si el registro cambió desde su lectura. Después de un commit exitoso invalida la etiqueta `portfolio`; un error de validación o persistencia nunca invalida la caché. Si la invalidación falla después del commit, devuelve `cache-error` con la nueva versión para dejar claro que los datos sí se guardaron.
+
+## 4. Webhook De Telemetría (Planificado)
+
+### 4.1 `POST /api/webhooks/github`
+
+Este endpoint todavía no está implementado. Recibirá eventos seleccionados del ciclo de desarrollo, validará `X-Hub-Signature-256`, responderá antes del procesamiento semántico prolongado y actualizará el contexto vectorial de proyectos autorizados.
+
+Headers previstos:
+
+```text
+Content-Type: application/json
+X-GitHub-Event: push
+X-Hub-Signature-256: sha256=<hash_hmac>
+```
+
+La especificación del payload y la política de eventos se cerrarán al comenzar el módulo de telemetría para no fijar anticipadamente un modelo de embeddings o una cola de procesamiento.

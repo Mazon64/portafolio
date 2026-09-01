@@ -15,6 +15,8 @@ export type Dictionary = {
   home: {
     eyebrow: string;
     heading: string;
+    viewCv: string;
+    viewProjects: string;
   };
   navigation: {
     menu: string;

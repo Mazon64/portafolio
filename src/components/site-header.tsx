@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MenuIcon } from "lucide-react";
+import { FileTextIcon, MenuIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
@@ -104,7 +104,7 @@ export function SiteHeader({
         <a
           href={pathname === portfolioPath ? "#hero" : `${portfolioPath}#hero`}
           aria-label={siteConfig.name}
-          className="hidden shrink-0 items-center gap-3 font-heading xl:flex"
+          className="hidden shrink-0 items-center gap-3 font-mono xl:flex"
         >
           <span className="grid size-9 place-items-center rounded-full bg-foreground text-xs font-bold tracking-tight text-background">
             {siteConfig.initials}
@@ -126,8 +126,11 @@ export function SiteHeader({
                     : "page"
                   : undefined
               }
-              className={`rounded-md px-2.5 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${isCurrent(item.href) ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${isCurrent(item.href) || item.href.endsWith("/cv") ? "bg-foreground text-background hover:bg-foreground/80" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
             >
+              {item.href.endsWith("/cv") && (
+                <FileTextIcon className="size-4" aria-hidden="true" />
+              )}
               {item.label}
             </a>
           ))}
@@ -181,6 +184,9 @@ export function SiteHeader({
                     >
                       {String(index + 1).padStart(2, "0")}
                     </span>
+                    {item.href.endsWith("/cv") && (
+                      <FileTextIcon className="size-4" aria-hidden="true" />
+                    )}
                     {item.label}
                   </a>
                 ))}

@@ -1,17 +1,17 @@
 # Documento de Arquitectura de Software
 ## Proyecto: Portafolio
-**Versión:** 1.2.0
+**Versión:** 1.3.0
 
 ---
 
 ## 1. Topología del Sistema
-Mi portafolio utiliza una aplicación fullstack de Next.js (App Router) distribuida como una imagen OCI. La aplicación web y sus Route Handlers permanecen en un mismo servicio para reducir la complejidad operativa durante la primera etapa.
+Mi portafolio utiliza una aplicación fullstack de Next.js (App Router) desplegada de forma nativa en Vercel. La aplicación web, sus Route Handlers y Server Actions permanecen en el mismo proyecto; una imagen OCI equivalente conserva la portabilidad para ejecución local o proveedores alternativos.
 
-* **Dominio y DNS:** Cloudflare, con proxy para el tráfico público.
-* **Aplicación y API:** Render Web Service a partir de una imagen Docker publicada en GHCR.
+* **Dominio y DNS:** Cloudflare en modo DNS only.
+* **Aplicación y API:** Vercel con Next.js y Vercel Functions.
 * **Dominio relacional y vectorial:** PostgreSQL y pgvector alojados en Supabase.
-* **Dominio de mensajería efímera:** MongoDB Atlas.
-* **Capa de inteligencia artificial:** Google Gemini API, mediante un modelo Flash.
+* **Correo de contacto:** Resend con plantillas React Email y Gmail como destino.
+* **Servicios futuros:** MongoDB Atlas para conversaciones y Google Gemini para RAG.
 
 ### 1.1 Internacionalización y Preferencias de Interfaz
 Los prefijos `/es` y `/en` son obligatorios para las rutas públicas. El Proxy interviene solo en `/`: selecciona español cuando es el idioma principal aceptado por el navegador e inglés para cualquier otro idioma. Cualquier otra ruta sin prefijo o con un idioma no soportado devuelve 404.
@@ -45,7 +45,7 @@ Las consultas públicas deben filtrar por el `Locale` solicitado. El CMS no debe
 
 ### 2.2 Acceso Público, CV Y Caché
 
-Las rutas localizadas conservan metadatos independientes de PostgreSQL para que el build no necesite credenciales. El Server Component de contenido llama a `connection()` antes del DAL, por lo que Prisma solo se ejecuta al recibir una petición. `unstable_cache` mantiene DTOs separados para el portafolio y el CV por idioma durante 300 segundos; ambos usan la etiqueta `portfolio`, preparada para invalidación desde el futuro CMS. El portafolio filtra mediante `showOnPortfolio`, mientras `/es/cv` y `/en/cv` filtran mediante `showOnCv` y ofrecen una composición HTML optimizada para impresión A4.
+Las rutas localizadas conservan metadatos independientes de PostgreSQL para que el build no necesite credenciales. El Server Component de contenido llama a `connection()` antes del DAL, por lo que Prisma solo se ejecuta al recibir una petición. `unstable_cache` mantiene DTOs separados para el portafolio y el CV por idioma durante 300 segundos; ambos usan la etiqueta `portfolio`, que el CMS invalida después de una transacción exitosa. El portafolio filtra mediante `showOnPortfolio`, mientras `/es/cv` y `/en/cv` filtran mediante `showOnCv` y ofrecen una composición HTML optimizada para impresión A4.
 
 El DAL selecciona únicamente campos públicos, exige la traducción solicitada, convierte fechas y enums a valores serializables y valida URLs externas. Los componentes nunca reciben modelos Prisma ni acceden directamente a variables de entorno. Una inconsistencia de contenido produce el estado de error localizado en lugar de mezclar idiomas o presentar datos parciales.
 
@@ -60,21 +60,27 @@ La etapa RAG ampliará este modelo sin almacenar HTML generado. Cada imagen debe
 ## 3. Estrategia de Autenticación y Autorización
 
 ### 3.1 Autenticación (SSO con GitHub)
-El acceso al CMS y a la auditoría se realizará exclusivamente mediante Single Sign-On con GitHub. Auth.js orquestará el flujo OAuth 2.0 sin gestionar contraseñas propias.
+El acceso al CMS se realiza exclusivamente mediante Single Sign-On con GitHub. NextAuth.js orquesta OAuth 2.0 sin gestionar contraseñas propias y mantiene una sesión JWT cifrada con una duración absoluta máxima de doce horas. Un timestamp firmado e inmutable evita que la renovación deslizante prolongue ese límite.
 
 * **Credenciales:** `AUTH_GITHUB_ID` y `AUTH_GITHUB_SECRET`, generados en GitHub.
-* **Firma de sesión:** JWT firmados con una llave segura definida en `AUTH_SECRET`.
+* **Sesión:** JWT cifrado mediante `AUTH_SECRET`, sin tablas de cuentas o sesiones.
+* **Entornos:** local, Preview y Production usan aplicaciones OAuth y secretos independientes.
 
 ### 3.2 Autorización (Whitelist por Entorno)
-El acceso a `/admin/*` estará restringido al propietario del ecosistema. Los callbacks de autenticación compararán el identificador estable de mi cuenta de GitHub con una whitelist almacenada en variables de entorno del servidor. El correo podrá utilizarse como dato adicional, pero no como único identificador porque el proveedor permite modificarlo.
+El acceso a `/admin/*` está restringido al propietario del ecosistema. El callback de autenticación compara el identificador numérico estable de GitHub con `ADMIN_GITHUB_ID`; después, el DAL vuelve a comparar ese ID en cada petición para revocar sesiones existentes cuando cambie la whitelist. El correo y el login no participan en la autorización porque son mutables.
 
 ```typescript
 callbacks: {
-  async signIn({ profile }) {
-    return String(profile.id) === process.env.ADMIN_GITHUB_ID;
+  async signIn({ account, profile }) {
+    return account?.provider === "github"
+      && String(profile.id) === process.env.ADMIN_GITHUB_ID;
   }
 }
 ```
+
+`/admin` detecta el idioma y redirige a `/admin/es` o `/admin/en`. El login permanece fuera del layout protegido, mientras el dashboard y cada consulta administrativa exigen autorización server-side. Las mutaciones usan Server Actions consideradas endpoints públicos: autorizan nuevamente, validan con Zod y ejecutan una transacción Prisma. `Profile.updatedAt` actúa como versión optimista para impedir que una pestaña obsoleta sobrescriba una edición reciente. Después del commit se llama `updateTag("portfolio")`; si solo falla esa invalidación, la interfaz confirma que el guardado ocurrió y conserva la nueva versión.
+
+`CMS_WRITES_ENABLED` es una segunda barrera operacional y falla de forma segura. Preview comparte la base Supabase exclusivamente para lecturas; sus mutaciones permanecen deshabilitadas para impedir que una prueba modifique datos públicos.
 
 ---
 
@@ -90,10 +96,18 @@ Los secretos estarán disponibles solo en el servidor. El prefijo `NEXT_PUBLIC_`
 | `HOST_PORT` | Puerto del host utilizado por Docker Compose; no se inyecta en el contenedor. |
 | `DATABASE_URL` | Conexión agrupada de Prisma a PostgreSQL/Supabase. |
 | `DIRECT_URL` | Pooler de sesión usado por Prisma CLI y migraciones. |
-| `AUTH_SECRET` | Firma de sesiones de Auth.js. |
+| `NEXTAUTH_URL` | Origen exacto del callback OAuth para cada entorno. |
+| `AUTH_SECRET` | Cifrado e integridad de sesiones JWT de Auth.js. |
 | `AUTH_GITHUB_ID` | Identificador OAuth de GitHub. |
 | `AUTH_GITHUB_SECRET` | Secreto OAuth de GitHub. |
 | `ADMIN_GITHUB_ID` | Identificador estable autorizado para el CMS. |
+| `CMS_WRITES_ENABLED` | Habilitación explícita de mutaciones administrativas. |
+| `CONTACT_DELIVERY_ENABLED` | Habilitación explícita de la entrega del formulario. |
+| `RESEND_API_KEY` | Credencial server-only para enviar correo mediante Resend. |
+| `CONTACT_FROM_EMAIL` | Remitente verificado de las notificaciones de contacto. |
+| `CONTACT_TO_EMAIL` | Buzón privado de destino. |
+| `TURNSTILE_SITE_KEY` | Identificador público entregado al formulario en runtime. |
+| `TURNSTILE_SECRET_KEY` | Credencial server-only para validar Turnstile. |
 | `GITHUB_WEBHOOK_SECRET` | Validación de firmas del webhook. |
 | `GEMINI_API_KEY` | Acceso a Google Gemini. |
 | `MONGODB_URI` | Conexión a MongoDB Atlas. |
@@ -107,39 +121,39 @@ El repositorio versiona `.env.example` para desarrollo nativo y `.env.docker.exa
 
 ### 5.1 Flujo de CI/CD
 
-GitHub Actions automatizará la entrega con este flujo:
+GitHub Actions y Vercel implementan este flujo:
 
-1. Ejecutar pruebas, lint y build para cada cambio propuesto.
-2. Construir una imagen OCI a partir del `Dockerfile` al integrar cambios en la rama principal.
-3. Publicar la imagen en GitHub Container Registry con una etiqueta inmutable para el SHA del commit y la etiqueta móvil `latest` consumida por Render.
-4. Aplicar las migraciones pendientes con `DIRECT_URL` después de construir la imagen y antes de activar el despliegue.
-5. Solicitar el despliegue de Render mediante un Deploy Hook después de publicar correctamente la imagen y migrar la base.
-6. Conservar en Render, GitHub y los proveedores de datos únicamente los secretos requeridos por cada servicio.
+1. Ejecutar pruebas, lint y build en pull requests y pushes a `develop` y `main`.
+2. Desplegar `develop` como Preview protegido y `main` como Production público mediante Vercel.
+3. Revisar visual y funcionalmente Preview antes de solicitar la promoción a `main`.
+4. Aplicar migraciones compatibles mediante el workflow manual y el environment protegido correspondiente.
+5. Publicar la imagen OCI `latest` y `sha-<commit>` en GHCR únicamente después de integrar un commit verificado en `main`.
+6. Conservar en Vercel, GitHub y los proveedores de datos únicamente los secretos requeridos por cada entorno.
 
-Render no reconstruirá la aplicación. El despliegue utilizará la imagen que haya superado las verificaciones de GitHub Actions para mantener trazabilidad entre código, artefacto y ejecución.
+Vercel despliega directamente desde GitHub y no consume la imagen de GHCR. Docker permanece como contrato de portabilidad independiente.
 
-Los metadatos localizados se generan durante el build y usan `SITE_URL` para incorporar canonical y alternates correctos. El contenido profesional se renderiza bajo demanda y recibe `DATABASE_URL` exclusivamente en runtime. Todas las credenciales y conexiones privadas permanecen fuera de la imagen.
+Los metadatos localizados se generan durante el build y usan `SITE_URL` para incorporar canonical y alternates correctos. El contenido profesional se renderiza bajo demanda y recibe `DATABASE_URL` exclusivamente en runtime. Todas las credenciales y conexiones privadas permanecen fuera de la imagen. El área administrativa no carga Vercel Web Analytics.
 
 ### 5.2 Flujo de Tráfico
 
-El dominio público se configurará en Cloudflare y su DNS apuntará al dominio personalizado de Render. El proxy de Cloudflare permanecerá activo cuando sea compatible con la validación del dominio y TLS de Render. El recorrido esperado será:
+Cloudflare conserva la zona DNS, pero los registros del portafolio permanecen en modo DNS only y apuntan a Vercel para evitar un doble proxy. El recorrido actual es:
 
 ```text
-Visitante o webhook de GitHub
-  -> Cloudflare DNS/proxy
-  -> Render Web Service
-  -> Next.js (páginas y Route Handlers)
-  -> Supabase / MongoDB Atlas / Gemini
+Visitante o administrador
+  -> Cloudflare DNS
+  -> Vercel
+  -> Next.js (páginas, Route Handlers y Server Actions)
+  -> Supabase / GitHub OAuth / Resend
 ```
 
-`/api/health/live` se utiliza como liveness del contenedor y no consulta dependencias. `/api/health/ready` verifica PostgreSQL, el perfil y las traducciones de todos los registros públicos; también devuelve el SHA incorporado en la imagen. GitHub Actions espera ese SHA después de solicitar el despliegue. Esta separación evita reiniciar la aplicación únicamente por una interrupción temporal de Supabase y evita aprobar una versión anterior todavía saludable.
+`/api/health/live` comprueba el proceso sin consultar dependencias. `/api/health/ready` verifica PostgreSQL, el perfil, las traducciones públicas y el SHA de Vercel o de la imagen. Esta separación evita interpretar una interrupción temporal de Supabase como un fallo del proceso.
 
-### 5.3 Limitaciones del Nivel Gratuito
+### 5.3 Separación De Entornos
 
-El servicio gratuito de Render puede suspenderse por inactividad y provocar un arranque en frío. Por este motivo, no se puede garantizar una respuesta menor a dos segundos para el primer webhook después de una suspensión. El endpoint debe permanecer ligero: validar la firma, registrar o delegar el evento y responder antes de ejecutar procesamiento semántico prolongado.
+Production y Preview usan la misma base Supabase para evitar un segundo proyecto. Preview solo consulta datos: no ejecuta mutaciones, migraciones ni seeds. El único `DIRECT_URL` reside en el environment `production` de GitHub y solo puede usarse desde `main`. Las aplicaciones OAuth, `AUTH_SECRET` y `NEXTAUTH_URL` se mantienen separadas por origen.
 
-Una necesidad futura de latencia estricta o disponibilidad continua requerirá una instancia sin suspensión o un servicio separado de recepción. Esa complejidad no se añadirá mientras la carga real no la justifique.
+Las integraciones que no deben operar en Preview permanecen detrás de flags server-only específicos. `CONTACT_DELIVERY_ENABLED` controla la entrega del formulario y `CMS_WRITES_ENABLED` controla las mutaciones administrativas; ninguna depende de `NODE_ENV` ni de `VERCEL_ENV`.
 
 ### 5.4 Estrategia de Portabilidad
 
-El `Dockerfile` funcionará como contrato de ejecución para evitar el acoplamiento a Render. La imagen debe poder ejecutarse localmente y en cualquier proveedor compatible con OCI. Cloudflare administrará el dominio para permitir cambios de origen sin trasladar el DNS autoritativo.
+El `Dockerfile` funciona como contrato de ejecución para evitar el acoplamiento exclusivo a Vercel. La imagen puede ejecutarse localmente y en cualquier proveedor compatible con OCI. Cloudflare administra el dominio para permitir cambios de origen sin trasladar el DNS autoritativo.

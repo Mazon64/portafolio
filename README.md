@@ -24,8 +24,10 @@ Actualmente incluye:
 - Formulario de contacto protegido por Cloudflare Turnstile y entregado mediante Resend.
 - Analítica web sin cookies mediante Vercel Web Analytics.
 - CV localizado e imprimible alimentado por el mismo contenido profesional.
+- Acceso administrativo bilingüe mediante GitHub OAuth y whitelist por ID estable.
+- Edición atómica del perfil y sus traducciones desde el CMS.
 
-El CMS, la telemetría y el chatbot forman parte de las siguientes etapas. La base inicial no publica proyectos; se incorporarán cuando existan propuestas propias que puedan mostrarse.
+El CMS comienza con la edición del perfil principal. La experiencia, educación, habilidades y proyectos se incorporarán como módulos posteriores; la telemetría y el chatbot permanecen en etapas futuras. La base inicial no publica proyectos hasta que existan propuestas propias que puedan mostrarse.
 
 ## Tecnologías
 
@@ -43,6 +45,8 @@ Tecnologías utilizadas:
 - Prisma 7.10 con el adaptador PostgreSQL.
 - React Email y Resend para notificaciones de contacto.
 - Vercel Web Analytics para métricas de tráfico y navegación.
+- NextAuth.js para sesiones JWT y GitHub OAuth.
+- Zod para validación server-side de formularios administrativos.
 
 ## Requisitos
 
@@ -119,10 +123,12 @@ Los contratos se encuentran en `.env.example` y `.env.docker.example`.
 | `HOST_PORT` | Puerto del host utilizado únicamente por Docker Compose. |
 | `DATABASE_URL` | Conexión agrupada de Prisma a PostgreSQL. |
 | `DIRECT_URL` | Pooler de sesión usado por Prisma CLI y migraciones. |
-| `AUTH_SECRET` | Firma de sesiones de Auth.js. |
+| `NEXTAUTH_URL` | Origen exacto que recibe el callback de GitHub OAuth. |
+| `AUTH_SECRET` | Cifrado e integridad de sesiones JWT de Auth.js. |
 | `AUTH_GITHUB_ID` | Identificador OAuth de GitHub. |
 | `AUTH_GITHUB_SECRET` | Secreto OAuth de GitHub. |
-| `ADMIN_GITHUB_ID` | Cuenta autorizada para el CMS. |
+| `ADMIN_GITHUB_ID` | ID numérico e inmutable de la cuenta autorizada para el CMS. |
+| `CMS_WRITES_ENABLED` | Habilita explícitamente las mutaciones del CMS cuando vale `true`. |
 | `GITHUB_WEBHOOK_SECRET` | Firma de webhooks de GitHub. |
 | `GEMINI_API_KEY` | Acceso a Google Gemini. |
 | `CONTACT_DELIVERY_ENABLED` | Habilita explícitamente la entrega de mensajes cuando vale `true`. |
@@ -135,6 +141,8 @@ Los contratos se encuentran en `.env.example` y `.env.docker.example`.
 | `CRON_SECRET` | Autorización de tareas programadas. |
 
 La interfaz del formulario permanece disponible en todos los entornos. La entrega solo se activa con `CONTACT_DELIVERY_ENABLED=true` y las tres variables de Resend y dos de Turnstile configuradas; de lo contrario, el endpoint rechaza el envío sin llamar a servicios externos. El navegador obtiene en runtime únicamente `TURNSTILE_SITE_KEY` desde `/api/contact`; los demás valores nunca se exponen. Cada envío habilitado se valida con Turnstile y después genera una sola notificación editorial y localizada dirigida a `contacto@davidaranda.dev`, con el correo del visitante como `replyTo`. Los mensajes no se duplican en PostgreSQL.
+
+El CMS exige una sesión GitHub cuyo ID coincida con `ADMIN_GITHUB_ID`. La autorización vuelve a comprobarse en el DAL y en cada Server Action; `CMS_WRITES_ENABLED` falla de forma segura cuando falta o no vale exactamente `true`. Preview comparte la base Supabase de Production únicamente para lectura y mantiene las mutaciones deshabilitadas de forma permanente.
 
 En archivos `.env`, las URLs de PostgreSQL y `CONTACT_FROM_EMAIL` se escriben entre comillas dobles; las claves y direcciones simples no las necesitan. En el panel de Vercel los valores nunca incluyen comillas externas, porque la interfaz las conservaría literalmente.
 
@@ -194,6 +202,8 @@ Estructura del código:
 src/
   app/[lang]/              Layout y página localizados
   app/[lang]/cv/           CV localizado e imprimible
+  app/admin/[lang]/        Login y CMS bilingüe
+  app/api/auth/            Callback y sesión de GitHub OAuth
   components/cv/           Documento y controles de impresión del CV
   components/              Componentes de aplicación
   components/portfolio/    Secciones públicas y estados de carga
@@ -205,7 +215,7 @@ src/
 docs/
   architecture.md          Arquitectura y modelo bilingüe propuesto
   srs.md                   Requisitos funcionales y no funcionales
-  api_spec.md              Contrato del webhook de telemetría
+  api_spec.md              Contratos de contacto, autenticación, CMS y telemetría futura
 ```
 
 ## Despliegue
@@ -221,11 +231,16 @@ Vercel requiere esta configuración:
 | Configuración | Tipo | Uso |
 | --- | --- | --- |
 | `SITE_URL` | Variable | URL pública incorporada en los metadatos durante el build. |
-| `DATABASE_URL` | Secreto | Transaction Pooler de Supabase usado por el runtime. |
+| `DATABASE_URL` | Secreto | Transaction Pooler compartido por Production y Preview de solo lectura. |
+| `NEXTAUTH_URL` | Variable | Dominio exacto de Production o Preview para OAuth. |
+| `AUTH_SECRET` | Secreto | Cifrado de sesión independiente por entorno. |
+| `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` | Secreto | Aplicación GitHub OAuth propia del entorno. |
+| `ADMIN_GITHUB_ID` | Secreto | ID numérico autorizado. |
+| `CMS_WRITES_ENABLED` | Variable | `false` en Preview; permiso explícito de escritura en Production. |
 
 Vercel Web Analytics está habilitado en el proyecto y se instrumenta desde el root layout con `@vercel/analytics`. No requiere claves, cookies ni variables de entorno adicionales.
 
-`DIRECT_URL` no se configura en Vercel. GitHub lo almacena como secreto del environment protegido `production`; el workflow manual **Database Migrations** es el único que aplica migraciones. Los cambios de esquema se despliegan con una estrategia expand-contract para que el código publicado y la base permanezcan compatibles.
+`DIRECT_URL` no se configura en Vercel. GitHub lo almacena únicamente en el environment protegido `production`; el workflow manual **Database Migrations** es el único que aplica migraciones y solo admite ejecuciones desde `main`. Los cambios de esquema se despliegan con una estrategia expand-contract para que Preview y Production permanezcan compatibles con la base compartida.
 
 Docker sigue siendo una ruta de despliegue mantenida e independiente. El workflow **Quality and Container** verifica pruebas, lint y build en `develop`, `main` y sus pull requests, pero publica `latest` y `sha-<commit>` en GHCR únicamente después de cada push verificado a `main`. Next.js genera la imagen standalone fuera de Vercel; dentro de Vercel utiliza la salida de su adaptador nativo. La imagen Docker puede ejecutarse en un VPS, NAS o proveedor de contenedores con `.env.docker`.
 
@@ -249,7 +264,7 @@ npm run build
 
 El desarrollo continuará en este orden:
 
-1. Añadir autenticación y CMS.
+1. Extender el CMS a experiencia, educación, habilidades y proyectos.
 2. Incorporar propuestas propias y su progreso como proyectos públicos.
 3. Añadir medios y narrativa técnica estructurada para proyectos.
 4. Incorporar telemetría, RAG y chatbot.

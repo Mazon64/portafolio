@@ -38,7 +38,15 @@ Configura estas variables en **Settings > Environment Variables**:
 | Variable | Entornos | Valor |
 | --- | --- | --- |
 | `SITE_URL` | Production y Preview | `https://davidaranda.dev` |
-| `DATABASE_URL` | Production y Preview | Transaction Pooler de Supabase, puerto `6543` |
+| `DATABASE_URL` | Production y Preview | Transaction Pooler del único proyecto Supabase, puerto `6543` |
+| `NEXTAUTH_URL` | Production | `https://davidaranda.dev` |
+| `NEXTAUTH_URL` | Preview | `https://preview.davidaranda.dev` |
+| `AUTH_SECRET` | Production y Preview | Valor aleatorio distinto para cada entorno |
+| `AUTH_GITHUB_ID` | Production y Preview | Client ID de la aplicación OAuth propia del entorno |
+| `AUTH_GITHUB_SECRET` | Production y Preview | Client secret de la aplicación OAuth propia del entorno |
+| `ADMIN_GITHUB_ID` | Production y Preview | ID numérico estable de la única cuenta autorizada |
+| `CMS_WRITES_ENABLED` | Preview | `false`; Preview es permanentemente de solo lectura |
+| `CMS_WRITES_ENABLED` | Production | `true`, solo después de aprobar autenticación y lectura en Preview |
 | `CONTACT_DELIVERY_ENABLED` | Production | `true` |
 | `CONTACT_DELIVERY_ENABLED` | Preview | `false` |
 | `RESEND_API_KEY` | Production | API key de Resend con permiso de envío |
@@ -47,9 +55,9 @@ Configura estas variables en **Settings > Environment Variables**:
 | `TURNSTILE_SITE_KEY` | Production | Site key del widget de Turnstile |
 | `TURNSTILE_SECRET_KEY` | Production | Secret key del widget de Turnstile |
 
-No configures `DIRECT_URL` en Vercel. `postinstall` genera Prisma con una URL ficticia que no establece ninguna conexión. Las migraciones se ejecutan exclusivamente desde GitHub Actions con el pooler de sesión.
+No configures `DIRECT_URL` en Vercel. `postinstall` genera Prisma con una URL ficticia que no establece ninguna conexión. Las migraciones se ejecutan exclusivamente desde GitHub Actions con el pooler de sesión almacenado en el environment `production`.
 
-Mientras el portafolio sea de solo lectura, Preview puede consultar la misma base mediante `DATABASE_URL`. Antes de habilitar CMS, escrituras o seeds desde previews, se debe crear una base o un rol aislado para ese entorno.
+Preview y Production comparten `DATABASE_URL`, pero Preview debe mantener `CMS_WRITES_ENABLED=false`. El código interpreta cualquier valor distinto de `true` como escrituras deshabilitadas. Preview no recibe `DIRECT_URL` y nunca ejecuta migraciones ni seeds.
 
 Las integraciones de contacto se limitan a Production mediante `CONTACT_DELIVERY_ENABLED`. En Preview la interfaz permanece disponible, pero `/api/contact` no expone la site key ni llama a Turnstile o Resend y rechaza cualquier intento de entrega con el error genérico del formulario.
 
@@ -74,22 +82,46 @@ TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
 
 La site key se entrega al cliente desde `GET /api/contact` en runtime para conservar la portabilidad de la imagen Docker. El flag, la secret key y las credenciales de Resend permanecen exclusivamente en el Route Handler. El endpoint exige que el flag valga exactamente `true` y verifica además la acción `contact`, el hostname, el origen, el tamaño, el honeypot y el límite básico por IP antes de solicitar la entrega.
 
+### GitHub OAuth Y CMS
+
+GitHub OAuth Apps admite una URL de callback por aplicación. Crea tres aplicaciones independientes para evitar compartir secretos o callbacks:
+
+| Entorno | Homepage URL | Authorization callback URL |
+| --- | --- | --- |
+| Local | `http://localhost:3000` | `http://localhost:3000/api/auth/callback/github` |
+| Preview | `https://preview.davidaranda.dev` | `https://preview.davidaranda.dev/api/auth/callback/github` |
+| Production | `https://davidaranda.dev` | `https://davidaranda.dev/api/auth/callback/github` |
+
+Genera un `AUTH_SECRET` independiente para cada entorno y guarda client secrets exclusivamente en el proveedor correspondiente. `ADMIN_GITHUB_ID` debe ser el ID numérico inmutable, no el login `Mazon64`; se puede consultar mediante la API pública de GitHub y debe verificarse antes de habilitar el CMS.
+
+El panel está disponible en `/admin/es` y `/admin/en`; `/admin` detecta el idioma. NextAuth.js rechaza cualquier proveedor distinto de GitHub y cualquier ID fuera de la whitelist. El DAL y las Server Actions repiten la autorización para no depender del layout. Las escrituras actualizan el perfil y sus dos traducciones en una transacción, rechazan versiones obsoletas e invalidan la caché pública solo después del commit.
+
+Para preparar Preview:
+
+1. Configura en Vercel Preview el mismo `DATABASE_URL` de Production.
+2. Crea una aplicación OAuth exclusiva para `https://preview.davidaranda.dev`.
+3. Configura `NEXTAUTH_URL`, `AUTH_SECRET`, las credenciales OAuth y `ADMIN_GITHUB_ID` solo para Preview.
+4. Configura `CMS_WRITES_ENABLED=false` y comprueba que el formulario rechace mutaciones.
+5. Verifica autenticación, autorización, lectura del perfil y cierre de sesión sin editar datos.
+
 ## 3. Migraciones
 
-En GitHub crea un environment llamado `production` y define dentro de el:
+En GitHub usa únicamente el environment protegido `production` para migraciones:
 
 | Nombre | Tipo | Valor |
 | --- | --- | --- |
-| `DIRECT_URL` | Secret | Session Pooler de Supabase, puerto `5432` |
+| `DIRECT_URL` | Secret | Session Pooler del único proyecto Supabase, puerto `5432` |
 
-El workflow manual **Database Migrations** ejecuta `prisma migrate deploy` y comprueba el estado final. Si el environment tiene revisores requeridos, GitHub solicitará aprobación antes de acceder al secreto.
+El workflow manual **Database Migrations** ejecuta `prisma migrate deploy`, comprueba el estado final y solo acepta ejecuciones desde `main`. Configura el environment `production` con revisores requeridos y una regla de deployment branches limitada a `main`. Preview no almacena `DIRECT_URL`.
 
 Vercel nunca aplica migraciones durante el build. Para un cambio de esquema:
 
-1. Crea y verifica una migración compatible con la versión publicada.
-2. Ejecuta **Database Migrations** desde la rama o commit que contiene esa migración.
-3. Fusiona el código que empieza a depender del nuevo esquema.
-4. Realiza eliminaciones incompatibles en un cambio posterior, después de retirar todos sus usos.
+1. Crea una migración expand compatible con la versión publicada.
+2. Integra en `main` únicamente la migración compatible, sin código que todavía dependa de ella.
+3. Ejecuta **Database Migrations** desde `main` después de la aprobación requerida.
+4. Verifica que Production y Preview continúen funcionando con el esquema expandido.
+5. Promueve en un cambio posterior el código que utiliza el nuevo esquema.
+6. Realiza eliminaciones contract incompatibles solo después de retirar todos sus usos.
 
 ## 4. Flujo De Ramas Y Promoción
 
@@ -97,7 +129,8 @@ Vercel nunca aplica migraciones durante el build. Para un cambio de esquema:
 - Las ramas `feature/*` y `fix/*` parten de `develop` y vuelven a ella mediante pull request.
 - `main` está protegida contra pushes directos y solo recibe promociones revisadas desde `develop`.
 - El check `verify` debe aprobar pruebas, lint y build antes de fusionar en `main`.
-- Antes de promover, se revisan `/es`, `/en`, navegación responsive y los endpoints de salud en el Preview.
+- Antes de promover, se revisan `/es`, `/en`, `/admin/es`, `/admin/en`, navegación responsive, autenticación y lectura administrativa sin mutaciones, y los endpoints de salud en Preview.
+- La promoción de `develop` a `main` requiere aprobación manual explícita después de revisar Preview.
 - Los cambios de esquema siguen la estrategia expand-contract y se aplican con el workflow manual antes de publicar código que dependa de ellos.
 
 Flujo habitual:
@@ -129,30 +162,27 @@ La imagen standalone conserva `/api/health/live` como health check y recibe `DAT
 
 ## 6. Dominio Y Cloudflare
 
-Realiza el corte solo después de verificar el deployment temporal `*.vercel.app`:
+La configuración vigente es:
 
-1. En Vercel, abre **Settings > Domains** y agrega `davidaranda.dev`.
-2. Agrega también `www.davidaranda.dev` y configúralo para redirigir al dominio apex si se desea soportar esa variante.
-3. Agrega `preview.davidaranda.dev`, selecciona el entorno Preview y vincula la rama `develop`.
-4. Copia exactamente los registros que Vercel indique para los tres dominios.
-5. En Cloudflare reemplaza el registro que apunta a Render por el destino de Vercel.
-6. Mantén esos registros en modo **DNS only** para evitar un doble proxy delante del CDN de Vercel.
-7. Espera a que Vercel confirme DNS y TLS antes de retirar el servicio anterior.
+1. `davidaranda.dev` sirve Production desde `main`.
+2. `www.davidaranda.dev` redirige al dominio apex.
+3. `preview.davidaranda.dev` sirve el entorno Preview de `develop` y está protegido por Vercel Authentication.
+4. Cloudflare mantiene los registros de estos hosts en modo **DNS only** para evitar un doble proxy delante del CDN de Vercel.
+5. Una regla WAF de Vercel deniega hosts `*.vercel.app`; la operación usa exclusivamente dominios propios.
 
 Cloudflare puede continuar administrando la zona y los demás subdominios. No es necesario cambiar sus nameservers a Vercel.
 
-## 7. Verificación Y Retiro De Render
+## 7. Verificación
 
-Comprueba en el dominio temporal y después en el dominio final:
+Comprueba en Preview y después de cada promoción en Production:
 
 - `/es`
 - `/en`
+- `/es/cv` y `/en/cv`
+- `/admin`, que debe redirigir al locale detectado
+- `/admin/es` y `/admin/en`, que deben exigir GitHub OAuth
 - `/api/health/live`, que debe devolver `204`
 - `/api/health/ready`, que debe devolver `status: ready` y el SHA desplegado
 - Canonical, alternates, assets, tema y navegación móvil
 
-Conserva Render activo durante el corte para poder restaurar el registro DNS si aparece un problema. Cuando el dominio final funcione de forma estable:
-
-1. Elimina el Web Service de Render.
-2. Elimina el secreto de GitHub `RENDER_DEPLOY_HOOK_URL` si todavía existe.
-3. Conserva `DIRECT_URL` dentro del environment protegido `production`.
+En Preview confirma que el acceso y la lectura funcionen, y que una mutación responda como deshabilitada. En Production realiza primero una edición reversible, comprueba los dos idiomas y conserva `DIRECT_URL` únicamente dentro de su environment protegido.
