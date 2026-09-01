@@ -15,6 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
+      - name: Require main for database migrations
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "Production migrations can only run from refs/heads/main"
+          exit 1
+
       - name: Validate migration configuration
         env:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}

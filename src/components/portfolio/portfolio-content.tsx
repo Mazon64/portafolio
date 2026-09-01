@@ -1,3 +1,6 @@
+import { ArrowDownIcon, FileTextIcon } from "lucide-react";
+import Link from "next/link";
+
 import { getPortfolioContent } from "@/data/portfolio";
 import type { Dictionary } from "@/i18n/dictionaries";
 import type { Locale } from "@/i18n/config";
@@ -39,6 +42,22 @@ export async function PortfolioContent({
           <p className="mt-12 max-w-xl border-t border-border pt-6 font-heading text-lg font-medium leading-7">
             {dictionary.home.heading}
           </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link
+              href={`/${locale}/cv`}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-foreground/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <FileTextIcon className="size-4" aria-hidden="true" />
+              {dictionary.home.viewCv}
+            </Link>
+            <a
+              href="#projects"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border bg-background px-5 py-2.5 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {dictionary.home.viewProjects}
+              <ArrowDownIcon className="size-4" aria-hidden="true" />
+            </a>
+          </div>
         </div>
       </section>
 
@@ -95,9 +114,18 @@ export async function PortfolioContent({
       <ContactSection profile={profile} copy={dictionary.contact} locale={locale} />
 
       <footer className="border-t border-border">
-        <div className="mx-auto flex w-full max-w-[96rem] items-center justify-between px-5 py-8 text-xs text-muted-foreground sm:px-8 lg:px-12">
+        <div className="mx-auto flex w-full max-w-[96rem] items-center justify-between gap-4 px-5 py-8 text-xs text-muted-foreground sm:px-8 lg:px-12">
           <span>{profile.fullName}</span>
-          <span className="font-mono">{new Date().getFullYear()}</span>
+          <div className="flex items-center gap-4">
+            <Link
+              href={`/${locale}/cv`}
+              className="inline-flex items-center gap-1.5 font-medium text-foreground hover:underline"
+            >
+              <FileTextIcon className="size-3.5" aria-hidden="true" />
+              {dictionary.home.viewCv}
+            </Link>
+            <span className="font-mono">{new Date().getFullYear()}</span>
+          </div>
         </div>
       </footer>
     </>

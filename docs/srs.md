@@ -1,7 +1,7 @@
 # Especificación de Requisitos de Software (SRS)
 ## Proyecto: Portafolio
-**Versión:** 1.2.0
-**Fecha:** 26 de agosto de 2026
+**Versión:** 1.3.0
+**Fecha:** 31 de agosto de 2026
 
 ---
 
@@ -48,9 +48,12 @@ Mi portafolio es una aplicación fullstack desarrollada en Next.js. Su alcance a
 * **RF-13: Persistencia Vectorial.** El sistema debe persistir los embeddings en Supabase con pgvector y actualizar el estado de los proyectos.
 
 ### 2.4 Módulo de Autenticación y Panel de Administración
-* **RF-14: Autenticación OAuth.** El sistema debe integrar el inicio de sesión exclusivamente mediante GitHub.
-* **RF-15: Autorización Estricta.** El acceso a `/admin` debe restringirse a mi cuenta de GitHub mediante una whitelist del lado del servidor.
-* **RF-16: Gestión de Contenido.** El CMS debe permitir crear, consultar, actualizar y eliminar perfiles, experiencias, educación, habilidades, proyectos y sus traducciones.
+* **RF-14: Autenticación OAuth.** El sistema debe integrar el inicio de sesión exclusivamente mediante GitHub y usar sesiones JWT cifradas sin almacenar contraseñas.
+* **RF-15: Autorización Estricta.** El acceso a `/admin` debe restringirse a mi cuenta mediante el ID numérico estable de GitHub. La autorización debe repetirse en el DAL y en cada mutación, sin depender únicamente de layouts o controles de cliente.
+* **RF-16: Gestión de Contenido.** El CMS debe permitir crear, consultar, actualizar y eliminar perfil, experiencias, educación, categorías de habilidades, habilidades, proyectos y sus traducciones. Las mutaciones deben conservar completas las versiones en español e inglés.
+* **RF-16.1: Interfaz Administrativa Bilingüe.** El CMS debe ofrecer interfaz en español e inglés mediante `/admin/es` y `/admin/en`, sin duplicar los datos editables.
+* **RF-16.2: Aislamiento De Escrituras.** Las mutaciones deben requerir una habilitación explícita del servidor. Preview puede compartir la base de Production únicamente con escrituras, migraciones y seeds deshabilitados; `VERCEL_ENV=preview` debe bloquear escrituras incluso si el flag se configura erróneamente.
+* **RF-16.3: Consistencia De Edición.** El CMS debe rechazar formularios basados en una versión obsoleta, invalidar la caché pública solo después del commit y distinguir un fallo de invalidación de un fallo de persistencia.
 * **RF-17: Gestión de Chats.** El CMS debe permitir visualizar conversaciones, eliminarlas y marcarlas como fijadas.
 
 ### 2.5 Módulo de Retención y Continuidad de Sesión
@@ -68,7 +71,7 @@ Mi portafolio es una aplicación fullstack desarrollada en Next.js. Su alcance a
 * **RNF-03:** Las cookies de sesión deben utilizar `HttpOnly`, `Secure` y `SameSite=Lax`.
 
 ### 3.2 Rendimiento
-* **RNF-04:** Con el servicio activo, el webhook debe responder en menos de 2000 ms y delegar el procesamiento prolongado. El arranque en frío impuesto por el nivel gratuito de Render queda fuera de este objetivo.
+* **RNF-04:** El webhook futuro debe responder en menos de 2000 ms y delegar el procesamiento semántico prolongado.
 
 ### 3.3 Diseño y Usabilidad
 * **RNF-05:** El CV impreso debe mantener contraste AAA y evitar elementos huérfanos.
@@ -77,6 +80,6 @@ Mi portafolio es una aplicación fullstack desarrollada en Next.js. Su alcance a
 ### 3.4 Arquitectura y Datos
 * **RNF-07:** La limpieza de sesiones debe implementarse mediante TTL o un trabajo programado equivalente.
 * **RNF-08:** Cada entidad publicada debe tener exactamente una traducción por idioma soportado.
-* **RNF-09:** La aplicación debe distribuirse como una imagen OCI ejecutable localmente y en Render.
-* **RNF-10:** GitHub Actions debe verificar el código, construir la imagen, publicarla en GHCR y solicitar su despliegue.
+* **RNF-09:** Vercel debe servir la aplicación principal y una imagen OCI equivalente debe conservar la ejecución local y la portabilidad.
+* **RNF-10:** GitHub Actions debe verificar el código y publicar la imagen en GHCR solo desde `main`; Vercel debe desplegar Preview desde `develop` y Production desde `main`.
 * **RNF-11:** La primera migración debe verificar que pgvector esté habilitado sin fijar tablas ni dimensiones de embeddings antes de seleccionar el modelo utilizado por el módulo RAG.

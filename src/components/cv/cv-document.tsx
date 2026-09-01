@@ -189,6 +189,19 @@ export function CvDocument({
             </CvSection>
           )}
 
+          <CvSection title={copy.languages}>
+            <dl className="space-y-3">
+              {copy.languageItems.map((language) => (
+                <div key={language.name} className="cv-entry">
+                  <dt className="text-sm font-semibold">{language.name}</dt>
+                  <dd className="mt-1 text-[0.8rem] leading-5 text-neutral-600">
+                    {language.proficiency}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </CvSection>
+
           {education.length > 0 && (
             <CvSection title={copy.education}>
               <ol className="space-y-5">
