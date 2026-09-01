@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import type { PortfolioDto } from "../../data/portfolio.types";
 import type { Dictionary } from "../../i18n/dictionaries";
+import englishDictionary from "../../i18n/dictionaries/en.json";
+import spanishDictionary from "../../i18n/dictionaries/es.json";
 
 import { CvDocument } from "./cv-document";
 
@@ -13,6 +15,11 @@ const copy: Dictionary["cv"] = {
   experience: "Experience",
   education: "Education",
   skills: "Skills",
+  languages: "Languages",
+  languageItems: [
+    { name: "Spanish", proficiency: "Native speaker" },
+    { name: "English", proficiency: "Comfortable communicating in professional settings" },
+  ],
   projects: "Selected projects",
   print: "Print",
   backToPortfolio: "Back",
@@ -99,6 +106,8 @@ describe("CvDocument", () => {
     expect(html).toContain("January 2020 - Present");
     expect(html).toContain("TypeScript · PostgreSQL");
     expect(html).toContain("Algorithms · Architecture");
+    expect(html).toContain("Native speaker");
+    expect(html).toContain("Comfortable communicating in professional settings");
     expect(html).toContain('href="mailto:ada@example.com"');
     expect(html).toContain('href="https://github.com/ada/notes"');
   });
@@ -112,5 +121,16 @@ describe("CvDocument", () => {
     );
 
     expect(html).not.toContain("Selected projects");
+  });
+
+  it("describes language proficiency naturally in both locales", () => {
+    expect(spanishDictionary.cv.languageItems).toEqual([
+      { name: "Español", proficiency: "Lengua materna" },
+      { name: "Inglés", proficiency: "Comunicación fluida en entornos profesionales" },
+    ]);
+    expect(englishDictionary.cv.languageItems).toEqual([
+      { name: "Spanish", proficiency: "Native speaker" },
+      { name: "English", proficiency: "Comfortable communicating in professional settings" },
+    ]);
   });
 });
