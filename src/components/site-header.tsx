@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FileTextIcon, MenuIcon } from "lucide-react";
+import { ArrowUpRightIcon, FileTextIcon, MenuIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
@@ -43,6 +43,8 @@ export function SiteHeader({
   const portfolioPath = `/${locale}`;
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeHref, setActiveHref] = useState<string | null>(null);
+  const cvItem = navigation.find((item) => item.href.endsWith("/cv"));
+  const sectionNavigation = navigation.filter((item) => item !== cvItem);
   const preferenceLabels = {
     language: labels.language,
     spanish: labels.spanish,
@@ -115,7 +117,7 @@ export function SiteHeader({
         </a>
 
         <nav className="ml-auto hidden items-center gap-1 xl:flex">
-          {navigation.map((item) => (
+          {sectionNavigation.map((item) => (
             <a
               key={item.href}
               href={resolvedHref(item.href)}
@@ -126,14 +128,27 @@ export function SiteHeader({
                     : "page"
                   : undefined
               }
-              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${isCurrent(item.href) || item.href.endsWith("/cv") ? "bg-foreground text-background hover:bg-foreground/80" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+              className={`inline-flex items-center rounded-md px-2.5 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${isCurrent(item.href) ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
             >
-              {item.href.endsWith("/cv") && (
-                <FileTextIcon className="size-4" aria-hidden="true" />
-              )}
               {item.label}
             </a>
           ))}
+          {cvItem && (
+            <a
+              href={resolvedHref(cvItem.href)}
+              aria-current={isCurrent(cvItem.href) ? "page" : undefined}
+              className="group ml-2 inline-flex items-center gap-2 rounded-full border border-foreground/25 bg-background px-4 py-2 font-mono text-xs font-semibold uppercase tracking-[0.08em] text-foreground shadow-[0_1px_0_color-mix(in_oklch,var(--foreground)_18%,transparent)] transition-all hover:-translate-y-0.5 hover:border-foreground/50 hover:shadow-[0_4px_14px_color-mix(in_oklch,var(--foreground)_12%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span className="grid size-6 place-items-center rounded-full bg-foreground text-background">
+                <FileTextIcon className="size-3.5" aria-hidden="true" />
+              </span>
+              {cvItem.label}
+              <ArrowUpRightIcon
+                className="size-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                aria-hidden="true"
+              />
+            </a>
+          )}
         </nav>
 
         <div className="hidden items-center gap-1 border-l border-border pl-3 xl:flex">
@@ -165,7 +180,7 @@ export function SiteHeader({
               </SheetHeader>
 
               <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4">
-                {navigation.map((item, index) => (
+                {sectionNavigation.map((item, index) => (
                   <a
                     key={item.href}
                     href={resolvedHref(item.href)}
@@ -184,12 +199,26 @@ export function SiteHeader({
                     >
                       {String(index + 1).padStart(2, "0")}
                     </span>
-                    {item.href.endsWith("/cv") && (
-                      <FileTextIcon className="size-4" aria-hidden="true" />
-                    )}
                     {item.label}
                   </a>
                 ))}
+                {cvItem && (
+                  <a
+                    href={resolvedHref(cvItem.href)}
+                    aria-current={isCurrent(cvItem.href) ? "page" : undefined}
+                    onClick={() => setMenuOpen(false)}
+                    className="group my-5 flex items-center gap-3 rounded-2xl border border-foreground/20 bg-muted/35 p-3 text-sm font-semibold text-foreground transition-all hover:border-foreground/40 hover:bg-muted"
+                  >
+                    <span className="grid size-10 place-items-center rounded-full bg-foreground text-background">
+                      <FileTextIcon className="size-4" aria-hidden="true" />
+                    </span>
+                    <span className="flex-1">{cvItem.label}</span>
+                    <ArrowUpRightIcon
+                      className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                      aria-hidden="true"
+                    />
+                  </a>
+                )}
               </nav>
 
               <div className="flex shrink-0 items-center justify-between border-t border-border p-6">
