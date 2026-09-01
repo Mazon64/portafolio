@@ -1,4 +1,4 @@
-import { ArrowUpRightIcon, UserRoundIcon } from "lucide-react";
+import { ArrowUpRightIcon, BriefcaseBusinessIcon, UserRoundIcon } from "lucide-react";
 import Link from "next/link";
 
 import { adminCopy } from "@/i18n/admin";
@@ -35,6 +35,19 @@ export default async function AdminDashboardPage({
           <h2 className="mt-12 text-2xl font-semibold tracking-[-0.03em]">{copy.profileTitle}</h2>
           <p className="mt-3 leading-7 text-muted-foreground">{copy.profileDescription}</p>
           <p className="mt-6 font-mono text-xs tracking-[0.16em] uppercase">{copy.edit}</p>
+        </Link>
+
+        <Link
+          href={`/admin/${lang}/experience`}
+          className="group rounded-3xl border border-border bg-card p-7 text-card-foreground transition-transform hover:-translate-y-1"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <BriefcaseBusinessIcon className="size-7" aria-hidden="true" />
+            <ArrowUpRightIcon className="size-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" aria-hidden="true" />
+          </div>
+          <h2 className="mt-12 text-2xl font-semibold tracking-[-0.03em]">{copy.experienceTitle}</h2>
+          <p className="mt-3 leading-7 text-muted-foreground">{copy.experienceDescription}</p>
+          <p className="mt-6 font-mono text-xs tracking-[0.16em] uppercase">{copy.manage}</p>
         </Link>
 
         <section className="rounded-3xl border border-dashed border-border p-7">

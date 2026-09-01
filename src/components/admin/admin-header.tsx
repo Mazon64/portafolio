@@ -34,6 +34,7 @@ export function AdminHeader({
   const items = [
     { href: `/admin/${locale}`, label: copy.navigation.dashboard },
     { href: `/admin/${locale}/profile`, label: copy.navigation.profile },
+    { href: `/admin/${locale}/experience`, label: copy.navigation.experience },
   ];
 
   function isCurrent(href: string) {
@@ -139,7 +140,7 @@ export function AdminHeader({
                   aria-label={`${copy.navigation.viewSite}. ${copy.navigation.newTab}`}
                   className="flex items-center gap-4 border-b border-border px-2 py-4 text-base font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  <span className="font-mono text-xs">03</span>
+                  <span className="font-mono text-xs">04</span>
                   <span className="flex flex-1 items-center justify-between gap-3">
                     {copy.navigation.viewSite}
                     <ArrowUpRightIcon className="size-4" aria-hidden="true" />
