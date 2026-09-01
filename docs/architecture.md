@@ -66,14 +66,16 @@ El acceso al CMS se realiza exclusivamente mediante Single Sign-On con GitHub. N
 * **Sesión:** JWT cifrado mediante `AUTH_SECRET`, sin tablas de cuentas o sesiones.
 * **Entornos:** local, Preview y Production usan aplicaciones OAuth y secretos independientes.
 
+Las rutas `/admin/*` y `/api/auth/*` se redirigen primero al origen declarado en `NEXTAUTH_URL` cuando un alias alternativo alcanza la aplicación. Esto evita iniciar OAuth en un host y recibir el callback en otro, donde no existiría la cookie de estado que protege el flujo.
+
 ### 3.2 Autorización (Whitelist por Entorno)
-El acceso a `/admin/*` está restringido al propietario del ecosistema. El callback de autenticación compara el identificador numérico estable de GitHub con `ADMIN_GITHUB_ID`; después, el DAL vuelve a comparar ese ID en cada petición para revocar sesiones existentes cuando cambie la whitelist. El correo y el login no participan en la autorización porque son mutables.
+El acceso a `/admin/*` está restringido al propietario del ecosistema. El callback de autenticación compara `account.providerAccountId`, el identificador numérico que NextAuth.js normaliza desde GitHub, con `ADMIN_GITHUB_ID`; después, el DAL vuelve a comparar ese ID en cada petición para revocar sesiones existentes cuando cambie la whitelist. El perfil crudo, el correo y el login no participan en la autorización porque pueden variar o ser mutables.
 
 ```typescript
 callbacks: {
-  async signIn({ account, profile }) {
+  async signIn({ account }) {
     return account?.provider === "github"
-      && String(profile.id) === process.env.ADMIN_GITHUB_ID;
+      && account.providerAccountId === process.env.ADMIN_GITHUB_ID;
   }
 }
 ```
@@ -154,7 +156,7 @@ Visitante o administrador
 
 Production y Preview usan la misma base Supabase para evitar un segundo proyecto. Preview solo consulta datos: no ejecuta mutaciones, migraciones ni seeds. El único `DIRECT_URL` reside en el environment `production` de GitHub y solo puede usarse desde `main`. Las aplicaciones OAuth, `AUTH_SECRET` y `NEXTAUTH_URL` se mantienen separadas por origen.
 
-Las integraciones que no deben operar en Preview permanecen detrás de flags server-only específicos. `CONTACT_DELIVERY_ENABLED` controla la entrega del formulario y `CMS_WRITES_ENABLED` controla las mutaciones administrativas; ninguna depende de `NODE_ENV` ni de `VERCEL_ENV`.
+Las integraciones que no deben operar en Preview permanecen detrás de flags server-only específicos. `CONTACT_DELIVERY_ENABLED` controla la entrega del formulario sin depender de `NODE_ENV`; `CMS_WRITES_ENABLED` controla las mutaciones administrativas y `VERCEL_ENV=preview` impone además un bloqueo de seguridad aunque el flag se configure erróneamente.
 
 ### 5.4 Estrategia de Portabilidad
 

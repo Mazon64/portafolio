@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { NextAuthOptions, Profile } from "next-auth";
+import type { Account, NextAuthOptions } from "next-auth";
 import { getServerSession } from "next-auth";
 import GitHubProvider from "next-auth/providers/github";
 
@@ -19,16 +19,16 @@ export function isSessionWithinAbsoluteLifetime(
   );
 }
 
-function getGithubProfileId(profile: Profile | undefined): string | undefined {
-  const id = profile && "id" in profile ? profile.id : undefined;
-  return typeof id === "number" || typeof id === "string"
-    ? String(id)
-    : undefined;
+function getGithubAccountId(account: Account | null): string | undefined {
+  if (account?.provider !== "github") return undefined;
+
+  const id = account.providerAccountId.trim();
+  return /^\d+$/.test(id) ? id : undefined;
 }
 
-export function isAllowedGithubProfile(profile: Profile | undefined): boolean {
+export function isAllowedGithubAccount(account: Account | null): boolean {
   const allowedId = getAdminGithubId();
-  return Boolean(allowedId && getGithubProfileId(profile) === allowedId);
+  return Boolean(allowedId && getGithubAccountId(account) === allowedId);
 }
 
 export const authOptions = {
@@ -47,13 +47,16 @@ export const authOptions = {
     error: "/admin/auth-error",
   },
   callbacks: {
-    async signIn({ account, profile }) {
-      return account?.provider === "github" && isAllowedGithubProfile(profile);
+    async signIn({ account }) {
+      return isAllowedGithubAccount(account);
     },
-    async jwt({ token, account, profile }) {
+    async jwt({ token, account }) {
       if (account?.provider === "github") {
-        token.githubId = getGithubProfileId(profile);
-        token.sessionStartedAt = Date.now();
+        const githubId = getGithubAccountId(account);
+        if (githubId) {
+          token.githubId = githubId;
+          token.sessionStartedAt = Date.now();
+        }
       }
       if (!isSessionWithinAbsoluteLifetime(token.sessionStartedAt)) {
         delete token.githubId;
