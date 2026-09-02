@@ -47,6 +47,14 @@ describe("locale proxy", () => {
     ).toBeNull();
   });
 
+  it("rejects an unsafe canonical OAuth origin", () => {
+    vi.stubEnv("NEXTAUTH_URL", "https://example.com/auth");
+
+    expect(() => redirectFor("/api/auth/callback/github")).toThrow(
+      "NEXTAUTH_URL must contain only an origin",
+    );
+  });
+
   it("detects the preferred language at the root", () => {
     expect(redirectFor("/", "es-MX,en;q=0.8")).toBe("https://example.com/es");
     expect(redirectFor("/?view=grid", "en-US,es;q=0.8")).toBe(

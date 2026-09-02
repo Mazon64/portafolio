@@ -1,9 +1,10 @@
 import type { Account } from "next-auth";
+import type { GithubProfile } from "next-auth/providers/github";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { isAllowedGithubAccount, isSessionWithinAbsoluteLifetime } from "./auth";
+import { authOptions, isAllowedGithubAccount, isSessionWithinAbsoluteLifetime } from "./auth";
 
 function githubAccount(id: string): Account {
   return {
@@ -34,6 +35,20 @@ describe("absolute session lifetime", () => {
 });
 
 describe("GitHub authorization", () => {
+  it("requests no additional GitHub scopes and keeps only the numeric ID", async () => {
+    const provider = authOptions.providers[0];
+    if (typeof provider === "function") throw new Error("GitHub provider must be configured");
+
+    expect(provider.authorization).toMatchObject({ params: { scope: "" } });
+    expect(provider.userinfo).toBe("https://api.github.com/user");
+    const profile = {
+      id: 123456,
+      login: "mutable-name",
+      email: "private@example.com",
+    } as GithubProfile;
+    expect(await provider.profile?.(profile, {})).toEqual({ id: "123456" });
+  });
+
   it("accepts only the configured numeric GitHub ID", () => {
     vi.stubEnv("ADMIN_GITHUB_ID", "123456");
 

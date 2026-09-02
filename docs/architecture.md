@@ -65,8 +65,11 @@ El acceso al CMS se realiza exclusivamente mediante Single Sign-On con GitHub. N
 * **Credenciales:** `AUTH_GITHUB_ID` y `AUTH_GITHUB_SECRET`, generados en GitHub.
 * **Sesión:** JWT cifrado mediante `AUTH_SECRET`, sin tablas de cuentas o sesiones.
 * **Entornos:** local, Preview y Production usan aplicaciones OAuth y secretos independientes.
+* **Minimización:** la autorización no solicita scopes adicionales de GitHub. Se consulta una vez el perfil público, se descartan nombre, correo y avatar, y solo el ID numérico se conserva en el JWT y la sesión.
 
 Las rutas `/admin/*` y `/api/auth/*` se redirigen primero al origen declarado en `NEXTAUTH_URL` cuando un alias alternativo alcanza la aplicación. Esto evita iniciar OAuth en un host y recibir el callback en otro, donde no existiría la cookie de estado que protege el flujo.
+
+El origen se valida antes de redirigir: debe contener exclusivamente esquema y host, usar HTTPS fuera de loopback y coincidir con `davidaranda.dev` en Production o `preview.davidaranda.dev` en Preview. La aplicación publica además CSP, protección anti-framing, `nosniff`, política de permisos y referrer policy; `/api/auth/*` declara `noindex, nofollow`. La pantalla de acceso no recopila credenciales y comunica la minimización aplicada al perfil de GitHub.
 
 ### 3.2 Autorización (Whitelist por Entorno)
 El acceso a `/admin/*` está restringido al propietario del ecosistema. El callback de autenticación compara `account.providerAccountId`, el identificador numérico que NextAuth.js normaliza desde GitHub, con `ADMIN_GITHUB_ID`; después, el DAL vuelve a comparar ese ID en cada petición para revocar sesiones existentes cuando cambie la whitelist. El perfil crudo, el correo y el login no participan en la autorización porque pueden variar o ser mutables.

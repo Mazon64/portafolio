@@ -31,7 +31,7 @@ export const adminCopy = {
       eyebrow: "/ACCESO PRIVADO",
       title: "Acceso al panel de administración.",
       description:
-        "Este espacio está protegido. Si tienes una cuenta autorizada, continúa con GitHub; de lo contrario, puedes volver al portafolio público.",
+        "Este espacio nunca solicita tu contraseña. GitHub autentica la cuenta y solo conservamos su identificador público para autorizar el acceso.",
       action: "Continuar con GitHub",
       denied: "La cuenta de GitHub no está autorizada.",
       failed: "No fue posible completar el inicio de sesión.",
@@ -212,7 +212,7 @@ export const adminCopy = {
       eyebrow: "/PRIVATE ACCESS",
       title: "Administration panel access.",
       description:
-        "This area is protected. If you have an authorized account, continue with GitHub; otherwise, you can return to the public portfolio.",
+        "This area never asks for your password. GitHub authenticates the account, and we only retain its public identifier to authorize access.",
       action: "Continue with GitHub",
       denied: "The GitHub account is not authorized.",
       failed: "The sign-in flow could not be completed.",
