@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 const { findFirstMock } = vi.hoisted(() => ({ findFirstMock: vi.fn() }));
 
 vi.mock("server-only", () => ({}));
+vi.mock("next/server", () => ({ connection: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({
   getPrisma: () => ({ documentArtifact: { findFirst: findFirstMock } }),
 }));

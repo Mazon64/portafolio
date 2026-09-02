@@ -1,5 +1,7 @@
 import "server-only";
 
+import { connection } from "next/server";
+
 import { DocumentKind, DocumentStatus, Locale } from "@/generated/prisma/client";
 import type { Locale as AppLocale } from "@/i18n/config";
 import { getPrisma } from "@/lib/prisma";
@@ -15,6 +17,7 @@ export function isDocumentSchemaUnavailable(error: unknown): boolean {
 export async function getPublishedGeneratedCv(
   locale: AppLocale,
 ): Promise<PortfolioDto | null> {
+  await connection();
   try {
     const artifact = await getPrisma().documentArtifact.findFirst({
       where: {
