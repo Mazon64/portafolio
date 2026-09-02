@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getNextAuthUrl } from "./config/env";
 import { detectLocale } from "./i18n/config";
 
 export function proxy(request: NextRequest) {
@@ -7,9 +8,8 @@ export function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/admin") ||
     request.nextUrl.pathname.startsWith("/api/auth")
   ) {
-    const configuredOrigin = process.env.NEXTAUTH_URL?.trim();
-    if (configuredOrigin) {
-      const canonicalUrl = new URL(configuredOrigin);
+    const canonicalUrl = getNextAuthUrl();
+    if (canonicalUrl) {
       if (request.nextUrl.origin !== canonicalUrl.origin) {
         canonicalUrl.pathname = request.nextUrl.pathname;
         canonicalUrl.search = request.nextUrl.search;

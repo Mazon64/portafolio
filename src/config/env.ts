@@ -10,6 +10,45 @@ export function getSiteUrl(): URL | undefined {
   }
 }
 
+export function getNextAuthUrl(): URL | undefined {
+  const value = process.env.NEXTAUTH_URL?.trim();
+  const vercelEnvironment = process.env.VERCEL_ENV?.trim();
+
+  if (!value) {
+    if (vercelEnvironment === "production" || vercelEnvironment === "preview") {
+      throw new Error("NEXTAUTH_URL is required on Vercel");
+    }
+    return undefined;
+  }
+
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("NEXTAUTH_URL must be an absolute URL");
+  }
+
+  const isLoopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && isLoopback)) {
+    throw new Error("NEXTAUTH_URL must use HTTPS outside localhost");
+  }
+  if (url.username || url.password || url.search || url.hash || url.pathname !== "/") {
+    throw new Error("NEXTAUTH_URL must contain only an origin");
+  }
+
+  const expectedVercelOrigin =
+    vercelEnvironment === "production"
+      ? "https://davidaranda.dev"
+      : vercelEnvironment === "preview"
+        ? "https://preview.davidaranda.dev"
+        : undefined;
+  if (expectedVercelOrigin && url.origin !== expectedVercelOrigin) {
+    throw new Error(`NEXTAUTH_URL must be ${expectedVercelOrigin} on ${vercelEnvironment}`);
+  }
+
+  return new URL(url.origin);
+}
+
 export function getAdminGithubId(): string | undefined {
   const value = process.env.ADMIN_GITHUB_ID?.trim();
 

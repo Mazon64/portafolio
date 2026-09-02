@@ -2,6 +2,7 @@ import "server-only";
 
 import type { Account, NextAuthOptions } from "next-auth";
 import { getServerSession } from "next-auth";
+import type { GithubProfile } from "next-auth/providers/github";
 import GitHubProvider from "next-auth/providers/github";
 
 import { getAdminGithubId } from "@/config/env";
@@ -26,24 +27,31 @@ function getGithubAccountId(account: Account | null): string | undefined {
   return /^\d+$/.test(id) ? id : undefined;
 }
 
+const githubProvider = GitHubProvider({
+  clientId: process.env.AUTH_GITHUB_ID?.trim() ?? "",
+  clientSecret: process.env.AUTH_GITHUB_SECRET?.trim() ?? "",
+});
+githubProvider.authorization = {
+  url: "https://github.com/login/oauth/authorize",
+  params: { scope: "" },
+};
+githubProvider.userinfo = "https://api.github.com/user";
+githubProvider.profile = (profile: GithubProfile) => ({ id: profile.id.toString() });
+
 export function isAllowedGithubAccount(account: Account | null): boolean {
   const allowedId = getAdminGithubId();
   return Boolean(allowedId && getGithubAccountId(account) === allowedId);
 }
 
 export const authOptions = {
-  providers: [
-    GitHubProvider({
-      clientId: process.env.AUTH_GITHUB_ID?.trim() ?? "",
-      clientSecret: process.env.AUTH_GITHUB_SECRET?.trim() ?? "",
-    }),
-  ],
+  providers: [githubProvider],
   secret: process.env.AUTH_SECRET?.trim() || undefined,
   session: {
     strategy: "jwt",
     maxAge: SESSION_MAX_AGE_SECONDS,
   },
   pages: {
+    signIn: "/admin/auth-error",
     error: "/admin/auth-error",
   },
   callbacks: {
@@ -64,7 +72,7 @@ export const authOptions = {
       return token;
     },
     async session({ session, token }) {
-      if (session.user) session.user.githubId = token.githubId;
+      session.user = token.githubId ? { githubId: token.githubId } : undefined;
       return session;
     },
   },
