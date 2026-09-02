@@ -28,6 +28,12 @@ Mi portafolio es una aplicación fullstack desarrollada en Next.js. Su alcance a
 * **RF-02: Exportación e Impresión.** El sistema debe permitir la impresión directa del CV, ocultar los elementos interactivos y adaptar el layout a dimensiones A4/Carta mediante `@media print`.
 * **RF-03: Única Fuente de Verdad.** La información de perfil, experiencia, educación, habilidades, proyectos y el mensaje de contacto debe consumirse desde PostgreSQL. Solo la identidad estable del shell puede permanecer en código.
 * **RF-04: Visibilidad CV vs Portafolio.** El sistema debe permitir definir qué registros se muestran en el portafolio web y cuáles se incluyen en el CV imprimible.
+* **RF-04.1: CV Público Generado.** El CMS debe generar manualmente borradores independientes ES/EN del CV público mediante IA, conservar cada versión y exigir publicación explícita. Un cambio posterior en las fuentes debe marcar el artefacto como desactualizado sin regenerarlo ni reemplazarlo automáticamente.
+* **RF-04.2: Fundamentación.** La generación debe usar únicamente contenido profesional seleccionado y contexto privado; la respuesta de IA debe validarse como datos estructurados y conservar fechas, URLs, empresas y slugs desde las fuentes canónicas.
+* **RF-04.3: CV ATS.** Cada solicitud debe poder producir un CV ATS de una columna adaptado a una vacante y descargable como PDF y DOCX.
+* **RF-04.4: Carta Por Vacante.** La carta de presentación solo debe generarse dentro de una solicitud concreta y permanecer privada.
+* **RF-04.5: Historial Permanente.** Solicitudes, contextos y artefactos deben conservarse como versiones append-only sin operaciones de borrado desde el CMS.
+* **RF-04.6: Privacidad.** El contexto, las vacantes, los CV ATS y las cartas deben requerir autorización administrativa para lectura o descarga y nunca formar parte del DTO público.
 * **RF-05: Proyectos Expandibles.** Cada proyecto debe mostrar un resumen y permitir consultar información detallada combinada con el estado generado por telemetría.
 * **RF-05.1: Repositorios Opcionales.** Un proyecto debe poder publicarse sin URL ni identificador de repositorio; la vinculación con GitHub solo aplica cuando exista un repositorio visible o autorizado para telemetría.
 * **RF-05.2: Presentación de Habilidades.** Las habilidades deben organizarse en categorías ordenadas que se presenten como cuadrículas de iconos o colecciones de badges.
@@ -54,6 +60,7 @@ Mi portafolio es una aplicación fullstack desarrollada en Next.js. Su alcance a
 * **RF-16.1: Interfaz Administrativa Bilingüe.** El CMS debe ofrecer interfaz en español e inglés mediante `/admin/es` y `/admin/en`, sin duplicar los datos editables.
 * **RF-16.2: Aislamiento De Escrituras.** Las mutaciones deben requerir una habilitación explícita del servidor. Preview puede compartir la base de Production únicamente con escrituras, migraciones y seeds deshabilitados; `VERCEL_ENV=preview` debe bloquear escrituras incluso si el flag se configura erróneamente.
 * **RF-16.3: Consistencia De Edición.** El CMS debe rechazar formularios basados en una versión obsoleta, invalidar la caché pública solo después del commit y distinguir un fallo de invalidación de un fallo de persistencia.
+* **RF-16.4: Periodos Por Mes.** Experiencia y educación deben capturar y mostrar periodos por mes y año. Cada registro debe declarar explícitamente si continúa vigente; si no está vigente, debe incluir un mes final, sin presuponer que exista empleo o formación actual.
 * **RF-17: Gestión de Chats.** El CMS debe permitir visualizar conversaciones, eliminarlas y marcarlas como fijadas.
 
 ### 2.5 Módulo de Retención y Continuidad de Sesión

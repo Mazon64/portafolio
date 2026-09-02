@@ -15,7 +15,7 @@ function CvSection({
 }) {
   return (
     <section className="cv-section">
-      <h2 className="border-b border-neutral-300 pb-2 font-mono text-[0.68rem] font-semibold tracking-[0.16em] text-neutral-600 uppercase">
+      <h2 className="cv-section-title border-b border-neutral-400 pb-2 font-mono text-[0.68rem] font-semibold tracking-[0.16em] text-neutral-700 uppercase">
         {title}
       </h2>
       <div className="mt-4">{children}</div>
@@ -39,13 +39,13 @@ export function CvDocument({
     <article className="cv-document mx-auto min-h-[297mm] w-full max-w-[210mm] bg-white p-7 text-neutral-950 shadow-2xl shadow-black/10 sm:p-12 lg:p-16">
       <header className="grid gap-8 border-b-2 border-neutral-950 pb-8 sm:grid-cols-[minmax(0,1.4fr)_minmax(13rem,0.6fr)] sm:items-end">
         <div>
-          <p className="font-mono text-[0.68rem] font-semibold tracking-[0.18em] text-neutral-500 uppercase">
+          <p className="font-mono text-[0.68rem] font-semibold tracking-[0.18em] text-neutral-600 uppercase">
             {copy.eyebrow}
           </p>
           <h1 className="mt-4 max-w-xl text-4xl leading-none font-semibold tracking-[-0.055em] sm:text-5xl">
             {profile.fullName}
           </h1>
-          <p className="mt-4 text-lg font-medium text-neutral-600">
+          <p className="mt-4 text-lg font-medium text-neutral-700">
             {profile.title}
           </p>
         </div>
@@ -81,37 +81,33 @@ export function CvDocument({
         </address>
       </header>
 
-      <CvSection title={copy.summary}>
-        <div className="space-y-3 text-[0.92rem] leading-6 text-neutral-700">
-          {profile.longBio.split(/\n+/).map((paragraph, index) => (
-            <p key={`summary-${index}`}>{paragraph}</p>
-          ))}
-        </div>
-      </CvSection>
-
-      <div className="cv-columns mt-9 grid gap-9 md:grid-cols-[minmax(0,1.45fr)_minmax(13rem,0.75fr)]">
+      <div className="cv-columns mt-9 grid gap-9 md:grid-cols-[minmax(0,1.5fr)_minmax(12rem,0.6fr)]">
         <div className="space-y-9">
+          <CvSection title={copy.summary}>
+            <div className="space-y-3 text-[0.92rem] leading-6 text-neutral-800">
+              {profile.longBio.split(/\n+/).map((paragraph, index) => (
+                <p key={`summary-${index}`}>{paragraph}</p>
+              ))}
+            </div>
+          </CvSection>
+
           {experience.length > 0 && (
             <CvSection title={copy.experience}>
               <ol className="space-y-6">
                 {experience.map((item) => (
                   <li key={item.slug} className="cv-entry">
-                    <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-5">
+                    <div className="cv-entry-heading flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-5">
                       <h3 className="text-base font-semibold tracking-[-0.02em]">
                         {item.role}
                       </h3>
-                      <p className="shrink-0 font-mono text-[0.66rem] tracking-[0.04em] text-neutral-500 uppercase">
-                        {formatDateRange(
-                          item.startDate,
-                          item.endDate,
-                          locale,
-                        )}
+                      <p className="shrink-0 font-mono text-[0.66rem] tracking-[0.04em] text-neutral-600 uppercase">
+                        {formatDateRange(item.startDate, item.endDate, locale)}
                       </p>
                     </div>
-                    <p className="mt-1 text-sm font-medium text-neutral-600">
+                    <p className="mt-1 text-sm font-medium text-neutral-700">
                       {item.company}
                     </p>
-                    <div className="mt-3 space-y-2 text-[0.86rem] leading-5.5 text-neutral-700">
+                    <div className="mt-3 space-y-2 text-[0.86rem] leading-5.5 text-neutral-800">
                       {item.description.split(/\n+/).map((paragraph, index) => (
                         <p key={`${item.slug}-description-${index}`}>
                           {paragraph}
@@ -129,36 +125,28 @@ export function CvDocument({
               <ol className="space-y-6">
                 {projects.map((project) => (
                   <li key={project.slug} className="cv-entry">
-                    <h3 className="text-base font-semibold tracking-[-0.02em]">
-                      {project.name}
-                    </h3>
-                    <p className="mt-2 text-[0.86rem] leading-5.5 text-neutral-700">
+                    <div className="cv-entry-heading">
+                      <h3 className="text-base font-semibold tracking-[-0.02em]">
+                        {project.name}
+                      </h3>
+                    </div>
+                    <p className="mt-2 text-[0.86rem] leading-5.5 text-neutral-800">
                       {project.summary}
                     </p>
                     {project.techStack.length > 0 && (
-                      <p className="mt-2 font-mono text-[0.66rem] leading-5 tracking-[0.04em] text-neutral-500 uppercase">
+                      <p className="mt-2 font-mono text-[0.66rem] leading-5 tracking-[0.04em] text-neutral-600 uppercase">
                         {project.techStack.join(" · ")}
                       </p>
                     )}
                     {(project.repositoryUrl || project.demoUrl) && (
                       <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium">
                         {project.repositoryUrl && (
-                          <a
-                            href={project.repositoryUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="cv-link"
-                          >
+                          <a href={project.repositoryUrl} target="_blank" rel="noreferrer" className="cv-link">
                             {copy.repository}
                           </a>
                         )}
                         {project.demoUrl && (
-                          <a
-                            href={project.demoUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="cv-link"
-                          >
+                          <a href={project.demoUrl} target="_blank" rel="noreferrer" className="cv-link">
                             {copy.prototype}
                           </a>
                         )}
@@ -169,18 +157,40 @@ export function CvDocument({
               </ol>
             </CvSection>
           )}
+
+          {education.length > 0 && (
+            <CvSection title={copy.education}>
+              <ol className="space-y-5">
+                {education.map((item) => (
+                  <li key={item.slug} className="cv-entry">
+                    <div className="cv-entry-heading flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-5">
+                      <h3 className="text-sm leading-5 font-semibold">
+                        {item.degree}
+                      </h3>
+                      <p className="shrink-0 font-mono text-[0.65rem] leading-4 tracking-[0.04em] text-neutral-600 uppercase">
+                        {formatDateRange(item.startDate, item.endDate, locale)}
+                      </p>
+                    </div>
+                    <p className="mt-1 text-[0.8rem] leading-5 text-neutral-700">
+                      {item.institution}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            </CvSection>
+          )}
         </div>
 
-        <aside className="space-y-9">
+        <aside className="space-y-9 border-neutral-300 md:border-l md:pl-8">
           {skillCategories.length > 0 && (
             <CvSection title={copy.skills}>
               <div className="space-y-5">
                 {skillCategories.map((category) => (
-                  <div key={category.slug} className="cv-entry">
+                  <div key={category.slug} className="cv-compact-entry">
                     <h3 className="text-sm font-semibold">
                       {category.title}
                     </h3>
-                    <p className="mt-2 text-[0.8rem] leading-5 text-neutral-700">
+                    <p className="mt-2 text-[0.8rem] leading-5 text-neutral-800">
                       {category.skills.map((skill) => skill.name).join(" · ")}
                     </p>
                   </div>
@@ -192,39 +202,15 @@ export function CvDocument({
           <CvSection title={copy.languages}>
             <dl className="space-y-3">
               {copy.languageItems.map((language) => (
-                <div key={language.name} className="cv-entry">
+                <div key={language.name} className="cv-compact-entry">
                   <dt className="text-sm font-semibold">{language.name}</dt>
-                  <dd className="mt-1 text-[0.8rem] leading-5 text-neutral-600">
+                  <dd className="mt-1 text-[0.8rem] leading-5 text-neutral-700">
                     {language.proficiency}
                   </dd>
                 </div>
               ))}
             </dl>
           </CvSection>
-
-          {education.length > 0 && (
-            <CvSection title={copy.education}>
-              <ol className="space-y-5">
-                {education.map((item) => (
-                  <li key={item.slug} className="cv-entry">
-                    <h3 className="text-sm leading-5 font-semibold">
-                      {item.degree}
-                    </h3>
-                    <p className="mt-1 text-[0.8rem] leading-5 text-neutral-600">
-                      {item.institution}
-                    </p>
-                    <p className="mt-2 font-mono text-[0.65rem] leading-4 tracking-[0.04em] text-neutral-500 uppercase">
-                      {formatDateRange(
-                        item.startDate,
-                        item.endDate,
-                        locale,
-                      )}
-                    </p>
-                  </li>
-                ))}
-              </ol>
-            </CvSection>
-          )}
         </aside>
       </div>
     </article>

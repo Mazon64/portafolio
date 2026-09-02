@@ -24,6 +24,7 @@ const emptyExperience: AdminExperience = {
   company: "",
   startDate: "",
   endDate: "",
+  isCurrent: false,
   showOnPortfolio: true,
   showOnCv: true,
   order: 0,
@@ -45,6 +46,7 @@ export function ExperienceForm({
     initialExperienceState,
   );
   const router = useRouter();
+  const [isCurrent, setIsCurrent] = useState(experience.isCurrent);
   const message = state.status === "idle" ? null : copy.status[state.status];
   const finishCreate = useEffectEvent(() => {
     onCreated?.();
@@ -63,8 +65,9 @@ export function ExperienceForm({
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           <Field name="slug" label={copy.slug} value={experience.slug} required />
           <Field name="company" label={copy.company} value={experience.company} required />
-          <Field name="startDate" label={copy.startDate} value={experience.startDate} type="date" required />
-          <Field name="endDate" label={copy.endDate} value={experience.endDate} type="date" />
+          <Field name="startDate" label={copy.startDate} value={experience.startDate} type="month" required />
+          <Field name="endDate" label={copy.endDate} value={experience.endDate} type="month" required={!isCurrent} disabled={isCurrent} />
+          <Check name="isCurrent" label={copy.current} checked={isCurrent} onChange={setIsCurrent} />
           <Field name="order" label={copy.order} value={String(experience.order)} type="number" required />
           <Check name="showOnPortfolio" label={copy.portfolio} checked={experience.showOnPortfolio} />
           <Check name="showOnCv" label={copy.cv} checked={experience.showOnCv} />
@@ -97,12 +100,12 @@ export function NewExperienceForm({ copy }: { copy: AdminCopy["experience"] }) {
   return <ExperienceForm key={resetKey} copy={copy} onCreated={() => setResetKey((key) => key + 1)} />;
 }
 
-function Field({ name, label, value, type = "text", required = false }: { name: string; label: string; value: string; type?: string; required?: boolean }) {
-  return <label className="text-sm font-medium">{label}<input className={fieldClass} name={name} type={type} defaultValue={value} required={required} min={type === "number" ? 0 : undefined} /></label>;
+function Field({ name, label, value, type = "text", required = false, disabled = false }: { name: string; label: string; value: string; type?: string; required?: boolean; disabled?: boolean }) {
+  return <label className="text-sm font-medium">{label}<input className={fieldClass} name={name} type={type} defaultValue={value} required={required} disabled={disabled} min={type === "number" ? 0 : undefined} /></label>;
 }
 
-function Check({ name, label, checked }: { name: string; label: string; checked: boolean }) {
-  return <label className="flex items-center gap-3 self-end rounded-lg border border-border px-3 py-2 text-sm font-medium"><input name={name} type="checkbox" defaultChecked={checked} />{label}</label>;
+function Check({ name, label, checked, onChange }: { name: string; label: string; checked: boolean; onChange?: (checked: boolean) => void }) {
+  return <label className="flex items-center gap-3 self-end rounded-lg border border-border px-3 py-2 text-sm font-medium"><input name={name} type="checkbox" checked={onChange ? checked : undefined} defaultChecked={onChange ? undefined : checked} onChange={onChange ? (event) => onChange(event.target.checked) : undefined} />{label}</label>;
 }
 
 function Translation({ prefix, heading, role, description, copy }: { prefix: "es" | "en"; heading: string; role: string; description: string; copy: AdminCopy["experience"] }) {
