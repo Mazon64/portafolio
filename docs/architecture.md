@@ -49,7 +49,15 @@ Las rutas localizadas conservan metadatos independientes de PostgreSQL para que 
 
 El DAL selecciona únicamente campos públicos, exige la traducción solicitada, convierte fechas y enums a valores serializables y valida URLs externas. Los componentes nunca reciben modelos Prisma ni acceden directamente a variables de entorno. Una inconsistencia de contenido produce el estado de error localizado en lugar de mezclar idiomas o presentar datos parciales.
 
-### 2.3 Presentación y Evolución de Proyectos
+### 2.3 Documentos Profesionales Generados
+
+`AiContextVersion`, `JobApplication` y `DocumentArtifact` forman un subsistema privado append-only. Cada guardado de contexto crea una fila nueva; cada solicitud conserva la vacante original y produce artefactos `ATS_CV` y `COVER_LETTER`; no existen acciones de actualización o borrado para ese historial. Los artefactos registran locale, versión, modelo, hash de fuentes, estado y contenido JSONB validado. No se almacena HTML generado.
+
+La generación es manual y requiere simultáneamente autorización, `CMS_WRITES_ENABLED=true`, `DOCUMENT_GENERATION_ENABLED=true` y `GEMINI_API_KEY`. Gemini recibe las fuentes como JSON tratado como datos y devuelve JSON conforme a un schema cerrado. El servidor valida la respuesta con Zod, exige que los slugs coincidan exactamente y recompone fechas, empresas, URLs e identidad desde el DTO canónico; así la IA solo redacta síntesis, descripciones y bullets.
+
+El CV público se genera por locale como borrador y solo una acción separada puede publicarlo. Publicar archiva la versión pública anterior, pero nunca elimina artefactos. `sourceHash` permite marcar versiones desactualizadas sin regenerarlas. `/es/cv` y `/en/cv` usan el último artefacto publicado; mientras no exista o antes de aplicar la migración expand, conservan el CV derivado directamente de las fuentes. Los CV ATS y cartas permanecen bajo `/admin` y se exportan bajo demanda como PDF o DOCX de una columna, sin persistir binarios duplicados.
+
+### 2.4 Presentación y Evolución de Proyectos
 
 Las cards de proyectos muestran nombre, resumen, espacio visual para una imagen y progreso. El detalle se expande de forma accesible para mostrar tecnologías, estado, repositorio, prototipo y la descripción extensa existente. Mientras no haya proyectos publicados, la sección conserva su posición y presenta un estado vacío.
 
@@ -111,6 +119,7 @@ Los secretos estarán disponibles solo en el servidor. El prefijo `NEXT_PUBLIC_`
 | `AUTH_GITHUB_SECRET` | Secreto OAuth de GitHub. |
 | `ADMIN_GITHUB_ID` | Identificador estable autorizado para el CMS. |
 | `CMS_WRITES_ENABLED` | Habilitación explícita de mutaciones administrativas. |
+| `DOCUMENT_GENERATION_ENABLED` | Habilitación explícita de llamadas a Gemini y creación de artefactos. |
 | `CONTACT_DELIVERY_ENABLED` | Habilitación explícita de la entrega del formulario. |
 | `RESEND_API_KEY` | Credencial server-only para enviar correo mediante Resend. |
 | `CONTACT_FROM_EMAIL` | Remitente verificado de las notificaciones de contacto. |
@@ -118,7 +127,7 @@ Los secretos estarán disponibles solo en el servidor. El prefijo `NEXT_PUBLIC_`
 | `TURNSTILE_SITE_KEY` | Identificador público entregado al formulario en runtime. |
 | `TURNSTILE_SECRET_KEY` | Credencial server-only para validar Turnstile. |
 | `GITHUB_WEBHOOK_SECRET` | Validación de firmas del webhook. |
-| `GEMINI_API_KEY` | Acceso a Google Gemini. |
+| `GEMINI_API_KEY` | Acceso server-only a Google Gemini para documentos y futuras funciones RAG. |
 | `MONGODB_URI` | Conexión a MongoDB Atlas. |
 | `CRON_SECRET` | Autorización de tareas programadas. |
 

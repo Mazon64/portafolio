@@ -38,6 +38,7 @@ export function AdminHeader({
     { href: `/admin/${locale}/education`, label: copy.navigation.education },
     { href: `/admin/${locale}/skills`, label: copy.navigation.skills },
     { href: `/admin/${locale}/projects`, label: copy.navigation.projects },
+    { href: `/admin/${locale}/documents`, label: copy.navigation.documents },
   ];
 
   function isCurrent(href: string) {
@@ -143,7 +144,7 @@ export function AdminHeader({
                   aria-label={`${copy.navigation.viewSite}. ${copy.navigation.newTab}`}
                   className="flex items-center gap-4 border-b border-border px-2 py-4 text-base font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  <span className="font-mono text-xs">07</span>
+                  <span className="font-mono text-xs">08</span>
                   <span className="flex flex-1 items-center justify-between gap-3">
                     {copy.navigation.viewSite}
                     <ArrowUpRightIcon className="size-4" aria-hidden="true" />

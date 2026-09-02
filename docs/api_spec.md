@@ -1,6 +1,6 @@
 # Especificación De APIs
 ## Proyecto: Portafolio
-**Versión:** 1.2.0
+**Versión:** 1.3.0
 
 ---
 
@@ -65,9 +65,13 @@ Cada origen utiliza una aplicación OAuth independiente.
 
 Las mutaciones administrativas se implementan como Server Actions y no como una API pública versionada. Deben tratarse como endpoints expuestos: vuelven a autorizar la sesión, verifican `CMS_WRITES_ENABLED`, rechazan siempre `VERCEL_ENV=preview`, validan con Zod y escriben mediante transacciones Prisma.
 
-El CMS ofrece CRUD de perfil, experiencia, educación, categorías de habilidades, habilidades y proyectos. Cada escritura localizable conserva `ES` y `EN` dentro de la misma transacción. Los formularios existentes envían `updatedAt` como versión optimista y reciben `conflict` si el registro cambió desde su lectura; las categorías también cambian de versión cuando se crea, mueve, edita o elimina una habilidad hija.
+El CMS ofrece CRUD de perfil, experiencia, educación, categorías de habilidades, habilidades y proyectos. También crea versiones append-only de contexto, solicitudes y documentos profesionales. Cada escritura localizable conserva `ES` y `EN` dentro de la misma transacción. Los formularios existentes envían `updatedAt` como versión optimista y reciben `conflict` si el registro cambió desde su lectura; las categorías también cambian de versión cuando se crea, mueve, edita o elimina una habilidad hija.
 
 Después de un commit exitoso se invalida la etiqueta `portfolio`; un error de validación, autorización, concurrencia o persistencia nunca invalida la caché. Si la invalidación falla después del commit, la acción devuelve `cache-error` y conserva la nueva versión. Los borrados devuelven estados explícitos `deleted`, `disabled`, `conflict`, `cache-error` o `error`. Las URLs públicas de proyectos solo aceptan los protocolos HTTP y HTTPS.
+
+### 3.1 `GET /admin/{locale}/documents/{id}/download?format=pdf|docx`
+
+Descarga un CV ATS o una carta ya persistidos. El handler vuelve a exigir autorización administrativa mediante el DAL, valida UUID y formato, reconstruye el archivo desde JSON validado y responde con `Cache-Control: private, no-store`, `nosniff` y `Content-Disposition: attachment`. Los artefactos públicos se consumen mediante la vista HTML del CV y no se exportan por este endpoint.
 
 ## 4. Webhook De Telemetría (Planificado)
 

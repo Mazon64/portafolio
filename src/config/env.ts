@@ -67,3 +67,11 @@ export function isCmsWriteEnabled(): boolean {
   const vercelEnvironment = process.env.VERCEL_ENV?.trim();
   return !vercelEnvironment || vercelEnvironment === "production";
 }
+
+export function isDocumentGenerationEnabled(): boolean {
+  return (
+    isCmsWriteEnabled() &&
+    process.env.DOCUMENT_GENERATION_ENABLED?.trim() === "true" &&
+    Boolean(process.env.GEMINI_API_KEY?.trim())
+  );
+}
