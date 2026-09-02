@@ -35,6 +35,13 @@ describe("absolute session lifetime", () => {
 });
 
 describe("GitHub authorization", () => {
+  it("uses the localized CMS page for every sign-in fallback", () => {
+    expect(authOptions.pages).toEqual({
+      signIn: "/admin/auth-error",
+      error: "/admin/auth-error",
+    });
+  });
+
   it("requests no additional GitHub scopes and keeps only the numeric ID", async () => {
     const provider = authOptions.providers[0];
     if (typeof provider === "function") throw new Error("GitHub provider must be configured");
