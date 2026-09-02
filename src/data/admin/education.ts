@@ -3,6 +3,7 @@ import "server-only";
 import { Locale } from "@/generated/prisma/client";
 import { requireAdmin } from "@/lib/auth/authorization";
 import { getPrisma } from "@/lib/prisma";
+import { dateToMonth, monthToEndDate, monthToStartDate } from "@/lib/month-date";
 
 export type AdminEducation = {
   id: string;
@@ -11,6 +12,7 @@ export type AdminEducation = {
   institution: string;
   startDate: string;
   endDate: string;
+  isCurrent: boolean;
   showOnPortfolio: boolean;
   showOnCv: boolean;
   order: number;
@@ -40,8 +42,9 @@ export async function getAdminEducation(): Promise<AdminEducation[]> {
       updatedAt: record.updatedAt.toISOString(),
       slug: record.slug,
       institution: record.institution,
-      startDate: record.startDate.toISOString().slice(0, 10),
-      endDate: record.endDate?.toISOString().slice(0, 10) ?? "",
+      startDate: dateToMonth(record.startDate),
+      endDate: record.endDate ? dateToMonth(record.endDate) : "",
+      isCurrent: record.endDate === null,
       showOnPortfolio: record.showOnPortfolio,
       showOnCv: record.showOnCv,
       order: record.order,
@@ -60,8 +63,8 @@ export async function saveAdminEducation(
     const data = {
       slug: input.slug,
       institution: input.institution,
-      startDate: new Date(`${input.startDate}T00:00:00.000Z`),
-      endDate: input.endDate ? new Date(`${input.endDate}T00:00:00.000Z`) : null,
+      startDate: monthToStartDate(input.startDate),
+      endDate: input.isCurrent ? null : monthToEndDate(input.endDate),
       showOnPortfolio: input.showOnPortfolio,
       showOnCv: input.showOnCv,
       order: input.order,

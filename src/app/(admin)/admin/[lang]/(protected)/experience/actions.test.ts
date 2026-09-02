@@ -28,8 +28,9 @@ function formData() {
     updatedAt: "",
     slug: "software-engineer",
     company: "Example",
-    startDate: "2025-01-01",
+    startDate: "2025-01",
     endDate: "",
+    isCurrent: "on",
     order: "0",
     esRole: "Ingeniero",
     esDescription: "Descripción",
@@ -70,6 +71,7 @@ describe("experience actions", () => {
       expect.objectContaining({
         es: { role: "Ingeniero", description: "Descripción" },
         en: { role: "Engineer", description: "Description" },
+        isCurrent: true,
       }),
     );
     expect(updateTagMock).toHaveBeenCalledWith("portfolio");

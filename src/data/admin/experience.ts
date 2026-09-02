@@ -3,6 +3,7 @@ import "server-only";
 import { Locale } from "@/generated/prisma/client";
 import { requireAdmin } from "@/lib/auth/authorization";
 import { getPrisma } from "@/lib/prisma";
+import { dateToMonth, monthToEndDate, monthToStartDate } from "@/lib/month-date";
 
 export type AdminExperience = {
   id: string;
@@ -11,6 +12,7 @@ export type AdminExperience = {
   company: string;
   startDate: string;
   endDate: string;
+  isCurrent: boolean;
   showOnPortfolio: boolean;
   showOnCv: boolean;
   order: number;
@@ -40,8 +42,9 @@ export async function getAdminExperiences(): Promise<AdminExperience[]> {
       updatedAt: record.updatedAt.toISOString(),
       slug: record.slug,
       company: record.company,
-      startDate: record.startDate.toISOString().slice(0, 10),
-      endDate: record.endDate?.toISOString().slice(0, 10) ?? "",
+      startDate: dateToMonth(record.startDate),
+      endDate: record.endDate ? dateToMonth(record.endDate) : "",
+      isCurrent: record.endDate === null,
       showOnPortfolio: record.showOnPortfolio,
       showOnCv: record.showOnCv,
       order: record.order,
@@ -64,10 +67,8 @@ export async function saveAdminExperience(
         data: {
           slug: input.slug,
           company: input.company,
-          startDate: new Date(`${input.startDate}T00:00:00.000Z`),
-          endDate: input.endDate
-            ? new Date(`${input.endDate}T00:00:00.000Z`)
-            : null,
+          startDate: monthToStartDate(input.startDate),
+          endDate: input.isCurrent ? null : monthToEndDate(input.endDate),
           showOnPortfolio: input.showOnPortfolio,
           showOnCv: input.showOnCv,
           order: input.order,
@@ -79,10 +80,8 @@ export async function saveAdminExperience(
         data: {
           slug: input.slug,
           company: input.company,
-          startDate: new Date(`${input.startDate}T00:00:00.000Z`),
-          endDate: input.endDate
-            ? new Date(`${input.endDate}T00:00:00.000Z`)
-            : null,
+          startDate: monthToStartDate(input.startDate),
+          endDate: input.isCurrent ? null : monthToEndDate(input.endDate),
           showOnPortfolio: input.showOnPortfolio,
           showOnCv: input.showOnCv,
           order: input.order,

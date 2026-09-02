@@ -54,6 +54,7 @@ Mi portafolio es una aplicación fullstack desarrollada en Next.js. Su alcance a
 * **RF-16.1: Interfaz Administrativa Bilingüe.** El CMS debe ofrecer interfaz en español e inglés mediante `/admin/es` y `/admin/en`, sin duplicar los datos editables.
 * **RF-16.2: Aislamiento De Escrituras.** Las mutaciones deben requerir una habilitación explícita del servidor. Preview puede compartir la base de Production únicamente con escrituras, migraciones y seeds deshabilitados; `VERCEL_ENV=preview` debe bloquear escrituras incluso si el flag se configura erróneamente.
 * **RF-16.3: Consistencia De Edición.** El CMS debe rechazar formularios basados en una versión obsoleta, invalidar la caché pública solo después del commit y distinguir un fallo de invalidación de un fallo de persistencia.
+* **RF-16.4: Periodos Por Mes.** Experiencia y educación deben capturar y mostrar periodos por mes y año. Cada registro debe declarar explícitamente si continúa vigente; si no está vigente, debe incluir un mes final, sin presuponer que exista empleo o formación actual.
 * **RF-17: Gestión de Chats.** El CMS debe permitir visualizar conversaciones, eliminarlas y marcarlas como fijadas.
 
 ### 2.5 Módulo de Retención y Continuidad de Sesión
