@@ -22,16 +22,11 @@ describe("administrator authorization", () => {
     authMock.mockResolvedValue({
       user: {
         githubId: "123456",
-        name: "Ada",
-        email: "ada@example.com",
-        image: "https://example.com/ada.png",
       },
     });
 
     await expect(getAdminIdentity()).resolves.toEqual({
-      name: "Ada",
-      email: "ada@example.com",
-      image: "https://example.com/ada.png",
+      githubId: "123456",
     });
   });
 

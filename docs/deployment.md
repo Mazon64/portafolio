@@ -96,7 +96,11 @@ GitHub OAuth Apps admite una URL de callback por aplicación. Crea tres aplicaci
 
 Genera un `AUTH_SECRET` independiente para cada entorno y guarda client secrets exclusivamente en el proveedor correspondiente. `ADMIN_GITHUB_ID` debe ser el ID numérico inmutable, no el login `Mazon64`; se puede consultar mediante la API pública de GitHub y debe verificarse antes de habilitar el CMS.
 
+Las aplicaciones OAuth no necesitan scopes adicionales. NextAuth.js debe enviar un scope vacío, omitir la consulta a `/user/emails` y conservar únicamente el ID numérico del perfil público; el CMS no utiliza correo, avatar, organizaciones ni repositorios para autenticar o autorizar.
+
 Inicia siempre el acceso administrativo desde el dominio canónico de cada entorno. Si un alias alternativo alcanza la aplicación, `/admin/*` y `/api/auth/*` se redirigen hacia `NEXTAUTH_URL` antes de comenzar OAuth, porque la cookie de estado y el callback deben pertenecer al mismo origen. Los hosts `*.vercel.app` permanecen denegados por WAF antes de llegar a esta capa.
+
+En Preview, completa primero Vercel Authentication y confirma que su cookie de acceso sigue vigente antes de pulsar **Continuar con GitHub**. Standard Protection también intercepta `/api/auth/callback/github`; sin esa sesión previa, Vercel redirige el callback a su propio SSO antes de que NextAuth.js pueda validarlo.
 
 El panel está disponible en `/admin/es` y `/admin/en`; `/admin` detecta el idioma. NextAuth.js rechaza cualquier proveedor distinto de GitHub y cualquier ID fuera de la whitelist. El DAL y las Server Actions repiten la autorización para no depender del layout. Las escrituras actualizan el perfil y sus dos traducciones en una transacción, rechazan versiones obsoletas e invalidan la caché pública solo después del commit.
 
@@ -191,3 +195,16 @@ Comprueba en Preview y después de cada promoción en Production:
 - Canonical, alternates, assets, tema y navegación móvil
 
 En Preview confirma que el acceso y la lectura funcionen, y que una mutación responda como deshabilitada. En Production realiza primero una edición reversible, comprueba los dos idiomas y conserva `DIRECT_URL` únicamente dentro de su environment protegido.
+
+### Incidentes De Safe Browsing
+
+Si Chrome presenta una advertencia roja de sitio engañoso:
+
+1. No continúes a través de la excepción del navegador durante el diagnóstico.
+2. Consulta la propiedad de dominio en Google Search Console, sección **Seguridad y acciones manuales > Problemas de seguridad**, y Google Transparency Report.
+3. Revisa las URLs de ejemplo si Google las proporciona, los deployments activos, DNS, dependencias, scripts externos y posibles redirecciones antes de asumir que es un falso positivo.
+4. Despliega cualquier corrección mediante el flujo normal de Preview y Production. Confirma CSP, anti-framing, `nosniff`, `X-Robots-Tag` en `/api/auth/*` y el origen exacto de `NEXTAUTH_URL`.
+5. Solicita una revisión en Search Console explicando que el acceso no recopila contraseñas, delega OAuth en GitHub y que se verificaron código, historial, DNS y deployments.
+6. Repite el flujo desde otro navegador o dispositivo y monitoriza Transparency Report hasta que Google retire la clasificación.
+
+Nunca incluyas `code`, `state` ni cookies al documentar un callback OAuth. Los códigos son temporales y de un solo uso, pero deben tratarse como secretos mientras permanecen vigentes.
