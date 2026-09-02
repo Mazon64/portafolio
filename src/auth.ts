@@ -51,6 +51,7 @@ export const authOptions = {
     maxAge: SESSION_MAX_AGE_SECONDS,
   },
   pages: {
+    signIn: "/admin/auth-error",
     error: "/admin/auth-error",
   },
   callbacks: {

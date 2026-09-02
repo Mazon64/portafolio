@@ -18,6 +18,7 @@ export default async function AuthErrorPage({
     savedLocale === "es" || savedLocale === "en"
       ? savedLocale
       : detectLocale(requestHeaders.get("accept-language"));
-  const error = params.error === "AccessDenied" ? "denied" : "failed";
-  redirect(`/admin/${locale}/login?error=${error}`);
+  const error =
+    params.error === "AccessDenied" ? "denied" : params.error ? "failed" : undefined;
+  redirect(`/admin/${locale}/login${error ? `?error=${error}` : ""}`);
 }

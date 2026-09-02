@@ -71,6 +71,8 @@ Las rutas `/admin/*` y `/api/auth/*` se redirigen primero al origen declarado en
 
 El origen se valida antes de redirigir: debe contener exclusivamente esquema y host, usar HTTPS fuera de loopback y coincidir con `davidaranda.dev` en Production o `preview.davidaranda.dev` en Preview. La aplicación publica además CSP, protección anti-framing, `nosniff`, política de permisos y referrer policy; `/api/auth/*` declara `noindex, nofollow`. La pantalla de acceso no recopila credenciales y comunica la minimización aplicada al perfil de GitHub.
 
+NextAuth.js no presenta su página de acceso integrada. Tanto un inicio directo como la recuperación posterior a un callback interrumpido pasan por `/admin/auth-error`, recuperan el locale guardado y vuelven a la pantalla de acceso propia; así no se mezclan estilos, recursos externos ni formularios de fallback con el CMS.
+
 ### 3.2 Autorización (Whitelist por Entorno)
 El acceso a `/admin/*` está restringido al propietario del ecosistema. El callback de autenticación compara `account.providerAccountId`, el identificador numérico que NextAuth.js normaliza desde GitHub, con `ADMIN_GITHUB_ID`; después, el DAL vuelve a comparar ese ID en cada petición para revocar sesiones existentes cuando cambie la whitelist. El perfil crudo, el correo y el login no participan en la autorización porque pueden variar o ser mutables.
 
