@@ -7,8 +7,9 @@ const valid = {
   updatedAt: "",
   slug: "software-engineer",
   company: "Example",
-  startDate: "2025-01-01",
+  startDate: "2025-01",
   endDate: "",
+  isCurrent: true,
   order: "0",
   esRole: "Ingeniero",
   esDescription: "Descripción",
@@ -23,7 +24,7 @@ describe("experience schema", () => {
 
   it("rejects invalid date ranges and partial versions", () => {
     expect(
-      experienceSchema.safeParse({ ...valid, endDate: "2024-01-01" }).success,
+      experienceSchema.safeParse({ ...valid, isCurrent: false, endDate: "2024-01" }).success,
     ).toBe(false);
     expect(
       experienceSchema.safeParse({
@@ -31,5 +32,10 @@ describe("experience schema", () => {
         id: "2eb66473-aca8-4f1f-a312-9a697b75a2e3",
       }).success,
     ).toBe(false);
+  });
+
+  it("requires an explicit current state or an end month", () => {
+    expect(experienceSchema.safeParse({ ...valid, isCurrent: false }).success).toBe(false);
+    expect(experienceSchema.safeParse({ ...valid, endDate: "2025-02" }).success).toBe(false);
   });
 });

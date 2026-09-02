@@ -47,6 +47,9 @@ Configura estas variables en **Settings > Environment Variables**:
 | `ADMIN_GITHUB_ID` | Production y Preview | ID numérico estable de la única cuenta autorizada |
 | `CMS_WRITES_ENABLED` | Preview | `false`; Preview es permanentemente de solo lectura |
 | `CMS_WRITES_ENABLED` | Production | `true`, solo después de aprobar autenticación y lectura en Preview |
+| `DOCUMENT_GENERATION_ENABLED` | Preview | `false`; Preview nunca llama a Gemini ni crea artefactos |
+| `DOCUMENT_GENERATION_ENABLED` | Production | `true` únicamente después de aplicar la migración y verificar el módulo |
+| `GEMINI_API_KEY` | Production | API key server-only restringida para generación de documentos |
 | `CONTACT_DELIVERY_ENABLED` | Production | `true` |
 | `CONTACT_DELIVERY_ENABLED` | Preview | `false` |
 | `RESEND_API_KEY` | Production | API key de Resend con permiso de envío |
@@ -61,7 +64,7 @@ Preview y Production comparten `DATABASE_URL`, pero Preview debe mantener `CMS_W
 
 Los cambios de variables en Vercel solo se aplican a deployments nuevos. Después de editar una variable de Production, crea un Redeploy del último deployment de `main` o promueve un nuevo commit verificado; volver a ejecutar únicamente GitHub Actions no actualiza el runtime. Confirma siempre el target **Production** y deja Preview con sus valores propios.
 
-Las integraciones de contacto se limitan a Production mediante `CONTACT_DELIVERY_ENABLED`. En Preview la interfaz permanece disponible, pero `/api/contact` no expone la site key ni llama a Turnstile o Resend y rechaza cualquier intento de entrega con el error genérico del formulario.
+Las integraciones de contacto se limitan a Production mediante `CONTACT_DELIVERY_ENABLED`. En Preview la interfaz permanece disponible, pero `/api/contact` no expone la site key ni llama a Turnstile o Resend y rechaza cualquier intento de entrega con el error genérico del formulario. La generación documental aplica la misma separación con `DOCUMENT_GENERATION_ENABLED`: Preview puede revisar la interfaz y el fallback del CV, pero nunca envía contexto o vacantes a Gemini.
 
 `SITE_URL` conserva el dominio público también en Preview para que canonical y alternates nunca anuncien una URL temporal. Vercel evita por defecto que sus Preview Deployments sean indexados. Si el formulario debe probarse fuera de local, se deben crear credenciales separadas de Resend y Turnstile para Preview; nunca se copian los secretos de Production.
 
@@ -111,6 +114,7 @@ Para preparar Preview:
 3. Configura `NEXTAUTH_URL`, `AUTH_SECRET`, las credenciales OAuth y `ADMIN_GITHUB_ID` solo para Preview.
 4. Configura `CMS_WRITES_ENABLED=false` y comprueba que el formulario rechace mutaciones.
 5. Verifica autenticación, autorización, lectura del perfil y cierre de sesión sin editar datos.
+6. Revisa `/admin/es/documents`: antes de la migración debe mostrar el estado pendiente sin romper el resto del CMS.
 
 ## 3. Migraciones
 
@@ -130,6 +134,8 @@ Vercel nunca aplica migraciones durante el build. Para un cambio de esquema:
 4. Verifica que Production y Preview continúen funcionando con el esquema expandido.
 5. Promueve en un cambio posterior el código que utiliza el nuevo esquema.
 6. Realiza eliminaciones contract incompatibles solo después de retirar todos sus usos.
+
+La migración `add_generated_documents` es expand-only. Su commit puede promoverse y ejecutarse primero en `main`; el commit de aplicación permanece compatible tanto antes como después de la migración porque captura exclusivamente el error de tabla inexistente y conserva el CV actual. No habilites `DOCUMENT_GENERATION_ENABLED` hasta confirmar las tablas desde el workflow protegido.
 
 ## 4. Flujo De Ramas Y Promoción
 
@@ -190,6 +196,7 @@ Comprueba en Preview y después de cada promoción en Production:
 - `/es/cv` y `/en/cv`
 - `/admin`, que debe redirigir al locale detectado
 - `/admin/es` y `/admin/en`, que deben exigir GitHub OAuth
+- `/admin/es/documents` y `/admin/en/documents`, que deben ser legibles y rechazar generación en Preview
 - `/api/health/live`, que debe devolver `204`
 - `/api/health/ready`, que debe devolver `status: ready` y el SHA desplegado
 - Canonical, alternates, assets, tema y navegación móvil

@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { getNextAuthUrl, isCmsWriteEnabled } from "./env";
+import {
+  getNextAuthUrl,
+  isCmsWriteEnabled,
+  isDocumentGenerationEnabled,
+} from "./env";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -17,6 +21,17 @@ describe("CMS write environment", () => {
     vi.stubEnv("CMS_WRITES_ENABLED", "true");
     vi.stubEnv("VERCEL_ENV", "preview");
     expect(isCmsWriteEnabled()).toBe(false);
+  });
+
+  it("requires writes, an explicit generation flag, and Gemini credentials", () => {
+    vi.stubEnv("CMS_WRITES_ENABLED", "true");
+    vi.stubEnv("DOCUMENT_GENERATION_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEY", "secret");
+    vi.stubEnv("VERCEL_ENV", "production");
+    expect(isDocumentGenerationEnabled()).toBe(true);
+
+    vi.stubEnv("VERCEL_ENV", "preview");
+    expect(isDocumentGenerationEnabled()).toBe(false);
   });
 });
 

@@ -123,6 +123,24 @@ describe("CvDocument", () => {
     expect(html).not.toContain("Selected projects");
   });
 
+  it("keeps the professional narrative before the complementary sidebar", () => {
+    const html = renderToStaticMarkup(
+      <CvDocument portfolio={portfolio()} locale="en" copy={copy} />,
+    );
+
+    expect(html).toContain("cv-columns");
+    expect(html.indexOf("Professional summary")).toBeLessThan(
+      html.indexOf("Experience"),
+    );
+    expect(html.indexOf("Experience")).toBeLessThan(
+      html.indexOf("Selected projects"),
+    );
+    expect(html.indexOf("Selected projects")).toBeLessThan(
+      html.indexOf("Education"),
+    );
+    expect(html.indexOf("Education")).toBeLessThan(html.indexOf("Skills"));
+  });
+
   it("describes language proficiency naturally in both locales", () => {
     expect(spanishDictionary.cv.languageItems).toEqual([
       { name: "Español", proficiency: "Lengua materna" },

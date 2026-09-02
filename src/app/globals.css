@@ -137,7 +137,7 @@
 }
 
 @page {
-  size: A4;
+  size: auto;
   margin: 14mm;
 }
 
@@ -167,16 +167,16 @@
   }
 
   .cv-columns {
-    grid-template-columns: minmax(0, 1.45fr) minmax(13rem, 0.75fr) !important;
+    grid-template-columns: minmax(0, 1.5fr) minmax(12rem, 0.6fr) !important;
   }
 
-  .cv-section,
-  .cv-entry {
+  .cv-compact-entry,
+  .cv-entry-heading {
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
-  .cv-section h2,
+  .cv-section-title,
   .cv-entry h3 {
     break-after: avoid;
     page-break-after: avoid;
