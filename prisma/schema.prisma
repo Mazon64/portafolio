@@ -25,6 +25,18 @@ enum ProjectStatus {
   ARCHIVED    @map("archived")
 }
 
+enum DocumentKind {
+  PUBLIC_CV    @map("public_cv")
+  ATS_CV       @map("ats_cv")
+  COVER_LETTER @map("cover_letter")
+}
+
+enum DocumentStatus {
+  DRAFT     @map("draft")
+  PUBLISHED @map("published")
+  ARCHIVED  @map("archived")
+}
+
 model Profile {
   id           String               @id @default(uuid()) @db.Uuid
   slug         String               @unique
@@ -214,4 +226,48 @@ model SkillTranslation {
 
   @@unique([skillId, locale])
   @@index([locale])
+}
+
+model AiContextVersion {
+  id                  String   @id @default(uuid()) @db.Uuid
+  professionalContext String   @db.Text
+  personalContext     String   @db.Text
+  createdAt           DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([createdAt(sort: Desc)])
+}
+
+model JobApplication {
+  id             String             @id @default(uuid()) @db.Uuid
+  locale         Locale
+  company        String
+  role           String
+  sourceUrl      String?
+  jobDescription String             @db.Text
+  notes          String?            @db.Text
+  createdAt      DateTime           @default(now()) @db.Timestamptz(3)
+  artifacts      DocumentArtifact[]
+
+  @@index([createdAt(sort: Desc)])
+  @@index([company, role])
+}
+
+model DocumentArtifact {
+  id            String            @id @default(uuid()) @db.Uuid
+  applicationId String?           @db.Uuid
+  kind          DocumentKind
+  locale        Locale
+  status        DocumentStatus    @default(DRAFT)
+  version       Int
+  title         String
+  content       Json              @db.JsonB
+  sourceHash    String
+  model         String
+  createdAt     DateTime          @default(now()) @db.Timestamptz(3)
+  publishedAt   DateTime?         @db.Timestamptz(3)
+  application   JobApplication?   @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+
+  @@unique([kind, locale, version])
+  @@index([applicationId, createdAt(sort: Desc)])
+  @@index([kind, locale, status, createdAt(sort: Desc)])
 }
