@@ -18,8 +18,6 @@ export type DocumentActionState = {
   status: "idle" | "success" | "invalid" | "disabled" | "unavailable" | "error";
 };
 
-export const initialDocumentState: DocumentActionState = { status: "idle" };
-
 async function canWrite() {
   try {
     await requireAdmin();

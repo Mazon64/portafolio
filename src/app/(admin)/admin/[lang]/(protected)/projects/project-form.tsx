@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button";
 import { DeleteForm } from "@/components/admin/delete-form";
 import type { AdminProject } from "@/data/admin/projects";
 import type { AdminCopy } from "@/i18n/admin";
-import { deleteProjectAction, initialProjectState, saveProjectAction } from "./actions";
+import { type ProjectActionState, deleteProjectAction, saveProjectAction } from "./actions";
 
 const fieldClass = "mt-2 w-full rounded-lg border border-input bg-background px-3 py-2 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20";
 const emptyProject: AdminProject = { id: "", updatedAt: "", slug: "", repositoryFullName: "", demoUrl: "", repositoryUrl: "", techStack: "", showOnPortfolio: true, showOnCv: false, order: 0, status: "PLANNED", progressPct: 0, es: { name: "", summary: "", detailedInfo: "" }, en: { name: "", summary: "", detailedInfo: "" } };
+const initialProjectState: ProjectActionState = { status: "idle" };
 
 export function ProjectForm({ project = emptyProject, copy, onCreated }: { project?: AdminProject; copy: AdminCopy["projects"]; onCreated?: () => void }) {
   const [state, action, pending] = useActionState(saveProjectAction, initialProjectState);

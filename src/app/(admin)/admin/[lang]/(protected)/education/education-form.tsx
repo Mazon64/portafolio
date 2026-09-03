@@ -9,13 +9,14 @@ import { DeleteForm } from "@/components/admin/delete-form";
 import type { AdminEducation } from "@/data/admin/education";
 import type { AdminCopy } from "@/i18n/admin";
 import {
+  type EducationActionState,
   deleteEducationAction,
-  initialEducationState,
   saveEducationAction,
 } from "./actions";
 
 const fieldClass =
   "mt-2 w-full rounded-lg border border-input bg-background px-3 py-2 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20";
+const initialEducationState: EducationActionState = { status: "idle" };
 
 const emptyEducation: AdminEducation = {
   id: "",

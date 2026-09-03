@@ -25,8 +25,6 @@ export type EducationActionState = {
   updatedAt?: string;
 };
 
-export const initialEducationState: EducationActionState = { status: "idle" };
-
 export async function saveEducationAction(
   _state: EducationActionState,
   formData: FormData,

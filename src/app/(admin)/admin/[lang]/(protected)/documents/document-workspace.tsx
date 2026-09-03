@@ -9,15 +9,16 @@ import type { AdminDocumentWorkspace } from "@/data/admin/documents";
 import type { AdminCopy } from "@/i18n/admin";
 import type { Locale } from "@/i18n/config";
 import {
+  type DocumentActionState,
   generateApplicationAction,
   generatePublicCvAction,
-  initialDocumentState,
   publishPublicCvAction,
   saveAiContextAction,
 } from "./actions";
 
 const fieldClass =
   "mt-2 w-full rounded-lg border border-input bg-background px-3 py-2 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20";
+const initialDocumentState: DocumentActionState = { status: "idle" };
 
 export function DocumentWorkspace({
   locale,
