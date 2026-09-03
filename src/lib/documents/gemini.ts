@@ -1,5 +1,6 @@
 import "server-only";
 
+import { randomInt } from "node:crypto";
 import type { ZodType } from "zod";
 
 const MODEL = "gemini-2.5-flash";
@@ -33,7 +34,7 @@ function getApiKeyAttempts(): string[] {
   const signature = apiKeys.join("\u0000");
   if (signature !== poolSignature) {
     poolSignature = signature;
-    nextApiKeyIndex = Math.floor(Math.random() * apiKeys.length);
+    nextApiKeyIndex = randomInt(apiKeys.length);
   }
 
   const startIndex = nextApiKeyIndex;
