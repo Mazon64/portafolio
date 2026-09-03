@@ -162,7 +162,9 @@ describe("Gemini document generation", () => {
         responseSchema: {},
         validator: z.object({ value: z.string() }),
       }),
-    ).rejects.toThrow("Gemini returned an invalid document");
+    ).rejects.toThrow(
+      "Document generation failed: network or timeout, invalid structured response, HTTP 503",
+    );
     expect(
       fetchMock.mock.calls.map((call) => call[1].headers["x-goog-api-key"]),
     ).toStrictEqual(["exhaust-a", "exhaust-b", "exhaust-c"]);

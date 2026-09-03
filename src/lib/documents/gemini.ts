@@ -73,7 +73,7 @@ export async function generateStructuredDocument<T>({
       temperature: 0.2,
     },
   });
-  let receivedInvalidDocument = false;
+  const failures: string[] = [];
 
   for (const apiKey of getApiKeyAttempts()) {
     let response: Response;
@@ -91,12 +91,14 @@ export async function generateStructuredDocument<T>({
         },
       );
     } catch {
+      failures.push("network or timeout");
       continue;
     }
 
     if (!response.ok) {
+      failures.push(`HTTP ${response.status}`);
       if (canRetryWithAnotherKey(response.status)) continue;
-      throw new DocumentGenerationError();
+      throw new DocumentGenerationError(`Document generation failed: ${failures.join(", ")}`);
     }
 
     try {
@@ -108,11 +110,9 @@ export async function generateStructuredDocument<T>({
 
       return { content: validator.parse(JSON.parse(text)), model: MODEL };
     } catch {
-      receivedInvalidDocument = true;
+      failures.push("invalid structured response");
     }
   }
 
-  throw new DocumentGenerationError(
-    receivedInvalidDocument ? "Gemini returned an invalid document" : undefined,
-  );
+  throw new DocumentGenerationError(`Document generation failed: ${failures.join(", ")}`);
 }
