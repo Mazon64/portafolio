@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+const randomIntMock = vi.hoisted(() => vi.fn<(max: number) => number>(() => 0));
+
 vi.mock("server-only", () => ({}));
+vi.mock("node:crypto", () => ({ randomInt: randomIntMock }));
 
 import { DocumentGenerationError, generateStructuredDocument } from "./gemini";
 
@@ -62,7 +65,7 @@ describe("Gemini document generation", () => {
   });
 
   it("randomizes the first key used by a new pool", async () => {
-    vi.spyOn(Math, "random").mockReturnValue(0.8);
+    randomIntMock.mockReturnValueOnce(2);
     vi.stubEnv("GEMINI_API_KEYS", "random-a,random-b,random-c");
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
@@ -83,7 +86,6 @@ describe("Gemini document generation", () => {
   });
 
   it("uses the next key after a retryable provider failure", async () => {
-    vi.spyOn(Math, "random").mockReturnValue(0);
     vi.stubEnv("GEMINI_API_KEYS", "retry-a\nretry-b,retry-a");
     const fetchMock = vi
       .fn()
@@ -114,7 +116,6 @@ describe("Gemini document generation", () => {
   it.each([401, 403, 408, 425, 429, 500, 503])(
     "fails over after retryable status %i",
     async (status) => {
-      vi.spyOn(Math, "random").mockReturnValue(0);
       vi.stubEnv("GEMINI_API_KEYS", `status-${status}-a,status-${status}-b`);
       const fetchMock = vi
         .fn()
@@ -142,7 +143,6 @@ describe("Gemini document generation", () => {
   );
 
   it("tries each unique key once across network, document, and provider failures", async () => {
-    vi.spyOn(Math, "random").mockReturnValue(0);
     vi.stubEnv("GEMINI_API_KEYS", "exhaust-a,exhaust-b,exhaust-c,exhaust-a");
     const fetchMock = vi
       .fn()
