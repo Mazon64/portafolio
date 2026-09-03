@@ -53,7 +53,9 @@ El DAL selecciona únicamente campos públicos, exige la traducción solicitada,
 
 `AiContextVersion`, `JobApplication` y `DocumentArtifact` forman un subsistema privado append-only. Cada guardado de contexto crea una fila nueva; cada solicitud conserva la vacante original y produce artefactos `ATS_CV` y `COVER_LETTER`; no existen acciones de actualización o borrado para ese historial. Los artefactos registran locale, versión, modelo, hash de fuentes, estado y contenido JSONB validado. No se almacena HTML generado.
 
-La generación es manual y requiere simultáneamente autorización, `CMS_WRITES_ENABLED=true`, `DOCUMENT_GENERATION_ENABLED=true` y `GEMINI_API_KEY`. Gemini recibe las fuentes como JSON tratado como datos y devuelve JSON conforme a un schema cerrado. El servidor valida la respuesta con Zod, exige que los slugs coincidan exactamente y recompone fechas, empresas, URLs e identidad desde el DTO canónico; así la IA solo redacta síntesis, descripciones y bullets.
+La generación es manual y requiere simultáneamente autorización, `CMS_WRITES_ENABLED=true`, `DOCUMENT_GENERATION_ENABLED=true` y al menos una clave en `GEMINI_API_KEYS`. Gemini recibe las fuentes como JSON tratado como datos y devuelve JSON conforme a un schema cerrado. El servidor valida la respuesta con Zod, exige que los slugs coincidan exactamente y recompone fechas, empresas, URLs e identidad desde el DTO canónico; así la IA solo redacta síntesis, descripciones y bullets.
+
+Las claves de Gemini forman un pool server-only sin persistencia. Cada instancia activa selecciona un inicio aleatorio y asigna las solicitudes sucesivas por round-robin. Si una credencial recibe `401`, `403`, `408`, `425`, `429` o un error `5xx`, si falla la red, o si la respuesta no satisface el contrato estructurado, la misma solicitud prueba una vez cada clave restante en orden circular. Los demás errores `4xx` no se reintentan porque cambiar de credencial no puede corregir la solicitud. La coordinación es deliberadamente local a cada instancia serverless; el inicio aleatorio evita concentrar todos los cold starts en la primera clave sin introducir almacenamiento compartido.
 
 El CV público se genera por locale como borrador y solo una acción separada puede publicarlo. Publicar archiva la versión pública anterior, pero nunca elimina artefactos. `sourceHash` permite marcar versiones desactualizadas sin regenerarlas. `/es/cv` y `/en/cv` usan el último artefacto publicado; mientras no exista o antes de aplicar la migración expand, conservan el CV derivado directamente de las fuentes. Los CV ATS y cartas permanecen bajo `/admin` y se exportan bajo demanda como PDF o DOCX de una columna, sin persistir binarios duplicados.
 
@@ -127,7 +129,7 @@ Los secretos estarán disponibles solo en el servidor. El prefijo `NEXT_PUBLIC_`
 | `TURNSTILE_SITE_KEY` | Identificador público entregado al formulario en runtime. |
 | `TURNSTILE_SECRET_KEY` | Credencial server-only para validar Turnstile. |
 | `GITHUB_WEBHOOK_SECRET` | Validación de firmas del webhook. |
-| `GEMINI_API_KEY` | Acceso server-only a Google Gemini para documentos y futuras funciones RAG. |
+| `GEMINI_API_KEYS` | Pool server-only de claves de Google Gemini, separadas por comas o saltos de línea. |
 | `MONGODB_URI` | Conexión a MongoDB Atlas. |
 | `CRON_SECRET` | Autorización de tareas programadas. |
 

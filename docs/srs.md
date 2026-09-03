@@ -75,6 +75,7 @@ Mi portafolio es una aplicación fullstack desarrollada en Next.js. Su alcance a
 ### 3.1 Seguridad
 * **RNF-01:** El webhook de GitHub debe validar la firma `X-Hub-Signature-256`.
 * **RNF-02:** Las API keys de Supabase y Gemini deben permanecer exclusivamente en el servidor.
+* **RNF-02.1:** Las claves de Gemini deben operar como un pool con distribución round-robin y failover acotado entre credenciales, sin exponer valores ni multiplicar errores de solicitud no recuperables.
 * **RNF-03:** Las cookies de sesión deben utilizar `HttpOnly`, `Secure` y `SameSite=Lax`.
 
 ### 3.2 Rendimiento

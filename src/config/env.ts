@@ -72,6 +72,8 @@ export function isDocumentGenerationEnabled(): boolean {
   return (
     isCmsWriteEnabled() &&
     process.env.DOCUMENT_GENERATION_ENABLED?.trim() === "true" &&
-    Boolean(process.env.GEMINI_API_KEY?.trim())
+    Boolean(
+      process.env.GEMINI_API_KEYS?.split(/[,\r\n]+/).some((value) => Boolean(value.trim())),
+    )
   );
 }
