@@ -50,6 +50,7 @@ Configura estas variables en **Settings > Environment Variables**:
 | `DOCUMENT_GENERATION_ENABLED` | Preview | `false`; Preview nunca llama a Gemini ni crea artefactos |
 | `DOCUMENT_GENERATION_ENABLED` | Production | `true` únicamente después de aplicar la migración y verificar el módulo |
 | `GEMINI_API_KEYS` | Production | Claves server-only restringidas, separadas por comas o saltos de línea |
+| `GEMINI_MODEL` | Production | `gemini-3-flash-preview`; permite cambiar de modelo sin modificar código |
 | `CONTACT_DELIVERY_ENABLED` | Production | `true` |
 | `CONTACT_DELIVERY_ENABLED` | Preview | `false` |
 | `RESEND_API_KEY` | Production | API key de Resend con permiso de envío |
@@ -65,6 +66,8 @@ Preview y Production comparten `DATABASE_URL`, pero Preview debe mantener `CMS_W
 Los cambios de variables en Vercel solo se aplican a deployments nuevos. Después de editar una variable de Production, crea un Redeploy del último deployment de `main` o promueve un nuevo commit verificado; volver a ejecutar únicamente GitHub Actions no actualiza el runtime. Confirma siempre el target **Production** y deja Preview con sus valores propios.
 
 `GEMINI_API_KEYS` debe almacenarse como Secret y contener al menos una clave. El servidor descarta entradas vacías y duplicadas, reparte solicitudes por round-robin dentro de cada instancia activa y prueba las claves restantes ante `401`, `403`, `408`, `425`, `429`, errores `5xx`, fallos de red o una respuesta estructural inválida. Los demás errores `4xx` detienen el intento. Al agregar, revocar o rotar claves, reemplaza el valor completo y vuelve a desplegar Production. No configures este pool en Preview.
+
+`GEMINI_MODEL` no es secreto, pero solo se necesita en Production. La aplicación usa `gemini-3-flash-preview` cuando falta; configúralo explícitamente para poder cambiar de modelo con un redeploy si Google retira una versión.
 
 Las integraciones de contacto se limitan a Production mediante `CONTACT_DELIVERY_ENABLED`. En Preview la interfaz permanece disponible, pero `/api/contact` no expone la site key ni llama a Turnstile o Resend y rechaza cualquier intento de entrega con el error genérico del formulario. La generación documental aplica la misma separación con `DOCUMENT_GENERATION_ENABLED`: Preview puede revisar la interfaz y el fallback del CV, pero nunca envía contexto o vacantes a Gemini.
 

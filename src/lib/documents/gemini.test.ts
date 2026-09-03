@@ -17,6 +17,7 @@ afterEach(() => {
 describe("Gemini document generation", () => {
   it("sends the key as a header and validates structured output", async () => {
     vi.stubEnv("GEMINI_API_KEYS", "secret-key");
+    vi.stubEnv("GEMINI_MODEL", "configured-model");
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"value":"grounded"}' }] } }] }),
@@ -32,7 +33,8 @@ describe("Gemini document generation", () => {
         responseSchema: { type: "object" },
         validator: z.object({ value: z.literal("grounded") }),
       }),
-    ).resolves.toMatchObject({ content: { value: "grounded" } });
+    ).resolves.toMatchObject({ content: { value: "grounded" }, model: "configured-model" });
+    expect(fetchMock.mock.calls[0][0]).toContain("/models/configured-model:generateContent");
     expect(fetchMock.mock.calls[0][1].headers["x-goog-api-key"]).toBe("secret-key");
     expect(fetchMock.mock.calls[0][0]).not.toContain("secret-key");
   });
