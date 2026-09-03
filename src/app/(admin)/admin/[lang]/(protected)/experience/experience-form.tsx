@@ -9,13 +9,14 @@ import { DeleteForm } from "@/components/admin/delete-form";
 import type { AdminExperience } from "@/data/admin/experience";
 import type { AdminCopy } from "@/i18n/admin";
 import {
+  type ExperienceActionState,
   deleteExperienceAction,
-  initialExperienceState,
   saveExperienceAction,
 } from "./actions";
 
 const fieldClass =
   "mt-2 w-full rounded-lg border border-input bg-background px-3 py-2 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20";
+const initialExperienceState: ExperienceActionState = { status: "idle" };
 
 const emptyExperience: AdminExperience = {
   id: "",

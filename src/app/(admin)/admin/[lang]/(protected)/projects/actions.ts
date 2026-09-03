@@ -10,7 +10,6 @@ import { requireAdmin } from "@/lib/auth/authorization";
 import { projectSchema } from "./project-schema";
 
 export type ProjectActionState = { status: "idle" | "success" | "invalid" | "disabled" | "conflict" | "cache-error" | "error"; id?: string; updatedAt?: string };
-export const initialProjectState: ProjectActionState = { status: "idle" };
 
 export async function saveProjectAction(_state: ProjectActionState, formData: FormData): Promise<ProjectActionState> {
   try { await requireAdmin(); } catch { return { status: "error", id: _state.id, updatedAt: _state.updatedAt }; }

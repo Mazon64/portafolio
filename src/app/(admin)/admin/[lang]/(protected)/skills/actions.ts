@@ -15,7 +15,6 @@ import { requireAdmin } from "@/lib/auth/authorization";
 import { categorySchema, skillSchema } from "./skills-schema";
 
 export type SkillActionState = { status: "idle" | "success" | "invalid" | "disabled" | "conflict" | "cache-error" | "error"; id?: string; updatedAt?: string };
-export const initialSkillState: SkillActionState = { status: "idle" };
 
 async function canWrite() {
   try { await requireAdmin(); } catch { return false; }

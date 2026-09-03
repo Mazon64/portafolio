@@ -16,10 +16,12 @@ vi.mock("@/data/admin/experience", () => ({
 
 import { initialDeleteState } from "@/components/admin/delete-form";
 import {
+  type ExperienceActionState,
   deleteExperienceAction,
-  initialExperienceState,
   saveExperienceAction,
 } from "./actions";
+
+const initialExperienceState: ExperienceActionState = { status: "idle" };
 
 function formData() {
   const data = new FormData();

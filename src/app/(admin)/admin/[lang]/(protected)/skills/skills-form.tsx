@@ -9,14 +9,15 @@ import { DeleteForm } from "@/components/admin/delete-form";
 import type { AdminSkill, AdminSkillCategory } from "@/data/admin/skills";
 import type { AdminCopy } from "@/i18n/admin";
 import {
+  type SkillActionState,
   deleteCategoryAction,
   deleteSkillAction,
-  initialSkillState,
   saveCategoryAction,
   saveSkillAction,
 } from "./actions";
 
 const fieldClass = "mt-2 w-full rounded-lg border border-input bg-background px-3 py-2 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20";
+const initialSkillState: SkillActionState = { status: "idle" };
 
 export function CategoryForm({ category, copy, onCreated }: { category?: AdminSkillCategory; copy: AdminCopy["skills"]; onCreated?: () => void }) {
   const [state, action, pending] = useActionState(saveCategoryAction, initialSkillState);

@@ -25,8 +25,6 @@ export type ExperienceActionState = {
   updatedAt?: string;
 };
 
-export const initialExperienceState: ExperienceActionState = { status: "idle" };
-
 export async function saveExperienceAction(
   _state: ExperienceActionState,
   formData: FormData,

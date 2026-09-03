@@ -4,11 +4,13 @@ const {
   requireAdminMock,
   writesEnabledMock,
   generationEnabledMock,
+  createContextMock,
   generatePublicMock,
 } = vi.hoisted(() => ({
   requireAdminMock: vi.fn(),
   writesEnabledMock: vi.fn(),
   generationEnabledMock: vi.fn(),
+  createContextMock: vi.fn(),
   generatePublicMock: vi.fn(),
 }));
 
@@ -19,7 +21,7 @@ vi.mock("@/config/env", () => ({
   isDocumentGenerationEnabled: generationEnabledMock,
 }));
 vi.mock("@/data/admin/documents", () => ({
-  createAiContextVersion: vi.fn(),
+  createAiContextVersion: createContextMock,
   publishPublicCvArtifact: vi.fn(),
 }));
 vi.mock("@/lib/documents/generate", () => ({
@@ -27,14 +29,38 @@ vi.mock("@/lib/documents/generate", () => ({
   generatePublicCvDraft: generatePublicMock,
 }));
 
-import { generatePublicCvAction, initialDocumentState } from "./actions";
+import {
+  type DocumentActionState,
+  generatePublicCvAction,
+  saveAiContextAction,
+} from "./actions";
+
+const initialDocumentState: DocumentActionState = { status: "idle" };
 
 describe("document actions", () => {
   beforeEach(() => {
     requireAdminMock.mockReset().mockResolvedValue({ githubId: "1" });
     writesEnabledMock.mockReset().mockReturnValue(true);
     generationEnabledMock.mockReset().mockReturnValue(true);
+    createContextMock.mockReset().mockResolvedValue({ id: "context" });
     generatePublicMock.mockReset().mockResolvedValue({ id: "artifact" });
+  });
+
+  it("saves professional context without optional personal context", async () => {
+    const data = new FormData();
+    data.set(
+      "professionalContext",
+      "Professional context with enough grounded detail for document generation.",
+    );
+    data.set("personalContext", "");
+
+    await expect(saveAiContextAction(initialDocumentState, data)).resolves.toEqual({
+      status: "success",
+    });
+    expect(createContextMock).toHaveBeenCalledWith(
+      "Professional context with enough grounded detail for document generation.",
+      "",
+    );
   });
 
   it("fails closed before invoking AI when writes are disabled", async () => {
