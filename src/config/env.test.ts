@@ -26,11 +26,20 @@ describe("CMS write environment", () => {
   it("requires writes, an explicit generation flag, and Gemini credentials", () => {
     vi.stubEnv("CMS_WRITES_ENABLED", "true");
     vi.stubEnv("DOCUMENT_GENERATION_ENABLED", "true");
-    vi.stubEnv("GEMINI_API_KEY", "secret");
+    vi.stubEnv("GEMINI_API_KEYS", "secret-a, secret-b");
     vi.stubEnv("VERCEL_ENV", "production");
     expect(isDocumentGenerationEnabled()).toBe(true);
 
     vi.stubEnv("VERCEL_ENV", "preview");
+    expect(isDocumentGenerationEnabled()).toBe(false);
+  });
+
+  it("rejects an empty Gemini key pool", () => {
+    vi.stubEnv("CMS_WRITES_ENABLED", "true");
+    vi.stubEnv("DOCUMENT_GENERATION_ENABLED", "true");
+    vi.stubEnv("GEMINI_API_KEYS", " ,\n");
+    vi.stubEnv("VERCEL_ENV", "production");
+
     expect(isDocumentGenerationEnabled()).toBe(false);
   });
 });

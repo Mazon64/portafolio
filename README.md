@@ -131,7 +131,7 @@ Los contratos se encuentran en `.env.example` y `.env.docker.example`.
 | `ADMIN_GITHUB_ID` | ID numérico e inmutable de la cuenta autorizada para el CMS. |
 | `CMS_WRITES_ENABLED` | Habilita explícitamente las mutaciones del CMS cuando vale `true`. |
 | `GITHUB_WEBHOOK_SECRET` | Firma de webhooks de GitHub. |
-| `GEMINI_API_KEY` | Acceso a Google Gemini. |
+| `GEMINI_API_KEYS` | Pool server-only de claves de Google Gemini separadas por comas o líneas. |
 | `CONTACT_DELIVERY_ENABLED` | Habilita explícitamente la entrega de mensajes cuando vale `true`. |
 | `RESEND_API_KEY` | Credencial server-only para enviar mensajes del formulario. |
 | `CONTACT_FROM_EMAIL` | Remitente verificado utilizado por Resend. |
@@ -142,6 +142,8 @@ Los contratos se encuentran en `.env.example` y `.env.docker.example`.
 | `CRON_SECRET` | Autorización de tareas programadas. |
 
 La interfaz del formulario permanece disponible en todos los entornos. La entrega solo se activa con `CONTACT_DELIVERY_ENABLED=true` y las tres variables de Resend y dos de Turnstile configuradas; de lo contrario, el endpoint rechaza el envío sin llamar a servicios externos. El navegador obtiene en runtime únicamente `TURNSTILE_SITE_KEY` desde `/api/contact`; los demás valores nunca se exponen. Cada envío habilitado se valida con Turnstile y después genera una sola notificación editorial y localizada dirigida a `contacto@davidaranda.dev`, con el correo del visitante como `replyTo`. Los mensajes no se duplican en PostgreSQL.
+
+La generación documental requiere `DOCUMENT_GENERATION_ENABLED=true` y al menos una entrada en `GEMINI_API_KEYS`. El pool elimina entradas vacías y duplicadas, distribuye solicitudes por round-robin con inicio aleatorio por instancia y usa la siguiente clave ante fallos recuperables. Preview no recibe estas credenciales ni ejecuta generación.
 
 El CMS exige una sesión GitHub cuyo ID coincida con `ADMIN_GITHUB_ID`. La autorización vuelve a comprobarse en el DAL y en cada Server Action; `CMS_WRITES_ENABLED` falla de forma segura cuando falta o no vale exactamente `true`. Preview comparte la base Supabase de Production únicamente para lectura: además del flag en `false`, el código rechaza escrituras siempre que Vercel declare `VERCEL_ENV=preview`.
 
