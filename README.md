@@ -132,6 +132,7 @@ Los contratos se encuentran en `.env.example` y `.env.docker.example`.
 | `CMS_WRITES_ENABLED` | Habilita explícitamente las mutaciones del CMS cuando vale `true`. |
 | `GITHUB_WEBHOOK_SECRET` | Firma de webhooks de GitHub. |
 | `GEMINI_API_KEYS` | Pool server-only de claves de Google Gemini separadas por comas o líneas. |
+| `GEMINI_MODEL` | Modelo de generación Gemini; usa `gemini-3-flash-preview` por defecto. |
 | `CONTACT_DELIVERY_ENABLED` | Habilita explícitamente la entrega de mensajes cuando vale `true`. |
 | `RESEND_API_KEY` | Credencial server-only para enviar mensajes del formulario. |
 | `CONTACT_FROM_EMAIL` | Remitente verificado utilizado por Resend. |

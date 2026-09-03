@@ -3,7 +3,7 @@ import "server-only";
 import { randomInt } from "node:crypto";
 import type { ZodType } from "zod";
 
-const MODEL = "gemini-2.5-flash";
+const DEFAULT_MODEL = "gemini-3-flash-preview";
 const RETRYABLE_STATUSES = new Set([401, 403, 408, 425, 429]);
 
 let poolSignature = "";
@@ -58,6 +58,7 @@ export async function generateStructuredDocument<T>({
   responseSchema: Record<string, unknown>;
   validator: ZodType<T>;
 }): Promise<{ content: T; model: string }> {
+  const model = process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL;
   const requestBody = JSON.stringify({
     systemInstruction: {
       parts: [
@@ -79,7 +80,7 @@ export async function generateStructuredDocument<T>({
     let response: Response;
     try {
       response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
         {
           method: "POST",
           headers: {
@@ -108,7 +109,7 @@ export async function generateStructuredDocument<T>({
         .join("");
       if (!text) throw new Error("Empty Gemini response");
 
-      return { content: validator.parse(JSON.parse(text)), model: MODEL };
+      return { content: validator.parse(JSON.parse(text)), model };
     } catch {
       failures.push("invalid structured response");
     }

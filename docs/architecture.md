@@ -130,6 +130,7 @@ Los secretos estarán disponibles solo en el servidor. El prefijo `NEXT_PUBLIC_`
 | `TURNSTILE_SECRET_KEY` | Credencial server-only para validar Turnstile. |
 | `GITHUB_WEBHOOK_SECRET` | Validación de firmas del webhook. |
 | `GEMINI_API_KEYS` | Pool server-only de claves de Google Gemini, separadas por comas o saltos de línea. |
+| `GEMINI_MODEL` | Modelo Gemini usado para generación; por defecto `gemini-3-flash-preview`. |
 | `MONGODB_URI` | Conexión a MongoDB Atlas. |
 | `CRON_SECRET` | Autorización de tareas programadas. |
 
