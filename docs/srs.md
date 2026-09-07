@@ -89,5 +89,5 @@ Mi portafolio es una aplicación fullstack desarrollada en Next.js. Su alcance a
 * **RNF-07:** La limpieza de sesiones debe implementarse mediante TTL o un trabajo programado equivalente.
 * **RNF-08:** Cada entidad publicada debe tener exactamente una traducción por idioma soportado.
 * **RNF-09:** Vercel debe servir la aplicación principal y una imagen OCI equivalente debe conservar la ejecución local y la portabilidad.
-* **RNF-10:** GitHub Actions debe verificar el código y publicar la imagen en GHCR solo desde `main`; Vercel debe desplegar Preview desde `develop` y Production desde `main`.
+* **RNF-10:** GitHub Actions debe verificar el código y publicar la imagen en GHCR solo desde `main`; Vercel debe desplegar Preview efímeros desde `feature/*`, el Preview estable desde `develop` y Production desde `main`.
 * **RNF-11:** La primera migración debe verificar que pgvector esté habilitado sin fijar tablas ni dimensiones de embeddings antes de seleccionar el modelo utilizado por el módulo RAG.

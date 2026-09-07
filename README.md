@@ -224,7 +224,7 @@ docs/
 
 ## Despliegue
 
-Vercel despliega el frontend directamente desde GitHub. `develop` es la rama de integración y siempre produce un Preview para pruebas en `https://preview.davidaranda.dev`; `main` está protegida, representa exclusivamente el código publicado y cada merge en ella produce el deployment de Production. `vercel.json` ubica las funciones en `sfo1`, cerca de Supabase, mientras `package.json` fija Node.js 24 y genera Prisma durante `postinstall` sin conectarse a PostgreSQL.
+Vercel despliega el frontend directamente desde GitHub. Las ramas `feature/*` producen Preview efímeros protegidos, `develop` es la rama de integración y mantiene el Preview estable en `https://preview.davidaranda.dev`, y `main` está protegida, representa exclusivamente el código publicado y produce cada deployment de Production. Los demás prefijos de rama permanecen ignorados. `vercel.json` ubica las funciones en `sfo1`, cerca de Supabase, mientras `package.json` fija Node.js 24 y genera Prisma durante `postinstall` sin conectarse a PostgreSQL.
 
 Standard Protection limita los Preview mediante Vercel Authentication. Una regla WAF deniega todos los hosts `*.vercel.app`, por lo que el acceso operativo utiliza exclusivamente `davidaranda.dev`, `www.davidaranda.dev` y `preview.davidaranda.dev`.
 

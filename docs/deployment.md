@@ -29,7 +29,7 @@ Vercel Web Analytics recopila páginas vistas y navegación mediante la integrac
 8. Vincula `preview.davidaranda.dev` al entorno Preview y a la rama `develop`.
 9. Publica una regla WAF `host ends with .vercel.app -> deny` para que la aplicación solo se sirva mediante dominios propios.
 
-`vercel.json` mantiene las funciones en `sfo1`, cerca de la base de datos de Supabase en Oregon, e ignora builds de ramas distintas de `develop` y `main`. `next.config.ts` genera `output: "standalone"` fuera de Vercel para Docker y lo desactiva en Vercel, donde el adaptador nativo genera su propia salida.
+`vercel.json` mantiene las funciones en `sfo1`, cerca de la base de datos de Supabase en Oregon. Vercel construye `feature/*` como Preview efímero, `develop` como Preview estable y `main` como Production; los demás prefijos de rama permanecen ignorados. `next.config.ts` genera `output: "standalone"` fuera de Vercel para Docker y lo desactiva en Vercel, donde el adaptador nativo genera su propia salida.
 
 ## 2. Variables De Vercel
 
@@ -146,7 +146,7 @@ La migración `add_generated_documents` es expand-only. Su commit puede promover
 
 - `develop` es la rama de integración y `https://preview.davidaranda.dev` siempre apunta al último Preview de esa rama.
 - Las ramas `feature/*` y `fix/*` parten de `develop` y vuelven a ella mediante pull request.
-- Los pushes a ramas de trabajo se validan en GitHub Actions, pero `ignoreCommand` evita deployments Vercel adicionales. Vercel solo construye `develop` como Preview y `main` como Production.
+- Los pushes a `feature/*` se validan en GitHub Actions y crean un Preview efímero protegido para probar el trabajo antes de integrarlo. `ignoreCommand` continúa evitando deployments de `fix/*` y otros prefijos; `develop` conserva el Preview estable y `main` es el único origen de Production.
 - `main` está protegida contra pushes directos y solo recibe promociones revisadas desde `develop`.
 - El check `verify` debe aprobar pruebas, lint y build antes de fusionar en `main`.
 - Antes de promover, se revisan `/es`, `/en`, `/admin/es`, `/admin/en`, navegación responsive, autenticación y lectura administrativa sin mutaciones, y los endpoints de salud en Preview.
