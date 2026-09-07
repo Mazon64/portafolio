@@ -28,6 +28,11 @@ async function withSerializationRetry<T>(operation: () => Promise<T>): Promise<T
 
 export type AdminDocumentWorkspace = {
   schemaReady: boolean;
+  history: {
+    page: number;
+    totalPages: number;
+    totalItems: number;
+  };
   context: {
     professionalContext: string;
     personalContext: string;
@@ -47,19 +52,26 @@ export type AdminDocumentWorkspace = {
   }>;
 };
 
-export async function getAdminDocumentWorkspace(): Promise<AdminDocumentWorkspace> {
+const documentHistoryPageSize = 6;
+
+export async function getAdminDocumentWorkspace(requestedPage = 1): Promise<AdminDocumentWorkspace> {
   await requireAdmin();
   try {
-    const [context, artifacts] = await Promise.all([
+    const [context, totalItems] = await Promise.all([
       getPrisma().aiContextVersion.findFirst({ orderBy: { createdAt: "desc" } }),
-      getPrisma().documentArtifact.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 100,
-        include: { application: { select: { company: true, role: true } } },
-      }),
+      getPrisma().documentArtifact.count(),
     ]);
+    const totalPages = Math.max(1, Math.ceil(totalItems / documentHistoryPageSize));
+    const page = Math.min(Math.max(1, Math.floor(requestedPage)), totalPages);
+    const artifacts = await getPrisma().documentArtifact.findMany({
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (page - 1) * documentHistoryPageSize,
+      take: documentHistoryPageSize,
+      include: { application: { select: { company: true, role: true } } },
+    });
     return {
       schemaReady: true,
+      history: { page, totalPages, totalItems },
       context: context
         ? {
             professionalContext: context.professionalContext,
@@ -82,7 +94,12 @@ export async function getAdminDocumentWorkspace(): Promise<AdminDocumentWorkspac
     };
   } catch (error) {
     if (isDocumentSchemaUnavailable(error)) {
-      return { schemaReady: false, context: null, artifacts: [] };
+      return {
+        schemaReady: false,
+        history: { page: 1, totalPages: 1, totalItems: 0 },
+        context: null,
+        artifacts: [],
+      };
     }
     throw error;
   }
@@ -105,6 +122,7 @@ export async function createAiContextVersion(
 }
 
 export async function createPublicCvDraft(input: {
+  id: string;
   locale: Locale;
   title: string;
   content: Prisma.InputJsonValue;
@@ -112,28 +130,58 @@ export async function createPublicCvDraft(input: {
   model: string;
 }) {
   await requireAdmin();
-  return withSerializationRetry(() =>
-    getPrisma().$transaction(
-      async (tx) => {
-        const latest = await tx.documentArtifact.aggregate({
-          where: { kind: DocumentKind.PUBLIC_CV, locale: input.locale },
-          _max: { version: true },
-        });
-        return tx.documentArtifact.create({
-          data: {
-            ...input,
-            kind: DocumentKind.PUBLIC_CV,
-            version: (latest._max.version ?? 0) + 1,
-          },
-          select: { id: true },
-        });
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    ),
-  );
+  const existing = await getPrisma().documentArtifact.findUnique({
+    where: { id: input.id },
+    select: { id: true, kind: true, locale: true, sourceHash: true, model: true },
+  });
+  if (existing) {
+    if (
+      existing.kind === DocumentKind.PUBLIC_CV &&
+      existing.locale === input.locale &&
+      existing.sourceHash === input.sourceHash &&
+      existing.model === input.model
+    ) return { id: existing.id };
+    throw new Error("Draft identifier is already in use");
+  }
+  try {
+    return await withSerializationRetry(() =>
+      getPrisma().$transaction(
+        async (tx) => {
+          const latest = await tx.documentArtifact.aggregate({
+            where: { kind: DocumentKind.PUBLIC_CV, locale: input.locale },
+            _max: { version: true },
+          });
+          return tx.documentArtifact.create({
+            data: {
+              ...input,
+              kind: DocumentKind.PUBLIC_CV,
+              version: (latest._max.version ?? 0) + 1,
+            },
+            select: { id: true },
+          });
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      ),
+    );
+  } catch (error) {
+    if (isSerializationConflict(error)) {
+      const saved = await getPrisma().documentArtifact.findUnique({
+        where: { id: input.id },
+        select: { id: true, kind: true, locale: true, sourceHash: true, model: true },
+      });
+      if (
+        saved?.kind === DocumentKind.PUBLIC_CV &&
+        saved.locale === input.locale &&
+        saved.sourceHash === input.sourceHash &&
+        saved.model === input.model
+      ) return { id: saved.id };
+    }
+    throw error;
+  }
 }
 
 export async function createApplicationArtifacts(input: {
+  id: string;
   locale: Locale;
   company: string;
   role: string;
@@ -148,9 +196,34 @@ export async function createApplicationArtifacts(input: {
   coverContent: Prisma.InputJsonValue;
 }) {
   await requireAdmin();
-  return withSerializationRetry(() => getPrisma().$transaction(async (tx) => {
+  const existing = await getPrisma().jobApplication.findUnique({
+    where: { id: input.id },
+    select: {
+      id: true,
+      locale: true,
+      company: true,
+      role: true,
+      sourceUrl: true,
+      jobDescription: true,
+      notes: true,
+    },
+  });
+  if (existing) {
+    if (
+      existing.locale === input.locale &&
+      existing.company === input.company &&
+      existing.role === input.role &&
+      existing.sourceUrl === input.sourceUrl &&
+      existing.jobDescription === input.jobDescription &&
+      existing.notes === input.notes
+    ) return { id: existing.id };
+    throw new Error("Draft identifier is already in use");
+  }
+  try {
+    return await withSerializationRetry(() => getPrisma().$transaction(async (tx) => {
     const application = await tx.jobApplication.create({
       data: {
+        id: input.id,
         locale: input.locale,
         company: input.company,
         role: input.role,
@@ -195,7 +268,32 @@ export async function createApplicationArtifacts(input: {
       ],
     });
     return application;
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
+  } catch (error) {
+    if (isSerializationConflict(error)) {
+      const saved = await getPrisma().jobApplication.findUnique({
+        where: { id: input.id },
+        select: {
+          id: true,
+          locale: true,
+          company: true,
+          role: true,
+          sourceUrl: true,
+          jobDescription: true,
+          notes: true,
+        },
+      });
+      if (
+        saved?.locale === input.locale &&
+        saved.company === input.company &&
+        saved.role === input.role &&
+        saved.sourceUrl === input.sourceUrl &&
+        saved.jobDescription === input.jobDescription &&
+        saved.notes === input.notes
+      ) return { id: saved.id };
+    }
+    throw error;
+  }
 }
 
 export async function publishPublicCvArtifact(id: string) {

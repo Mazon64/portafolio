@@ -7,13 +7,19 @@ import { DocumentWorkspace } from "./document-workspace";
 
 export default async function DocumentsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ lang: string }>;
+  searchParams: Promise<{ page?: string | string[] }>;
 }) {
-  const { lang } = await params;
+  const [{ lang }, query] = await Promise.all([params, searchParams]);
   if (!hasLocale(lang)) return null;
+  const requestedPage = Number.parseInt(
+    typeof query.page === "string" ? query.page : "1",
+    10,
+  );
   const [workspace, esSource, enSource] = await Promise.all([
-    getAdminDocumentWorkspace(),
+    getAdminDocumentWorkspace(Number.isFinite(requestedPage) ? requestedPage : 1),
     getCvContent("es"),
     getCvContent("en"),
   ]);

@@ -9,6 +9,7 @@ import {
   getLatestAiContext,
 } from "@/data/admin/documents";
 import { formatDateRange } from "@/lib/format-date-range";
+import { createDocumentDraftProof, verifyDocumentDraftProof } from "./draft-proof";
 import { generateStructuredDocument } from "./gemini";
 import {
   atsArtifactSchema,
@@ -17,6 +18,11 @@ import {
   coverLetterGenerationSchema,
   publicCvArtifactSchema,
   publicCvGenerationSchema,
+} from "./schemas";
+import type {
+  AtsGeneration,
+  CoverLetterGeneration,
+  PublicCvGeneration,
 } from "./schemas";
 import { createSourceHash } from "./source-hash";
 
@@ -110,7 +116,54 @@ function requireMatchingSlugs(
   }
 }
 
-export async function generatePublicCvDraft(locale: AppLocale) {
+export type PublicCvDraft = {
+  draftId: string;
+  locale: AppLocale;
+  sourceHash: string;
+  model: string;
+  proof: string;
+  content: PublicCvGeneration;
+  experienceLabels: Array<{ slug: string; label: string }>;
+  projectLabels: Array<{ slug: string; label: string }>;
+};
+
+export type ApplicationDocumentInput = {
+  locale: AppLocale;
+  company: string;
+  role: string;
+  sourceUrl: string | null;
+  jobDescription: string;
+  notes: string | null;
+};
+
+export type ApplicationDocumentsDraft = {
+  draftId: string;
+  application: ApplicationDocumentInput;
+  sourceHash: string;
+  model: string;
+  proof: string;
+  ats: AtsGeneration;
+  cover: CoverLetterGeneration;
+  experienceLabels: Array<{ slug: string; label: string }>;
+  projectLabels: Array<{ slug: string; label: string }>;
+  skillLabels: Array<{ slug: string; label: string }>;
+};
+
+export class DocumentSourceConflictError extends Error {
+  constructor() {
+    super("Document sources changed before the draft was saved");
+    this.name = "DocumentSourceConflictError";
+  }
+}
+
+export class InvalidDocumentDraftError extends Error {
+  constructor() {
+    super("Document draft proof is invalid");
+    this.name = "InvalidDocumentDraftError";
+  }
+}
+
+export async function generatePublicCvDraft(locale: AppLocale): Promise<PublicCvDraft> {
   const [portfolio, context] = await Promise.all([getCvContent(locale), getLatestAiContext()]);
   const source = {
     locale,
@@ -120,8 +173,8 @@ export async function generatePublicCvDraft(locale: AppLocale) {
   const generated = await generateStructuredDocument({
     instruction:
       locale === "es"
-        ? "Redacta un CV público profesional en español. Conserva exactamente cada slug y devuelve una síntesis clara, natural y verificable."
-        : "Write a professional public CV in English. Preserve every slug exactly and return clear, natural, verifiable copy.",
+        ? "Redacta un CV público profesional en español y en primera persona, como si lo hubiera escrito el candidato. Conserva exactamente cada slug y devuelve una síntesis clara, natural y verificable."
+        : "Write a professional public CV in English and in the first person, as if authored by the candidate. Preserve every slug exactly and return clear, natural, verifiable copy.",
     source,
     responseSchema: publicCvResponseSchema,
     validator: publicCvGenerationSchema,
@@ -135,17 +188,66 @@ export async function generatePublicCvDraft(locale: AppLocale) {
     generated.content.projects,
   );
 
+  const draftId = crypto.randomUUID();
+  const sourceHash = createSourceHash({
+    portfolio,
+    professionalContext: context?.professionalContext ?? "",
+  });
+  const proofValue = { draftId, locale, sourceHash, model: generated.model };
+  return {
+    ...proofValue,
+    proof: createDocumentDraftProof(proofValue),
+    locale,
+    content: generated.content,
+    experienceLabels: portfolio.experience.map((item) => ({
+      slug: item.slug,
+      label: `${item.role} · ${item.company}`,
+    })),
+    projectLabels: portfolio.projects.map((item) => ({ slug: item.slug, label: item.name })),
+  };
+}
+
+export async function savePublicCvDraft(
+  input: Omit<PublicCvDraft, "experienceLabels" | "projectLabels">,
+) {
+  const proofValue = {
+    draftId: input.draftId,
+    locale: input.locale,
+    sourceHash: input.sourceHash,
+    model: input.model,
+  };
+  if (!verifyDocumentDraftProof(proofValue, input.proof)) {
+    throw new InvalidDocumentDraftError();
+  }
+  const [portfolio, context] = await Promise.all([
+    getCvContent(input.locale),
+    getLatestAiContext(),
+  ]);
+  const sourceHash = createSourceHash({
+    portfolio,
+    professionalContext: context?.professionalContext ?? "",
+  });
+  if (sourceHash !== input.sourceHash) {
+    throw new DocumentSourceConflictError();
+  }
+  const content = publicCvGenerationSchema.parse(input.content);
+  requireMatchingSlugs(
+    portfolio.experience.map(({ slug }) => slug),
+    content.experience,
+  );
+  requireMatchingSlugs(
+    portfolio.projects.map(({ slug }) => slug),
+    content.projects,
+  );
   const descriptions = new Map(
-    generated.content.experience.map(({ slug, description }) => [slug, description]),
+    content.experience.map(({ slug, description }) => [slug, description]),
   );
-  const summaries = new Map(
-    generated.content.projects.map(({ slug, summary }) => [slug, summary]),
-  );
+  const summaries = new Map(content.projects.map(({ slug, summary }) => [slug, summary]));
   const artifact = publicCvArtifactSchema.parse({
     type: "public_cv",
     portfolio: {
       ...portfolio,
-      profile: { ...portfolio.profile, longBio: generated.content.summary },
+      profile: { ...portfolio.profile, longBio: content.summary },
       experience: portfolio.experience.map((item) => ({
         ...item,
         description: descriptions.get(item.slug),
@@ -157,25 +259,18 @@ export async function generatePublicCvDraft(locale: AppLocale) {
     },
   });
   return createPublicCvDraft({
-    locale: databaseLocale[locale],
-    title: locale === "es" ? "CV público" : "Public CV",
+    id: input.draftId,
+    locale: databaseLocale[input.locale],
+    title: input.locale === "es" ? "CV público" : "Public CV",
     content: artifact as Prisma.InputJsonValue,
-    sourceHash: createSourceHash({
-      portfolio,
-      professionalContext: context?.professionalContext ?? "",
-    }),
-    model: generated.model,
+    sourceHash,
+    model: input.model,
   });
 }
 
-export async function generateApplicationDocuments(input: {
-  locale: AppLocale;
-  company: string;
-  role: string;
-  sourceUrl: string | null;
-  jobDescription: string;
-  notes: string | null;
-}) {
+export async function generateApplicationDocuments(
+  input: ApplicationDocumentInput,
+): Promise<ApplicationDocumentsDraft> {
   const [portfolio, context] = await Promise.all([
     getCvContent(input.locale),
     getLatestAiContext(),
@@ -193,13 +288,13 @@ export async function generateApplicationDocuments(input: {
   const language = input.locale === "es" ? "Spanish" : "English";
   const [atsGenerated, coverGenerated] = await Promise.all([
     generateStructuredDocument({
-      instruction: `Create a one-column ATS CV tailored to the supplied vacancy in ${language}. Preserve every experience and project slug exactly. Return skills only as slugs present in the portfolio. Prioritize relevant facts without adding claims.`,
+      instruction: `Create a one-column ATS CV tailored to the supplied vacancy in ${language}. Write narrative content in the first person as if authored by the candidate; bullets may use concise action verbs with an implied first person. Preserve every experience and project slug exactly. Return skills only as slugs present in the portfolio. Prioritize relevant facts without adding claims.`,
       source: sharedSource,
       responseSchema: atsResponseSchema,
       validator: atsGenerationSchema,
     }),
     generateStructuredDocument({
-      instruction: `Write a concise cover letter for the supplied vacancy in ${language}. Connect only documented experience to the role and avoid generic claims.`,
+      instruction: `Write a concise cover letter for the supplied vacancy in ${language}, in the first person as if authored by the candidate. Connect only documented experience to the role and avoid generic claims.`,
       source: {
         ...sharedSource,
         personalContext: context?.personalContext ?? "",
@@ -228,32 +323,112 @@ export async function generateApplicationDocuments(input: {
     atsGenerated.content.projects,
   );
 
+  const sourceHash = createSourceHash({
+    ...sharedSource,
+    personalContext: context?.personalContext ?? "",
+  });
+  const draftId = crypto.randomUUID();
+  const proofValue = {
+    draftId,
+    application: input,
+    sourceHash,
+    model: atsGenerated.model,
+  };
+  return {
+    ...proofValue,
+    proof: createDocumentDraftProof(proofValue),
+    application: input,
+    ats: atsGenerated.content,
+    cover: coverGenerated.content,
+    experienceLabels: portfolio.experience.map((item) => ({
+      slug: item.slug,
+      label: `${item.role} · ${item.company}`,
+    })),
+    projectLabels: portfolio.projects.map((item) => ({ slug: item.slug, label: item.name })),
+    skillLabels: [...canonicalSkills].map(([slug, label]) => ({ slug, label })),
+  };
+}
+
+export async function saveApplicationDocuments(
+  input: Omit<ApplicationDocumentsDraft, "experienceLabels" | "projectLabels" | "skillLabels">,
+) {
+  const proofValue = {
+    draftId: input.draftId,
+    application: input.application,
+    sourceHash: input.sourceHash,
+    model: input.model,
+  };
+  if (!verifyDocumentDraftProof(proofValue, input.proof)) {
+    throw new InvalidDocumentDraftError();
+  }
+  const [portfolio, context] = await Promise.all([
+    getCvContent(input.application.locale),
+    getLatestAiContext(),
+  ]);
+  const sharedSource = {
+    target: {
+      company: input.application.company,
+      role: input.application.role,
+      sourceUrl: input.application.sourceUrl,
+      jobDescription: input.application.jobDescription,
+    },
+    professionalContext: context?.professionalContext ?? "",
+    portfolio,
+  };
+  const sourceHash = createSourceHash({
+    ...sharedSource,
+    personalContext: context?.personalContext ?? "",
+  });
+  if (sourceHash !== input.sourceHash) {
+    throw new DocumentSourceConflictError();
+  }
+  const atsContent = atsGenerationSchema.parse(input.ats);
+  const coverContent = coverLetterGenerationSchema.parse(input.cover);
+  requireMatchingSlugs(
+    portfolio.experience.map(({ slug }) => slug),
+    atsContent.experience,
+  );
+  requireMatchingSlugs(
+    portfolio.projects.map(({ slug }) => slug),
+    atsContent.projects,
+  );
+  const canonicalSkills = new Map(
+    portfolio.skillCategories.flatMap((category) =>
+      category.skills.map((skill) => [skill.slug, skill.name] as const),
+    ),
+  );
+  if (
+    new Set(atsContent.skills).size !== atsContent.skills.length ||
+    atsContent.skills.some((slug) => !canonicalSkills.has(slug))
+  ) {
+    throw new Error("Generated document contains unknown skills");
+  }
   const experienceBullets = new Map(
-    atsGenerated.content.experience.map(({ slug, bullets }) => [slug, bullets]),
+    atsContent.experience.map(({ slug, bullets }) => [slug, bullets]),
   );
   const projectBullets = new Map(
-    atsGenerated.content.projects.map(({ slug, bullets }) => [slug, bullets]),
+    atsContent.projects.map(({ slug, bullets }) => [slug, bullets]),
   );
   const ats = atsArtifactSchema.parse({
     type: "ats_cv",
-    locale: input.locale,
+    locale: input.application.locale,
     name: portfolio.profile.fullName,
-    headline: atsGenerated.content.headline,
+    headline: atsContent.headline,
     contact: [portfolio.profile.email, ...portfolio.profile.socialLinks.map(({ url }) => url)].filter(
       (value): value is string => Boolean(value),
     ),
-    summary: atsGenerated.content.summary,
-    skills: atsGenerated.content.skills.map((slug) => canonicalSkills.get(slug)),
+    summary: atsContent.summary,
+    skills: atsContent.skills.map((slug) => canonicalSkills.get(slug)),
     experience: portfolio.experience.map((item) => ({
       title: item.role,
       subtitle: item.company,
-      period: formatDateRange(item.startDate, item.endDate, input.locale),
+      period: formatDateRange(item.startDate, item.endDate, input.application.locale),
       bullets: experienceBullets.get(item.slug),
     })),
     education: portfolio.education.map((item) => ({
       title: item.degree,
       subtitle: item.institution,
-      period: formatDateRange(item.startDate, item.endDate, input.locale),
+      period: formatDateRange(item.startDate, item.endDate, input.application.locale),
       bullets: [],
     })),
     projects: portfolio.projects.map((item) => ({
@@ -265,22 +440,19 @@ export async function generateApplicationDocuments(input: {
   });
   const cover = coverLetterArtifactSchema.parse({
     type: "cover_letter",
-    locale: input.locale,
-    ...coverGenerated.content,
+    locale: input.application.locale,
+    ...coverContent,
     name: portfolio.profile.fullName,
   });
-  const sourceHash = createSourceHash({
-    ...sharedSource,
-    personalContext: context?.personalContext ?? "",
-  });
   return createApplicationArtifacts({
-    ...input,
-    locale: databaseLocale[input.locale],
+    id: input.draftId,
+    ...input.application,
+    locale: databaseLocale[input.application.locale],
     sourceHash,
-    model: atsGenerated.model,
-    atsTitle: `${input.role} · ${input.company} · ATS CV`,
+    model: input.model,
+    atsTitle: `${input.application.role} · ${input.application.company} · ATS CV`,
     atsContent: ats as Prisma.InputJsonValue,
-    coverTitle: `${input.role} · ${input.company} · Cover letter`,
+    coverTitle: `${input.application.role} · ${input.application.company} · Cover letter`,
     coverContent: cover as Prisma.InputJsonValue,
   });
 }
