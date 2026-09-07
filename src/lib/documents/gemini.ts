@@ -47,6 +47,10 @@ function canRetryWithAnotherKey(status: number): boolean {
   return RETRYABLE_STATUSES.has(status) || status >= 500;
 }
 
+function getDocumentGenerationModel() {
+  return process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL;
+}
+
 export async function generateStructuredDocument<T>({
   instruction,
   source,
@@ -58,7 +62,7 @@ export async function generateStructuredDocument<T>({
   responseSchema: Record<string, unknown>;
   validator: ZodType<T>;
 }): Promise<{ content: T; model: string }> {
-  const model = process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL;
+  const model = getDocumentGenerationModel();
   const requestBody = JSON.stringify({
     systemInstruction: {
       parts: [

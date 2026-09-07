@@ -143,3 +143,4 @@ export type PublicCvGeneration = z.infer<typeof publicCvGenerationSchema>;
 export type AtsArtifact = z.infer<typeof atsArtifactSchema>;
 export type AtsGeneration = z.infer<typeof atsGenerationSchema>;
 export type CoverLetterArtifact = z.infer<typeof coverLetterArtifactSchema>;
+export type CoverLetterGeneration = z.infer<typeof coverLetterGenerationSchema>;
