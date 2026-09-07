@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - Start feature and fix branches from `develop`.
 - Merge reviewed feature branches into `develop`; this updates the stable Preview at `https://preview.davidaranda.dev`.
-- Vercel ignores feature-branch builds. Only `develop` creates Preview deployments and only `main` creates Production deployments.
+- Vercel creates ephemeral Preview deployments for `feature/*`, keeps the stable Preview on `develop`, and creates Production deployments only from `main`. Other branch prefixes remain ignored.
 - Promote `develop` to `main` only after manual Preview approval. `main` deploys Production at `https://davidaranda.dev`.
 - Never run database migrations from Preview. The single Supabase database is migrated only through the protected Production workflow from `main`.
 - Keep `CMS_WRITES_ENABLED=false` in Preview; application code also rejects writes whenever `VERCEL_ENV=preview`.
