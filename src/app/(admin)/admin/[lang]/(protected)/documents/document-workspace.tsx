@@ -4,6 +4,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   EyeIcon,
+  ListFilterIcon,
   LoaderCircleIcon,
   SaveIcon,
   SendIcon,
@@ -15,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useEffectEvent, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DeleteForm } from "@/components/admin/delete-form";
 import type { AdminDocumentWorkspace } from "@/data/admin/documents";
 import type { AdminCopy } from "@/i18n/admin";
 import type { Locale } from "@/i18n/config";
@@ -24,6 +26,7 @@ import type {
 } from "@/lib/documents/generate";
 import {
   type DocumentActionState,
+  deleteDocumentArtifactAction,
   generateApplicationAction,
   generatePublicCvAction,
   publishPublicCvAction,
@@ -59,6 +62,7 @@ export function DocumentWorkspace({
     generateApplicationAction,
     initialDocumentState,
   );
+  const [generatingLocale, setGeneratingLocale] = useState<Locale | null>(null);
 
   return (
     <div className="mt-12 space-y-8">
@@ -115,19 +119,25 @@ export function DocumentWorkspace({
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               {(["es", "en"] as const).map((documentLocale) => (
-                <form key={documentLocale} action={publicAction}>
+                <form
+                  key={documentLocale}
+                  action={publicAction}
+                  onSubmit={() => setGeneratingLocale(documentLocale)}
+                >
                   <input type="hidden" name="locale" value={documentLocale} />
                   <Button
                     type="submit"
                     variant="outline"
                     disabled={!workspace.schemaReady || publicPending}
                   >
-                    {publicPending ? (
+                    {publicPending && generatingLocale === documentLocale ? (
                       <LoaderCircleIcon className="animate-spin" />
                     ) : (
                       <SparklesIcon />
                     )}
-                    {publicPending ? copy.generating : copy.generatePublic} ·{" "}
+                    {publicPending && generatingLocale === documentLocale
+                      ? copy.generating
+                      : copy.generatePublic} ·{" "}
                     {documentLocale.toUpperCase()}
                   </Button>
                 </form>
@@ -513,8 +523,16 @@ function HistoryPanel({
   sourceHashes: Record<Locale, string>;
 }) {
   const { page, totalPages, totalItems } = workspace.history;
-  const pageHref = (target: number) =>
-    target === 1 ? `/admin/${locale}/documents` : `/admin/${locale}/documents?page=${target}`;
+  const pageHref = (target: number) => {
+    const params = new URLSearchParams();
+    if (workspace.filters.kind) params.set("kind", workspace.filters.kind);
+    if (workspace.filters.locale) params.set("locale", workspace.filters.locale);
+    if (workspace.filters.status) params.set("status", workspace.filters.status);
+    if (workspace.filters.query) params.set("query", workspace.filters.query);
+    if (target > 1) params.set("page", String(target));
+    const query = params.toString();
+    return `/admin/${locale}/documents${query ? `?${query}` : ""}`;
+  };
 
   return (
     <aside className="rounded-3xl border border-border bg-card p-6 text-card-foreground xl:sticky xl:top-6">
@@ -529,6 +547,52 @@ function HistoryPanel({
           {totalItems}
         </span>
       </div>
+      <form method="get" className="mt-6 grid gap-3 border-t border-border pt-5 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+        <label className="text-xs font-medium text-muted-foreground">
+          {copy.filterQuery}
+          <input
+            name="query"
+            defaultValue={workspace.filters.query ?? ""}
+            className={fieldClass}
+            placeholder={copy.filterQueryPlaceholder}
+          />
+        </label>
+        <label className="text-xs font-medium text-muted-foreground">
+          {copy.filterKind}
+          <select name="kind" defaultValue={workspace.filters.kind ?? ""} className={fieldClass}>
+            <option value="">{copy.filterAll}</option>
+            {Object.entries(copy.kinds).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </label>
+        <label className="text-xs font-medium text-muted-foreground">
+          {copy.filterLocale}
+          <select name="locale" defaultValue={workspace.filters.locale ?? ""} className={fieldClass}>
+            <option value="">{copy.filterAll}</option>
+            <option value="ES">ES</option>
+            <option value="EN">EN</option>
+          </select>
+        </label>
+        <label className="text-xs font-medium text-muted-foreground">
+          {copy.filterStatus}
+          <select name="status" defaultValue={workspace.filters.status ?? ""} className={fieldClass}>
+            <option value="">{copy.filterAll}</option>
+            {Object.entries(copy.statuses).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </label>
+        <div className="flex flex-wrap items-center gap-2 sm:col-span-2 xl:col-span-1 2xl:col-span-2">
+          <Button type="submit" variant="secondary">
+            <ListFilterIcon />
+            {copy.applyFilters}
+          </Button>
+          <Button variant="ghost" render={<Link href={`/admin/${locale}/documents`} scroll={false} />}>
+            {copy.clearFilters}
+          </Button>
+        </div>
+      </form>
       <div className="mt-6 divide-y divide-border border-y border-border">
         {workspace.artifacts.length === 0 ? (
           <p className="py-8 text-sm text-muted-foreground">{copy.emptyHistory}</p>
@@ -542,7 +606,7 @@ function HistoryPanel({
               <article key={artifact.id} className="py-5">
                 <p className="font-medium">{artifact.title}</p>
                 <p className="mt-1 font-mono text-xs leading-5 text-muted-foreground">
-                  {copy.kinds[artifact.kind]} · {artifact.locale} · v{artifact.version} ·{" "}
+                  {copy.kinds[artifact.kind]} · {artifact.locale} ·{" "}
                   {copy.statuses[artifact.status]}
                 </p>
                 {artifact.application && (
@@ -563,6 +627,14 @@ function HistoryPanel({
                     {copy.review}
                   </Button>
                 </div>
+                <DeleteForm
+                  action={deleteDocumentArtifactAction}
+                  id={artifact.id}
+                  label={copy.deleteDocument}
+                  confirmText={copy.confirmDeleteDocument}
+                  messages={copy.deleteStatus}
+                  fields={{ locale, confirmation: "delete" }}
+                />
               </article>
             );
           })
@@ -625,9 +697,14 @@ export function PublishForm({
   return (
     <form action={action} className="flex items-center gap-2">
       <input type="hidden" name="id" value={id} />
-      <Button type="submit" size="sm" disabled={!enabled || pending}>
-        <SendIcon />
-        {copy.publish}
+      <Button
+        type="submit"
+        variant="secondary"
+        className="h-10 border border-border px-4 shadow-sm"
+        disabled={!enabled || pending}
+      >
+        {pending ? <LoaderCircleIcon className="animate-spin" /> : <SendIcon />}
+        {pending ? copy.publishing : copy.publish}
       </Button>
       <ActionStatus state={state.status} copy={copy} compact />
     </form>

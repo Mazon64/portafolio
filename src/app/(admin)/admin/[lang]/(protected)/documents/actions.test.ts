@@ -10,6 +10,9 @@ const {
   saveApplicationMock,
   SourceConflictMock,
   InvalidDraftMock,
+  deleteArtifactMock,
+  revalidatePathMock,
+  updateTagMock,
 } = vi.hoisted(() => ({
   requireAdminMock: vi.fn(),
   writesEnabledMock: vi.fn(),
@@ -20,9 +23,15 @@ const {
   saveApplicationMock: vi.fn(),
   SourceConflictMock: class extends Error {},
   InvalidDraftMock: class extends Error {},
+  deleteArtifactMock: vi.fn(),
+  revalidatePathMock: vi.fn(),
+  updateTagMock: vi.fn(),
 }));
 
-vi.mock("next/cache", () => ({ updateTag: vi.fn() }));
+vi.mock("next/cache", () => ({
+  revalidatePath: revalidatePathMock,
+  updateTag: updateTagMock,
+}));
 vi.mock("@/lib/auth/authorization", () => ({ requireAdmin: requireAdminMock }));
 vi.mock("@/config/env", () => ({
   isCmsWriteEnabled: writesEnabledMock,
@@ -30,6 +39,7 @@ vi.mock("@/config/env", () => ({
 }));
 vi.mock("@/data/admin/documents", () => ({
   createAiContextVersion: createContextMock,
+  deleteDocumentArtifact: deleteArtifactMock,
   publishPublicCvArtifact: vi.fn(),
 }));
 vi.mock("@/lib/documents/generate", () => ({
@@ -43,6 +53,7 @@ vi.mock("@/lib/documents/generate", () => ({
 
 import {
   type DocumentActionState,
+  deleteDocumentArtifactAction,
   generatePublicCvAction,
   saveAiContextAction,
   saveApplicationDocumentsAction,
@@ -60,6 +71,9 @@ describe("document actions", () => {
     generatePublicMock.mockReset();
     savePublicMock.mockReset().mockResolvedValue({ id: "artifact" });
     saveApplicationMock.mockReset().mockResolvedValue({ id: "application" });
+    deleteArtifactMock.mockReset().mockResolvedValue({ kind: "ATS_CV", status: "DRAFT" });
+    revalidatePathMock.mockReset();
+    updateTagMock.mockReset();
   });
 
   it("saves professional context without optional personal context", async () => {
@@ -217,5 +231,59 @@ describe("document actions", () => {
         cover: expect.objectContaining({ paragraphs: ["A".repeat(40), "B".repeat(40), "C".repeat(40)] }),
       }),
     );
+  });
+
+  it("deletes a validated document and refreshes its localized workspace", async () => {
+    const data = new FormData();
+    data.set("id", "2eb66473-aca8-4f1f-a312-9a697b75a2e3");
+    data.set("locale", "en");
+    data.set("confirmation", "delete");
+
+    await expect(
+      deleteDocumentArtifactAction({ status: "idle" }, data),
+    ).resolves.toEqual({ status: "deleted" });
+    expect(deleteArtifactMock).toHaveBeenCalledWith(
+      "2eb66473-aca8-4f1f-a312-9a697b75a2e3",
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/en/documents");
+  });
+
+  it("invalidates the public CV after deleting the published artifact", async () => {
+    deleteArtifactMock.mockResolvedValue({ kind: "PUBLIC_CV", status: "PUBLISHED" });
+    const data = new FormData();
+    data.set("id", "2eb66473-aca8-4f1f-a312-9a697b75a2e3");
+    data.set("locale", "es");
+    data.set("confirmation", "delete");
+
+    await deleteDocumentArtifactAction({ status: "idle" }, data);
+
+    expect(updateTagMock).toHaveBeenCalledWith("portfolio");
+  });
+
+  it("still invalidates a deleted public CV when refreshing the workspace fails", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    deleteArtifactMock.mockResolvedValue({ kind: "PUBLIC_CV", status: "PUBLISHED" });
+    revalidatePathMock.mockImplementation(() => {
+      throw new Error("cache unavailable");
+    });
+    const data = new FormData();
+    data.set("id", "2eb66473-aca8-4f1f-a312-9a697b75a2e3");
+    data.set("locale", "es");
+    data.set("confirmation", "delete");
+
+    await expect(
+      deleteDocumentArtifactAction({ status: "idle" }, data),
+    ).resolves.toEqual({ status: "cache-error" });
+    expect(updateTagMock).toHaveBeenCalledWith("portfolio");
+    consoleError.mockRestore();
+  });
+
+  it("does not delete documents when writes are disabled", async () => {
+    writesEnabledMock.mockReturnValue(false);
+
+    await expect(
+      deleteDocumentArtifactAction({ status: "idle" }, new FormData()),
+    ).resolves.toEqual({ status: "disabled" });
+    expect(deleteArtifactMock).not.toHaveBeenCalled();
   });
 });

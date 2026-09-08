@@ -19,13 +19,15 @@ export function DeleteForm({
   label,
   confirmText,
   messages,
+  fields,
 }: {
   action: (state: DeleteActionState, formData: FormData) => Promise<DeleteActionState>;
   id: string;
-  updatedAt: string;
+  updatedAt?: string;
   label: string;
   confirmText: string;
   messages: Record<Exclude<DeleteActionState["status"], "idle">, string>;
+  fields?: Record<string, string>;
 }) {
   const [state, formAction, pending] = useActionState(action, initialDeleteState);
   const router = useRouter();
@@ -33,7 +35,7 @@ export function DeleteForm({
 
   useEffect(() => {
     if (
-      state.status === "deleted" &&
+      (state.status === "deleted" || state.status === "cache-error") &&
       refreshedStatus.current !== state.status
     ) {
       refreshedStatus.current = state.status;
@@ -44,7 +46,10 @@ export function DeleteForm({
   return (
     <form action={formAction} className="mt-4 border-t border-border pt-4">
       <input type="hidden" name="id" value={id} />
-      <input type="hidden" name="updatedAt" value={updatedAt} />
+      {updatedAt && <input type="hidden" name="updatedAt" value={updatedAt} />}
+      {Object.entries(fields ?? {}).map(([name, value]) => (
+        <input key={name} type="hidden" name={name} value={value} />
+      ))}
       <Button
         type="submit"
         variant="destructive"
