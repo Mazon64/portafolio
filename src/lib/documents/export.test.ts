@@ -3,7 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import { DocumentKind } from "@/generated/prisma/client";
-import { exportArtifactDocx, exportArtifactPdf } from "./export";
+import { PDFDocument } from "pdf-lib";
+import { exportArtifactPdf } from "./export";
 
 const artifact = {
   type: "ats_cv" as const,
@@ -26,21 +27,39 @@ const artifact = {
 };
 
 describe("document exports", () => {
-  it("creates valid PDF and DOCX containers", async () => {
-    const [pdf, docx] = await Promise.all([
-      exportArtifactPdf(DocumentKind.ATS_CV, artifact),
-      exportArtifactDocx(DocumentKind.ATS_CV, artifact),
-    ]);
+  it("creates a valid US Letter PDF", async () => {
+    const pdf = await exportArtifactPdf(DocumentKind.ATS_CV, artifact);
     expect(Buffer.from(pdf).subarray(0, 4).toString()).toBe("%PDF");
-    expect(docx.subarray(0, 2).toString()).toBe("PK");
+    const document = await PDFDocument.load(pdf);
+    expect(document.getPage(0).getSize()).toEqual({ width: 612, height: 792 });
   });
 
   it("handles Unicode and long unbroken values without failing PDF export", async () => {
     const pdf = await exportArtifactPdf(DocumentKind.ATS_CV, {
       ...artifact,
       locale: "es",
-      headline: `Ingeniería 🚀 ${"https://example.com/".repeat(20)}`,
+      name: "José Muñoz",
+      headline: `Ingeniería ágil 🚀 ${"https://example.com/".repeat(20)}`,
     });
     expect(Buffer.from(pdf).subarray(0, 4).toString()).toBe("%PDF");
+  });
+
+  it("exports cover letters with the same Letter page format", async () => {
+    const pdf = await exportArtifactPdf(DocumentKind.COVER_LETTER, {
+      type: "cover_letter",
+      locale: "es",
+      subject: "Postulación: Ingeniería de software",
+      salutation: "Equipo de contratación:",
+      paragraphs: [
+        "Presento mi candidatura porque mi experiencia documentada coincide con las necesidades descritas para el puesto.",
+        "He desarrollado sistemas mantenibles con TypeScript y prácticas de entrega que priorizan la calidad del producto.",
+        "Puedo aportar esa experiencia al equipo y conversar con detalle sobre el alcance y las responsabilidades del puesto.",
+      ],
+      closing: "Atentamente,",
+      name: "José Muñoz",
+    });
+
+    const document = await PDFDocument.load(pdf);
+    expect(document.getPage(0).getSize()).toEqual({ width: 612, height: 792 });
   });
 });

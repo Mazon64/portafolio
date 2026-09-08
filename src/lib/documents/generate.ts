@@ -173,8 +173,8 @@ export async function generatePublicCvDraft(locale: AppLocale): Promise<PublicCv
   const generated = await generateStructuredDocument({
     instruction:
       locale === "es"
-        ? "Redacta un CV público profesional en español y en primera persona, como si lo hubiera escrito el candidato. Conserva exactamente cada slug y devuelve una síntesis clara, natural y verificable."
-        : "Write a professional public CV in English and in the first person, as if authored by the candidate. Preserve every slug exactly and return clear, natural, verifiable copy.",
+        ? "Redacta un CV público profesional en español, con lenguaje natural, directo y conciso. Usa la primera persona con moderación y varía la estructura para no repetir «yo». Conserva exactamente cada slug y sintetiza únicamente hechos verificables del portafolio. Evita elogios genéricos, clichés, grandilocuencia y descripciones mecánicas."
+        : "Write a professional public CV in natural, direct, concise English. Use the first person sparingly and vary sentence structure instead of repeatedly starting with “I.” Preserve every slug exactly and summarize only verifiable portfolio facts. Avoid generic praise, clichés, inflated language, and mechanical narration.",
     source,
     responseSchema: publicCvResponseSchema,
     validator: publicCvGenerationSchema,
@@ -282,19 +282,20 @@ export async function generateApplicationDocuments(
       sourceUrl: input.sourceUrl,
       jobDescription: input.jobDescription,
     },
+    requestNotes: input.notes,
     professionalContext: context?.professionalContext ?? "",
     portfolio,
   };
   const language = input.locale === "es" ? "Spanish" : "English";
   const [atsGenerated, coverGenerated] = await Promise.all([
     generateStructuredDocument({
-      instruction: `Create a one-column ATS CV tailored to the supplied vacancy in ${language}. Write narrative content in the first person as if authored by the candidate; bullets may use concise action verbs with an implied first person. Preserve every experience and project slug exactly. Return skills only as slugs present in the portfolio. Prioritize relevant facts without adding claims.`,
+      instruction: `Create a one-column ATS CV tailored to the supplied vacancy in ${language}. Use natural, concise, professional language and prioritize relevant documented facts without embellishment. Keep the headline direct. Write the summary in restrained first person without repeated first-person openings. Start bullets with precise action verbs and omit first-person pronouns. Preserve every experience and project slug exactly. Return skills only as slugs present in the portfolio.`,
       source: sharedSource,
       responseSchema: atsResponseSchema,
       validator: atsGenerationSchema,
     }),
     generateStructuredDocument({
-      instruction: `Write a concise cover letter for the supplied vacancy in ${language}, in the first person as if authored by the candidate. Connect only documented experience to the role and avoid generic claims.`,
+      instruction: `Write a concise, natural cover letter for the supplied vacancy in ${language}. Use a restrained first-person voice with varied sentence openings. Connect only documented experience to specific role needs. Avoid generic enthusiasm, clichés, flattery, inflated claims, and formulaic narration. Do not claim knowledge of the company beyond the supplied vacancy.`,
       source: {
         ...sharedSource,
         personalContext: context?.personalContext ?? "",
@@ -372,6 +373,7 @@ export async function saveApplicationDocuments(
       sourceUrl: input.application.sourceUrl,
       jobDescription: input.application.jobDescription,
     },
+    requestNotes: input.application.notes,
     professionalContext: context?.professionalContext ?? "",
     portfolio,
   };

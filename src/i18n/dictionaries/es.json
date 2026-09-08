@@ -1,11 +1,11 @@
 {
   "metadata": {
     "title": "David Yael Aranda | Ingeniero de software",
-    "description": "Portafolio y ecosistema de ingeniería"
+    "description": "Portafolio de ingeniería de software"
   },
   "home": {
     "eyebrow": "Portafolio · Ingeniería de software",
-    "heading": "Construyo software con intención, claridad y alcance.",
+    "heading": "Diseño y desarrollo software claro, útil y mantenible.",
     "viewCv": "Ver currículum",
     "viewProjects": "Ver proyectos"
   },
@@ -66,7 +66,7 @@
       "send": "Enviar mensaje",
       "sending": "Enviando...",
       "success": "Tu mensaje fue enviado correctamente.",
-      "error": "No se pudo enviar el mensaje. Inténtalo nuevamente más tarde."
+      "error": "No se pudo enviar el mensaje. Inténtalo de nuevo más tarde."
     }
   },
   "skillsCarousel": {
@@ -75,13 +75,13 @@
     "next": "Mostrar categoría siguiente"
   },
   "projects": {
-    "empty": "Los proyectos públicos están en preparación.",
+    "empty": "Los proyectos públicos estarán disponibles próximamente.",
     "imagePlaceholder": "Imagen del proyecto",
-    "expand": "Selecciona para consultar los detalles",
+    "expand": "Selecciona para ver los detalles",
     "progress": "Progreso",
     "technologies": "Tecnologías",
     "status": "Estado actual",
-    "details": "Desarrollo del proyecto",
+    "details": "Detalles del proyecto",
     "repository": "Repositorio",
     "prototype": "Prototipo",
     "newTab": "Abre en una pestaña nueva",
@@ -96,7 +96,7 @@
   "cv": {
     "metadata": {
       "title": "Currículum de David Yael Aranda",
-      "description": "Currículum localizado e imprimible de David Yael Aranda, Ingeniero de Software."
+      "description": "Currículum de David Yael Aranda, ingeniero de software, disponible en español, inglés y formato imprimible."
     },
     "eyebrow": "Currículum vitae",
     "summary": "Perfil profesional",
@@ -118,6 +118,6 @@
     "loading": "Cargando currículum"
   },
   "loading": {
-    "portfolio": "Cargando información del portafolio"
+    "portfolio": "Cargando portafolio"
   }
 }
