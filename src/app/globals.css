@@ -158,7 +158,7 @@
     padding: 0 !important;
   }
 
-  .cv-document {
+  .print-document {
     min-height: auto !important;
     max-width: none !important;
     padding: 0 !important;
@@ -166,23 +166,46 @@
     font-size: 9.5pt;
   }
 
+  #admin-main:has(.document-print-page) {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .document-review-stage {
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: white !important;
+    padding: 0 !important;
+  }
+
   .cv-columns {
     grid-template-columns: minmax(0, 1.5fr) minmax(12rem, 0.6fr) !important;
   }
 
   .cv-compact-entry,
-  .cv-entry-heading {
+  .cv-entry-heading,
+  .document-entry-heading,
+  .document-entry-intro,
+  .document-entry li {
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
-  .cv-section-title,
-  .cv-entry h3 {
+  .document-entry-intro {
     break-after: avoid;
     page-break-after: avoid;
   }
 
-  .cv-document p {
+  .document-section-title,
+  .cv-entry h3,
+  .document-entry h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .print-document p,
+  .print-document li {
     orphans: 3;
     widows: 3;
   }
