@@ -37,6 +37,18 @@ describe("Gemini document generation", () => {
     expect(fetchMock.mock.calls[0][0]).toContain("/models/configured-model:generateContent");
     expect(fetchMock.mock.calls[0][1].headers["x-goog-api-key"]).toBe("secret-key");
     expect(fetchMock.mock.calls[0][0]).not.toContain("secret-key");
+
+    const request = JSON.parse(fetchMock.mock.calls[0][1].body);
+    const systemInstruction = request.systemInstruction.parts[0].text;
+    expect(systemInstruction).toContain("Write natural, concise, specific, professional prose");
+    expect(systemInstruction).toContain("Never mention AI");
+    expect(systemInstruction).toContain("generic enthusiasm");
+    expect(systemInstruction).toContain("clichés");
+    expect(systemInstruction).toContain("unverifiable claims");
+    expect(systemInstruction).toContain("robotic narration");
+    expect(systemInstruction).toContain("repeated first-person sentence openings");
+    expect(systemInstruction).toContain("requestNotes field");
+    expect(systemInstruction).toContain("optional writing preferences, not facts");
   });
 
   it("balances consecutive requests across the configured keys", async () => {

@@ -1,11 +1,11 @@
 {
   "metadata": {
     "title": "David Yael Aranda | Software Engineer",
-    "description": "Software engineering portfolio and ecosystem"
+    "description": "Software engineering portfolio"
   },
   "home": {
     "eyebrow": "Portfolio · Software engineering",
-    "heading": "I build software with intention, clarity, and reach.",
+    "heading": "I design and build clear, useful, maintainable software.",
     "viewCv": "View résumé",
     "viewProjects": "View projects"
   },
@@ -75,13 +75,13 @@
     "next": "Show next category"
   },
   "projects": {
-    "empty": "Public projects are being prepared.",
+    "empty": "Public projects are coming soon.",
     "imagePlaceholder": "Project image",
-    "expand": "Select to view the details",
+    "expand": "Select to view details",
     "progress": "Progress",
     "technologies": "Technologies",
     "status": "Current status",
-    "details": "Project development",
+    "details": "Project details",
     "repository": "Repository",
     "prototype": "Prototype",
     "newTab": "Opens in a new tab",
@@ -96,7 +96,7 @@
   "cv": {
     "metadata": {
       "title": "David Yael Aranda's Résumé",
-      "description": "Localized and printable résumé for David Yael Aranda, Software Engineer."
+      "description": "David Yael Aranda's software engineering résumé, available in English, Spanish, and a print-friendly format."
     },
     "eyebrow": "Curriculum vitae",
     "summary": "Professional summary",
@@ -118,6 +118,6 @@
     "loading": "Loading résumé"
   },
   "loading": {
-    "portfolio": "Loading portfolio information"
+    "portfolio": "Loading portfolio"
   }
 }

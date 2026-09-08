@@ -564,30 +564,17 @@ function HistoryPanel({
                     {copy.review}
                   </Button>
                   {artifact.kind !== "PUBLIC_CV" && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        render={
-                          <a
-                            href={`/admin/${artifactLocale}/documents/${artifact.id}/download?format=pdf`}
-                          />
-                        }
-                      >
-                        <FileDownIcon />PDF
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        render={
-                          <a
-                            href={`/admin/${artifactLocale}/documents/${artifact.id}/download?format=docx`}
-                          />
-                        }
-                      >
-                        <FileDownIcon />DOCX
-                      </Button>
-                    </>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      render={
+                        <a
+                          href={`/admin/${artifactLocale}/documents/${artifact.id}/download?format=pdf`}
+                        />
+                      }
+                    >
+                      <FileDownIcon />PDF
+                    </Button>
                   )}
                 </div>
               </article>
