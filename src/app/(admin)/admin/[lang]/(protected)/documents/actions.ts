@@ -1,12 +1,15 @@
 "use server";
 
 import { z } from "zod";
+import { revalidatePath, updateTag } from "next/cache";
 
 import { isCmsWriteEnabled, isDocumentGenerationEnabled } from "@/config/env";
 import {
   createAiContextVersion,
+  deleteDocumentArtifact,
   publishPublicCvArtifact,
 } from "@/data/admin/documents";
+import { DocumentKind, DocumentStatus } from "@/generated/prisma/client";
 import { requireAdmin } from "@/lib/auth/authorization";
 import {
   DocumentSourceConflictError,
@@ -39,6 +42,10 @@ export type DocumentActionState = {
     | "error";
   publicDraft?: PublicCvDraft;
   applicationDraft?: ApplicationDocumentsDraft;
+};
+
+export type DocumentDeleteActionState = {
+  status: "idle" | "deleted" | "disabled" | "conflict" | "cache-error" | "error";
 };
 
 const draftMetadataSchema = z.object({
@@ -263,6 +270,49 @@ export async function publishPublicCvAction(
     return { status: "success" };
   } catch (error) {
     console.error("Failed to publish public CV", error);
+    return { status: "error" };
+  }
+}
+
+export async function deleteDocumentArtifactAction(
+  _state: DocumentDeleteActionState,
+  formData: FormData,
+): Promise<DocumentDeleteActionState> {
+  if (!(await canWrite())) return { status: "disabled" };
+  const input = z.object({
+    id: z.uuid(),
+    locale: z.enum(["es", "en"]),
+    confirmation: z.literal("delete"),
+  }).safeParse({
+    id: formData.get("id"),
+    locale: formData.get("locale"),
+    confirmation: formData.get("confirmation"),
+  });
+  if (!input.success) return { status: "conflict" };
+  try {
+    const deleted = await deleteDocumentArtifact(input.data.id);
+    if (!deleted) return { status: "conflict" };
+    let cacheError = false;
+    if (
+      deleted.kind === DocumentKind.PUBLIC_CV &&
+      deleted.status === DocumentStatus.PUBLISHED
+    ) {
+      try {
+        updateTag("portfolio");
+      } catch (error) {
+        console.error("Failed to invalidate CV after document deletion", error);
+        cacheError = true;
+      }
+    }
+    try {
+      revalidatePath(`/admin/${input.data.locale}/documents`);
+    } catch (error) {
+      console.error("Failed to refresh documents after deletion", error);
+      cacheError = true;
+    }
+    return { status: cacheError ? "cache-error" : "deleted" };
+  } catch (error) {
+    console.error("Failed to delete document artifact", error);
     return { status: "error" };
   }
 }

@@ -8,6 +8,8 @@ const {
   contextFindFirstMock,
   artifactCountMock,
   artifactFindManyMock,
+  artifactDeleteMock,
+  applicationDeleteManyMock,
 } = vi.hoisted(
   () => ({
     requireAdminMock: vi.fn(),
@@ -17,6 +19,8 @@ const {
     contextFindFirstMock: vi.fn(),
     artifactCountMock: vi.fn(),
     artifactFindManyMock: vi.fn(),
+    artifactDeleteMock: vi.fn(),
+    applicationDeleteManyMock: vi.fn(),
   }),
 );
 
@@ -30,12 +34,15 @@ vi.mock("@/lib/prisma", () => ({
       count: artifactCountMock,
       findUnique: findUniqueMock,
       findMany: artifactFindManyMock,
+      delete: artifactDeleteMock,
     },
+    jobApplication: { deleteMany: applicationDeleteManyMock },
   }),
 }));
 
 import {
   createPublicCvDraft,
+  deleteDocumentArtifact,
   getAdminDocumentWorkspace,
   publishPublicCvArtifact,
 } from "./documents";
@@ -52,6 +59,8 @@ describe("document publication", () => {
     contextFindFirstMock.mockReset().mockResolvedValue(null);
     artifactCountMock.mockReset().mockResolvedValue(0);
     artifactFindManyMock.mockReset().mockResolvedValue([]);
+    artifactDeleteMock.mockReset().mockResolvedValue({ id: "artifact" });
+    applicationDeleteManyMock.mockReset().mockResolvedValue({ count: 1 });
     transactionMock.mockReset().mockImplementation((callback) =>
       callback({
         documentArtifact: {
@@ -90,6 +99,57 @@ describe("document publication", () => {
         skip: 6,
         take: 6,
       }),
+    );
+  });
+
+  it("applies the same document filters to the count and page query", async () => {
+    const filters = {
+      kind: "ATS_CV" as const,
+      locale: "EN" as const,
+      status: "DRAFT" as const,
+      query: "engineer",
+    };
+
+    await getAdminDocumentWorkspace(1, filters);
+
+    expect(artifactCountMock).toHaveBeenCalledWith({ where: expect.any(Object) });
+    expect(artifactFindManyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          kind: "ATS_CV",
+          locale: "EN",
+          status: "DRAFT",
+          OR: expect.any(Array),
+        }),
+      }),
+    );
+  });
+
+  it("deletes an artifact and its application only when it becomes empty", async () => {
+    findUniqueMock.mockResolvedValue({
+      applicationId: "2eb66473-aca8-4f1f-a312-9a697b75a2e3",
+      kind: "ATS_CV",
+      status: "DRAFT",
+    });
+    transactionMock.mockImplementation((callback) =>
+      callback({
+        documentArtifact: { findUnique: findUniqueMock, delete: artifactDeleteMock },
+        jobApplication: { deleteMany: applicationDeleteManyMock },
+      }),
+    );
+
+    await expect(
+      deleteDocumentArtifact("19781016-8a26-4483-93f4-9cd2c7208583"),
+    ).resolves.toEqual({ kind: "ATS_CV", status: "DRAFT" });
+    expect(applicationDeleteManyMock).toHaveBeenCalledWith({
+      where: {
+        id: "2eb66473-aca8-4f1f-a312-9a697b75a2e3",
+        artifacts: { none: {} },
+      },
+    });
+    expect(transactionMock).toHaveBeenCalledWith(
+      expect.any(Function),
+      { isolationLevel: "Serializable" },
     );
   });
 

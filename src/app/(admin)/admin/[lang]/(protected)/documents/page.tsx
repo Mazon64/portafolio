@@ -1,16 +1,25 @@
 import { getAdminDocumentWorkspace } from "@/data/admin/documents";
+import { DocumentKind, DocumentStatus, Locale } from "@/generated/prisma/client";
 import { getCvContent } from "@/data/portfolio";
 import { adminCopy } from "@/i18n/admin";
 import { hasLocale } from "@/i18n/config";
 import { createSourceHash } from "@/lib/documents/source-hash";
 import { DocumentWorkspace } from "./document-workspace";
+import { z } from "zod";
+
+const filtersSchema = z.object({
+  kind: z.enum(DocumentKind).optional().catch(undefined),
+  locale: z.enum(Locale).optional().catch(undefined),
+  status: z.enum(DocumentStatus).optional().catch(undefined),
+  query: z.string().trim().max(100).optional().catch(undefined),
+});
 
 export default async function DocumentsPage({
   params,
   searchParams,
 }: {
   params: Promise<{ lang: string }>;
-  searchParams: Promise<{ page?: string | string[] }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const [{ lang }, query] = await Promise.all([params, searchParams]);
   if (!hasLocale(lang)) return null;
@@ -18,8 +27,14 @@ export default async function DocumentsPage({
     typeof query.page === "string" ? query.page : "1",
     10,
   );
+  const filters = filtersSchema.parse({
+    kind: typeof query.kind === "string" ? query.kind : undefined,
+    locale: typeof query.locale === "string" ? query.locale : undefined,
+    status: typeof query.status === "string" ? query.status : undefined,
+    query: typeof query.query === "string" && query.query.trim() ? query.query : undefined,
+  });
   const [workspace, esSource, enSource] = await Promise.all([
-    getAdminDocumentWorkspace(Number.isFinite(requestedPage) ? requestedPage : 1),
+    getAdminDocumentWorkspace(Number.isFinite(requestedPage) ? requestedPage : 1, filters),
     getCvContent("es"),
     getCvContent("en"),
   ]);

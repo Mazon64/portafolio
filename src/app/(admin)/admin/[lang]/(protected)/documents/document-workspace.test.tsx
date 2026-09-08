@@ -4,10 +4,14 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("./actions", () => ({
   generateApplicationAction: vi.fn(),
   generatePublicCvAction: vi.fn(),
+  deleteDocumentArtifactAction: vi.fn(),
   publishPublicCvAction: vi.fn(),
   saveAiContextAction: vi.fn(),
   saveApplicationDocumentsAction: vi.fn(),
   savePublicCvDraftAction: vi.fn(),
+}));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn(), replace: vi.fn() }),
 }));
 
 import { DocumentKind, DocumentStatus, Locale } from "@/generated/prisma/client";
@@ -23,6 +27,7 @@ describe("DocumentWorkspace", () => {
         sourceHashes={{ es: "es-hash", en: "en-hash" }}
         workspace={{
           schemaReady: true,
+          filters: {},
           history: { page: 1, totalPages: 1, totalItems: 1 },
           context: null,
           artifacts: [{
@@ -30,7 +35,6 @@ describe("DocumentWorkspace", () => {
             kind: DocumentKind.ATS_CV,
             locale: Locale.EN,
             status: DocumentStatus.DRAFT,
-            version: 1,
             title: "Backend Engineer CV",
             sourceHash: "en-hash",
             createdAt: "2026-09-01T00:00:00.000Z",
@@ -45,6 +49,9 @@ describe("DocumentWorkspace", () => {
       "/admin/en/documents/00000000-0000-4000-8000-000000000001",
     );
     expect(html).toContain(">Review<");
+    expect(html).toContain("Delete document");
+    expect(html).toContain("Title, company, or role");
+    expect(html).not.toContain("· v1 ·");
     expect(html).not.toContain("/download");
   });
 });
