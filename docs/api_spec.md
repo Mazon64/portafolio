@@ -69,7 +69,7 @@ El CMS ofrece CRUD de perfil, experiencia, educación, categorías de habilidade
 
 Después de un commit exitoso se invalida la etiqueta `portfolio`; un error de validación, autorización, concurrencia o persistencia nunca invalida la caché. Si la invalidación falla después del commit, la acción devuelve `cache-error` y conserva la nueva versión. Los borrados devuelven estados explícitos `deleted`, `disabled`, `conflict`, `cache-error` o `error`. Las URLs públicas de proyectos solo aceptan los protocolos HTTP y HTTPS.
 
-### 3.1 `GET /admin/{locale}/documents/{id}/download?format=pdf|docx`
+### 3.1 `GET /admin/{locale}/documents/{id}/download?format=pdf`
 
 Descarga un CV ATS o una carta ya persistidos. El handler vuelve a exigir autorización administrativa mediante el DAL, valida UUID y formato, reconstruye el archivo desde JSON validado y responde con `Cache-Control: private, no-store`, `nosniff` y `Content-Disposition: attachment`. Los artefactos públicos se consumen mediante la vista HTML del CV y no se exportan por este endpoint.
 

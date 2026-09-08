@@ -26,8 +26,7 @@ const copy = {
     subject: (name: string) => `Nuevo mensaje del portafolio: ${name}`,
     marker: "/CONTACTO",
     title: "Nuevo mensaje",
-    intro:
-      "Alguien utilizó el formulario de tu portafolio. Puedes responder directamente a este correo.",
+    intro: "Recibiste un mensaje desde tu portafolio. Puedes responder directamente a este correo.",
     name: "Nombre",
     email: "Correo",
     message: "Mensaje",
@@ -39,8 +38,7 @@ const copy = {
     subject: (name: string) => `New portfolio message: ${name}`,
     marker: "/CONTACT",
     title: "New message",
-    intro:
-      "Someone used your portfolio contact form. You can reply directly to this email.",
+    intro: "You received a message through your portfolio. You can reply directly to this email.",
     name: "Name",
     email: "Email",
     message: "Message",
