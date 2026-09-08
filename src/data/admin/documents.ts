@@ -28,6 +28,7 @@ async function withSerializationRetry<T>(operation: () => Promise<T>): Promise<T
 
 export type AdminDocumentWorkspace = {
   schemaReady: boolean;
+  filters: AdminDocumentFilters;
   history: {
     page: number;
     totalPages: number;
@@ -43,7 +44,6 @@ export type AdminDocumentWorkspace = {
     kind: DocumentKind;
     locale: Locale;
     status: DocumentStatus;
-    version: number;
     title: string;
     sourceHash: string;
     createdAt: string;
@@ -52,18 +52,51 @@ export type AdminDocumentWorkspace = {
   }>;
 };
 
+export type AdminDocumentFilters = {
+  kind?: DocumentKind;
+  locale?: Locale;
+  status?: DocumentStatus;
+  query?: string;
+};
+
 const documentHistoryPageSize = 6;
 
-export async function getAdminDocumentWorkspace(requestedPage = 1): Promise<AdminDocumentWorkspace> {
+export async function getAdminDocumentWorkspace(
+  requestedPage = 1,
+  filters: AdminDocumentFilters = {},
+): Promise<AdminDocumentWorkspace> {
   await requireAdmin();
   try {
+    const where: Prisma.DocumentArtifactWhereInput = {
+      kind: filters.kind,
+      locale: filters.locale,
+      status: filters.status,
+      ...(filters.query
+        ? {
+            OR: [
+              { title: { contains: filters.query, mode: "insensitive" } },
+              {
+                application: {
+                  is: {
+                    OR: [
+                      { company: { contains: filters.query, mode: "insensitive" } },
+                      { role: { contains: filters.query, mode: "insensitive" } },
+                    ],
+                  },
+                },
+              },
+            ],
+          }
+        : {}),
+    };
     const [context, totalItems] = await Promise.all([
       getPrisma().aiContextVersion.findFirst({ orderBy: { createdAt: "desc" } }),
-      getPrisma().documentArtifact.count(),
+      getPrisma().documentArtifact.count({ where }),
     ]);
     const totalPages = Math.max(1, Math.ceil(totalItems / documentHistoryPageSize));
     const page = Math.min(Math.max(1, Math.floor(requestedPage)), totalPages);
     const artifacts = await getPrisma().documentArtifact.findMany({
+      where,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       skip: (page - 1) * documentHistoryPageSize,
       take: documentHistoryPageSize,
@@ -71,6 +104,7 @@ export async function getAdminDocumentWorkspace(requestedPage = 1): Promise<Admi
     });
     return {
       schemaReady: true,
+      filters,
       history: { page, totalPages, totalItems },
       context: context
         ? {
@@ -84,7 +118,6 @@ export async function getAdminDocumentWorkspace(requestedPage = 1): Promise<Admi
         kind: artifact.kind,
         locale: artifact.locale,
         status: artifact.status,
-        version: artifact.version,
         title: artifact.title,
         sourceHash: artifact.sourceHash,
         createdAt: artifact.createdAt.toISOString(),
@@ -96,6 +129,7 @@ export async function getAdminDocumentWorkspace(requestedPage = 1): Promise<Admi
     if (isDocumentSchemaUnavailable(error)) {
       return {
         schemaReady: false,
+        filters,
         history: { page: 1, totalPages: 1, totalItems: 0 },
         context: null,
         artifacts: [],
@@ -103,6 +137,30 @@ export async function getAdminDocumentWorkspace(requestedPage = 1): Promise<Admi
     }
     throw error;
   }
+}
+
+export async function deleteDocumentArtifact(id: string) {
+  await requireAdmin();
+  return withSerializationRetry(() =>
+    getPrisma().$transaction(
+      async (tx) => {
+        const artifact = await tx.documentArtifact.findUnique({
+          where: { id },
+          select: { applicationId: true, kind: true, status: true },
+        });
+        if (!artifact) return null;
+
+        await tx.documentArtifact.delete({ where: { id } });
+        if (artifact.applicationId) {
+          await tx.jobApplication.deleteMany({
+            where: { id: artifact.applicationId, artifacts: { none: {} } },
+          });
+        }
+        return { kind: artifact.kind, status: artifact.status };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    ),
+  );
 }
 
 export async function getLatestAiContext() {
