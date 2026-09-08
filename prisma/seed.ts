@@ -224,7 +224,7 @@ async function main() {
         {
           locale: Locale.EN,
           role: "Backend Developer Intern",
-          description: "Backend development and maintenance for an institutional workflow management platform at the General Directorate of Innovation and Entrepreneurship of the University of Colima. Implemented APIs with Node.js and Express.js, integrated Single Sign-On (SSO), worked with relational persistence, and prepared the runtime environment with Docker.",
+          description: "I developed and maintained the backend of an institutional workflow management platform for the General Directorate of Innovation and Entrepreneurship at the University of Colima. I implemented APIs with Node.js and Express.js, integrated Single Sign-On (SSO), worked with relational data, and prepared the runtime environment with Docker.",
         },
       ];
 
