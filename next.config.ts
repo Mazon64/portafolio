@@ -29,12 +29,6 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: process.env.VERCEL ? undefined : "standalone",
-  outputFileTracingIncludes: {
-    "/admin/**": [
-      "./node_modules/@fontsource/noto-sans/files/noto-sans-latin-400-normal.woff",
-      "./node_modules/@fontsource/noto-sans/files/noto-sans-latin-700-normal.woff",
-    ],
-  },
   async headers() {
     return [
       { source: "/(.*)", headers: securityHeaders },

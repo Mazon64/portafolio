@@ -4,7 +4,6 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   EyeIcon,
-  FileDownIcon,
   LoaderCircleIcon,
   SaveIcon,
   SendIcon,
@@ -563,19 +562,6 @@ function HistoryPanel({
                     <EyeIcon />
                     {copy.review}
                   </Button>
-                  {artifact.kind !== "PUBLIC_CV" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      render={
-                        <a
-                          href={`/admin/${artifactLocale}/documents/${artifact.id}/download?format=pdf`}
-                        />
-                      }
-                    >
-                      <FileDownIcon />PDF
-                    </Button>
-                  )}
                 </div>
               </article>
             );
