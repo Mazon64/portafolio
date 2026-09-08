@@ -3,25 +3,9 @@ import type { Locale } from "../../i18n/config";
 import type { PortfolioDto } from "../../data/portfolio.types";
 import { siteConfig } from "../../config/site";
 import { formatDateRange } from "../../lib/format-date-range";
+import { DocumentPaper, DocumentSection } from "../documents/document-paper";
 
 type CvCopy = Dictionary["cv"];
-
-function CvSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="cv-section">
-      <h2 className="cv-section-title border-b border-neutral-400 pb-2 font-mono text-[0.68rem] font-semibold tracking-[0.16em] text-neutral-700 uppercase">
-        {title}
-      </h2>
-      <div className="mt-4">{children}</div>
-    </section>
-  );
-}
 
 export function CvDocument({
   portfolio,
@@ -36,7 +20,7 @@ export function CvDocument({
     portfolio;
 
   return (
-    <article className="cv-document mx-auto min-h-[297mm] w-full max-w-[210mm] bg-white p-7 text-neutral-950 shadow-2xl shadow-black/10 sm:p-12 lg:p-16">
+    <DocumentPaper className="cv-document">
       <header className="grid gap-8 border-b-2 border-neutral-950 pb-8 sm:grid-cols-[minmax(0,1.4fr)_minmax(13rem,0.6fr)] sm:items-end">
         <div>
           <p className="font-mono text-[0.68rem] font-semibold tracking-[0.18em] text-neutral-600 uppercase">
@@ -83,16 +67,16 @@ export function CvDocument({
 
       <div className="cv-columns mt-9 grid gap-9 md:grid-cols-[minmax(0,1.5fr)_minmax(12rem,0.6fr)]">
         <div className="space-y-9">
-          <CvSection title={copy.summary}>
+          <DocumentSection title={copy.summary}>
             <div className="space-y-3 text-[0.92rem] leading-6 text-neutral-800">
               {profile.longBio.split(/\n+/).map((paragraph, index) => (
                 <p key={`summary-${index}`}>{paragraph}</p>
               ))}
             </div>
-          </CvSection>
+          </DocumentSection>
 
           {experience.length > 0 && (
-            <CvSection title={copy.experience}>
+            <DocumentSection title={copy.experience}>
               <ol className="space-y-6">
                 {experience.map((item) => (
                   <li key={item.slug} className="cv-entry">
@@ -117,11 +101,11 @@ export function CvDocument({
                   </li>
                 ))}
               </ol>
-            </CvSection>
+            </DocumentSection>
           )}
 
           {projects.length > 0 && (
-            <CvSection title={copy.projects}>
+            <DocumentSection title={copy.projects}>
               <ol className="space-y-6">
                 {projects.map((project) => (
                   <li key={project.slug} className="cv-entry">
@@ -155,11 +139,11 @@ export function CvDocument({
                   </li>
                 ))}
               </ol>
-            </CvSection>
+            </DocumentSection>
           )}
 
           {education.length > 0 && (
-            <CvSection title={copy.education}>
+            <DocumentSection title={copy.education}>
               <ol className="space-y-5">
                 {education.map((item) => (
                   <li key={item.slug} className="cv-entry">
@@ -177,13 +161,13 @@ export function CvDocument({
                   </li>
                 ))}
               </ol>
-            </CvSection>
+            </DocumentSection>
           )}
         </div>
 
         <aside className="space-y-9 border-neutral-300 md:border-l md:pl-8">
           {skillCategories.length > 0 && (
-            <CvSection title={copy.skills}>
+            <DocumentSection title={copy.skills}>
               <div className="space-y-5">
                 {skillCategories.map((category) => (
                   <div key={category.slug} className="cv-compact-entry">
@@ -196,10 +180,10 @@ export function CvDocument({
                   </div>
                 ))}
               </div>
-            </CvSection>
+            </DocumentSection>
           )}
 
-          <CvSection title={copy.languages}>
+          <DocumentSection title={copy.languages}>
             <dl className="space-y-3">
               {copy.languageItems.map((language) => (
                 <div key={language.name} className="cv-compact-entry">
@@ -210,9 +194,9 @@ export function CvDocument({
                 </div>
               ))}
             </dl>
-          </CvSection>
+          </DocumentSection>
         </aside>
       </div>
-    </article>
+    </DocumentPaper>
   );
 }

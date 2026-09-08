@@ -15,7 +15,7 @@ import { adminCopy } from "@/i18n/admin";
 import { DocumentWorkspace } from "./document-workspace";
 
 describe("DocumentWorkspace", () => {
-  it("offers PDF as the only private document export", () => {
+  it("opens private documents in the shared review view", () => {
     const html = renderToStaticMarkup(
       <DocumentWorkspace
         locale="en"
@@ -41,9 +41,10 @@ describe("DocumentWorkspace", () => {
       />,
     );
 
-    expect(html).toContain("download?format=pdf");
-    expect(html).toContain(">PDF<");
-    expect(html).not.toContain("format=docx");
-    expect(html).not.toContain("DOCX");
+    expect(html).toContain(
+      "/admin/en/documents/00000000-0000-4000-8000-000000000001",
+    );
+    expect(html).toContain(">Review<");
+    expect(html).not.toContain("/download");
   });
 });
