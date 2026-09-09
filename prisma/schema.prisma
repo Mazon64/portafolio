@@ -259,8 +259,6 @@ model DocumentArtifact {
   kind          DocumentKind
   locale        Locale
   status        DocumentStatus    @default(DRAFT)
-  // Compatibility placeholder until the separately approved contract migration.
-  version       Int               @default(1) @ignore
   title         String
   content       Json              @db.JsonB
   sourceHash    String

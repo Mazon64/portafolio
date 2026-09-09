@@ -1,90 +1,52 @@
 # Unversioned Documents: Expand And Contract
 
-## Status And Scope
+## Rollout
 
-Prepared locally only. No migration, deployment, integration, or production data
-change has been performed. Do not promote all of this work in one deployment.
-The checked-in application requires the expand migration before artifact writes.
-The old schema rejects omitted `version` values; a successful build is not proof
-that the production database is ready. Preview remains read-only.
+1. Compatibility: PR #40, Production `d169827`, applied by protected workflow
+   [34361635706](https://github.com/Mazon64/portafolio/actions/runs/34361635706).
+   The old required counter received a default and its unique index was removed.
+2. Application cutover: PR #41, Production commit `9d254a3`. The application no
+   longer reads or writes counters. Context saves update the current row, with
+   serializable retries for concurrent initial saves. Filter navigation preserves
+   drafts; publication/context refresh and stale-deletion checks are included.
+3. Contract: `20260909150000_contract_unversioned_documents` removes the unused
+   column and retains only the current context. Apply exclusively from `main`
+   through the protected Production migration workflow after the checks below.
+   Merging the migration does not apply it; workflow completion is authoritative.
 
-## Phase 1: Compatibility Migration
+## Contract Preconditions
 
-Promote only `20260908120000_expand_unversioned_documents/migration.sql` first,
-following the protected Production workflow in `deployment.md`. It adds a
-constant default of 1 and removes the counter's unique index, without changing
-any existing document, source content, context row, or publication constraint.
-Old Prisma clients still read a non-null positive integer and can continue their
-existing writes. A nullable expansion would be unsafe: old clients select the
-required integer and cannot deserialize nulls.
+- Production and stable Preview must run the cutover application. Legacy
+  deployments that read counters or append context revisions must be retired.
+- Preserve a protected snapshot of the three affected tables and verify that it
+  can be restored into an isolated PostgreSQL instance. Never commit source text
+  or generated documents. The rest of the portfolio schema is unaffected.
+- Verify the current context, artifact contents, source hashes and application
+  relationships. The migration obtains exclusive locks before its snapshot,
+  drains conflicting database transactions, and blocks new writes until commit.
+  A five-second lock timeout aborts instead of waiting indefinitely.
 
-Do not replace this with a column drop or edit an already applied migration.
-Verify existing readers and writers against the expanded schema before approval
-of the application phase. No database credentials are needed for local build.
+## Contract Guarantees
 
-## Phase 2: Application Cutover
+The migration keeps the latest context by `createdAt DESC, id DESC` and enforces
+one current row with a unique expression index. Its legacy physical table name
+`AiContextVersion` is retained through Prisma's `AiContext` mapping; the name no
+longer represents versioned storage. The expression index is managed in SQL.
 
-Deploy the application only after phase 1 is confirmed. The Prisma client ignores
-the legacy column and no longer reads, returns, allocates, or writes counters.
-The database default is only a compatibility placeholder, not a sequence.
-`AiContext` maps to the existing `AiContextVersion` table, avoiding a new table,
-dual writes, copied private data, and content loss. Saves update the current row
-in place, creating a row only for an empty table. Serializable retries protect
-concurrent initial saves. Ordering by timestamp then UUID deterministically
-chooses the current row even if legacy timestamps tie. The legacy `createdAt`
-column records the latest save so overlapping old readers see current content.
+Before committing, the migration compares all artifact fields except the removed
+counter, all application fields, and the complete current context against its
+locked snapshot. Any difference aborts the transaction. Document JSON, sources,
+publication constraints, IDs and other CMS concurrency safeguards are preserved.
 
-No new context revisions are appended by this application. Preexisting history
-is deliberately retained until the contract, because old deployments may still
-append rows. Source hashes still use context content, not a row ID or counter.
-Draft signatures, idempotent UUIDs, publication state, and the other CMS entities'
-optimistic `updatedAt` safeguards remain unchanged.
+## Verification And Recovery
 
-## Phase 3: Contract, Not Yet Scheduled
+After the protected run, check migration status, absence of `version`, the
+singleton index, readiness for both environments, and public CV routes. Verify
+context update/creation, document save/publication and stale deletion through
+tests and authenticated operation as available; HTTP smoke tests alone do not
+prove administrative interactions.
 
-The SQL below is intentionally outside `prisma/migrations`, so `migrate deploy`
-cannot apply it prematurely. Before turning it into a reviewed migration:
-
-1. Retire all old Production, Preview, rollback and worker deployments that read
-   the counter or append context rows. Stop document writes for the maintenance
-   window and drain in-flight requests.
-2. Take a protected database backup and verify restore procedures. Review the
-   context rows privately, especially timestamp ties, and confirm the selected
-   current professional and personal text. Do not export private content into Git.
-3. Verify artifact counts, content/source hashes, current context text, public CV
-   uniqueness, and job-application relations before and after the transaction.
-4. Add the SQL as a new contract migration only with explicit approval. Remove
-   the ignored `version` field from `schema.prisma` in that follow-up. Keep the
-   context table mapping and mapped index name; no physical rename is needed.
-5. Apply only via the protected Production workflow from `main`. Test context
-   update/initial creation, generation/save, publication, deletion and fallback.
-   Do not roll back to a pre-cutover binary after contract; recovery requires a
-   coordinated restore, not merely redeploying an old application.
-
-```sql
-BEGIN;
-SET LOCAL lock_timeout = '5s';
-LOCK TABLE "AiContextVersion", "DocumentArtifact" IN ACCESS EXCLUSIVE MODE;
-
--- Preserve the exact current row and its complete source text.
-WITH current_context AS (
-  SELECT "id" FROM "AiContextVersion"
-  ORDER BY "createdAt" DESC, "id" DESC LIMIT 1
-)
-DELETE FROM "AiContextVersion"
-WHERE "id" NOT IN (SELECT "id" FROM current_context);
-
--- Enforce current-only storage, including concurrent initial saves.
-CREATE UNIQUE INDEX "AiContextVersion_single_current"
-ON "AiContextVersion" ((true));
-
-ALTER TABLE "DocumentArtifact"
-  DROP CONSTRAINT "DocumentArtifact_version_positive";
-ALTER TABLE "DocumentArtifact" DROP COLUMN "version";
-COMMIT;
-```
-
-This contract permanently removes historical context rows and internal artifact
-counter storage. It does not remove source entities, document JSON, applications,
-publication tokens or any non-document CMS concurrency columns. Until it is
-approved and applied, physical removal remains an explicitly pending issue.
+Do not redeploy a pre-cutover binary after contract. Restore the affected schema
+and its protected data snapshot together before attempting such a rollback.
+The cutover binary itself is compatible with the final schema because its Prisma
+client already ignores the removed column.
