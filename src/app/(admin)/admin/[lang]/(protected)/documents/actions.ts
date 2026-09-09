@@ -5,7 +5,7 @@ import { revalidatePath, updateTag } from "next/cache";
 
 import { isCmsWriteEnabled, isDocumentGenerationEnabled } from "@/config/env";
 import {
-  createAiContextVersion,
+  saveAiContext,
   deleteDocumentArtifact,
   publishPublicCvArtifact,
 } from "@/data/admin/documents";
@@ -35,6 +35,7 @@ export type DocumentActionState = {
     | "idle"
     | "generated"
     | "success"
+    | "cache-error"
     | "invalid"
     | "disabled"
     | "unavailable"
@@ -92,15 +93,36 @@ export async function saveAiContextAction(
   });
   if (!result.success) return { status: "invalid" };
   try {
-    await createAiContextVersion(
+    await saveAiContext(
       result.data.professionalContext,
       result.data.personalContext,
     );
-    return { status: "success" };
   } catch (error) {
     console.error("Failed to save AI context", error);
     return { status: "error" };
   }
+  return refreshDocuments();
+}
+
+function refreshDocuments(publicCv = false): DocumentActionState {
+  let cacheError = false;
+  if (publicCv) {
+    try {
+      updateTag("portfolio");
+    } catch (error) {
+      console.error("Failed to invalidate public CV after commit", error);
+      cacheError = true;
+    }
+  }
+  for (const locale of ["es", "en"]) {
+    try {
+      revalidatePath(`/admin/${locale}/documents`, "layout");
+    } catch (error) {
+      console.error("Failed to refresh documents after commit", error);
+      cacheError = true;
+    }
+  }
+  return { status: cacheError ? "cache-error" : "success" };
 }
 
 export async function generatePublicCvAction(
@@ -267,11 +289,11 @@ export async function publishPublicCvAction(
   if (!id.success) return { status: "invalid" };
   try {
     if (!(await publishPublicCvArtifact(id.data))) return { status: "invalid" };
-    return { status: "success" };
   } catch (error) {
     console.error("Failed to publish public CV", error);
     return { status: "error" };
   }
+  return refreshDocuments(true);
 }
 
 export async function deleteDocumentArtifactAction(
@@ -283,14 +305,21 @@ export async function deleteDocumentArtifactAction(
     id: z.uuid(),
     locale: z.enum(["es", "en"]),
     confirmation: z.literal("delete"),
+    expectedStatus: z.enum(DocumentStatus),
+    expectedPublishedAt: z.union([z.literal(""), z.iso.datetime()]),
   }).safeParse({
     id: formData.get("id"),
     locale: formData.get("locale"),
     confirmation: formData.get("confirmation"),
+    expectedStatus: formData.get("expectedStatus"),
+    expectedPublishedAt: formData.get("expectedPublishedAt"),
   });
   if (!input.success) return { status: "conflict" };
   try {
-    const deleted = await deleteDocumentArtifact(input.data.id);
+    const deleted = await deleteDocumentArtifact(input.data.id, {
+      status: input.data.expectedStatus,
+      publishedAt: input.data.expectedPublishedAt || null,
+    });
     if (!deleted) return { status: "conflict" };
     let cacheError = false;
     if (

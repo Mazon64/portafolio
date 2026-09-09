@@ -10,7 +10,9 @@ vi.mock("next/navigation", () => ({
     throw new Error("Not found");
   }),
 }));
-vi.mock("../document-workspace", () => ({ PublishForm: () => null }));
+vi.mock("../document-workspace", () => ({
+  PublishForm: ({ enabled }: { enabled: boolean }) => <span data-publication-enabled={enabled} />,
+}));
 
 import { getAdminDocumentArtifact } from "@/data/admin/documents";
 import { DocumentKind, DocumentStatus, Locale } from "@/generated/prisma/client";
@@ -23,7 +25,6 @@ describe("DocumentPreviewPage", () => {
       kind: DocumentKind.ATS_CV,
       locale: Locale.EN,
       status: DocumentStatus.DRAFT,
-      version: 1,
       title: "Backend Engineer CV",
       sourceHash: "source-hash",
       model: "test-model",
@@ -66,6 +67,7 @@ describe("DocumentPreviewPage", () => {
     expect(html).toContain("Ada Lovelace");
     expect(html).toContain("ada@example.com");
     expect(html).toContain("Analytical Engines");
+    expect(html).not.toContain("data-publication-enabled");
   });
 
   it("uses the shared printable document view for cover letters", async () => {
@@ -74,7 +76,6 @@ describe("DocumentPreviewPage", () => {
       kind: DocumentKind.COVER_LETTER,
       locale: Locale.ES,
       status: DocumentStatus.DRAFT,
-      version: 1,
       title: "Carta para Example",
       sourceHash: "source-hash",
       model: "test-model",
@@ -108,5 +109,33 @@ describe("DocumentPreviewPage", () => {
     expect(html).toContain("professional-document");
     expect(html).toContain("Imprimir o guardar como PDF");
     expect(html).toContain("Equipo de contratación:");
+    expect(html).not.toContain("data-publication-enabled");
   });
+
+  it.each([DocumentStatus.DRAFT, DocumentStatus.PUBLISHED, DocumentStatus.ARCHIVED])(
+    "keeps publication feedback mounted for a public CV in state %s",
+    async (status) => {
+      const id = "00000000-0000-4000-8000-000000000001";
+      vi.mocked(getAdminDocumentArtifact).mockResolvedValue({
+        id, kind: DocumentKind.PUBLIC_CV, locale: Locale.EN, status,
+        title: "Public CV", sourceHash: "hash", model: "test-model", applicationId: null,
+        createdAt: new Date("2026-09-01T00:00:00.000Z"),
+        publishedAt: status === DocumentStatus.DRAFT ? null : new Date("2026-09-02T00:00:00.000Z"),
+        content: {
+          type: "public_cv",
+          portfolio: {
+            profile: {
+              fullName: "Ada Lovelace", email: null, title: "Engineer",
+              longBio: "Professional summary", contactText: "", socialLinks: [],
+            },
+            experience: [], education: [], projects: [], skillCategories: [],
+          },
+        },
+      });
+      const page = await DocumentPreviewPage({ params: Promise.resolve({ lang: "en", id }) });
+      expect(renderToStaticMarkup(page)).toContain(
+        `data-publication-enabled="${status === DocumentStatus.DRAFT}"`,
+      );
+    },
+  );
 });

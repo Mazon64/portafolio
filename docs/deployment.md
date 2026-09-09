@@ -144,6 +144,11 @@ La migración `add_generated_documents` es expand-only. Su commit puede promover
 
 ## 4. Flujo De Ramas Y Promoción
 
+La retirada de contadores documentales e historial de contexto requiere fases
+separadas: consulta [document-schema-transition.md](document-schema-transition.md).
+La migracion expand debe preceder al codigo de escritura; el SQL contract no esta
+en la cola de migraciones y requiere retirar primero los deployments antiguos.
+
 - `develop` es la rama de integración y `https://preview.davidaranda.dev` siempre apunta al último Preview de esa rama.
 - Las ramas `feature/*` y `fix/*` parten de `develop` y vuelven a ella mediante pull request.
 - Los pushes a `feature/*` se validan en GitHub Actions y crean un Preview efímero protegido para probar el trabajo antes de integrarlo. `ignoreCommand` continúa evitando deployments de `fix/*` y otros prefijos; `develop` conserva el Preview estable y `main` es el único origen de Production.
