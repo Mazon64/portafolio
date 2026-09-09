@@ -228,13 +228,14 @@ model SkillTranslation {
   @@index([locale])
 }
 
-model AiContextVersion {
+model AiContext {
   id                  String   @id @default(uuid()) @db.Uuid
   professionalContext String   @db.Text
   personalContext     String   @db.Text
   createdAt           DateTime @default(now()) @db.Timestamptz(3)
 
-  @@index([createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)], map: "AiContextVersion_createdAt_idx")
+  @@map("AiContextVersion")
 }
 
 model JobApplication {
@@ -258,7 +259,8 @@ model DocumentArtifact {
   kind          DocumentKind
   locale        Locale
   status        DocumentStatus    @default(DRAFT)
-  version       Int
+  // Compatibility placeholder until the separately approved contract migration.
+  version       Int               @default(1) @ignore
   title         String
   content       Json              @db.JsonB
   sourceHash    String
@@ -267,7 +269,6 @@ model DocumentArtifact {
   publishedAt   DateTime?         @db.Timestamptz(3)
   application   JobApplication?   @relation(fields: [applicationId], references: [id], onDelete: Restrict)
 
-  @@unique([kind, locale, version])
   @@index([applicationId, createdAt(sort: Desc)])
   @@index([kind, locale, status, createdAt(sort: Desc)])
 }

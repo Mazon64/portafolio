@@ -13,6 +13,7 @@ const {
   deleteArtifactMock,
   revalidatePathMock,
   updateTagMock,
+  publishMock,
 } = vi.hoisted(() => ({
   requireAdminMock: vi.fn(),
   writesEnabledMock: vi.fn(),
@@ -26,6 +27,7 @@ const {
   deleteArtifactMock: vi.fn(),
   revalidatePathMock: vi.fn(),
   updateTagMock: vi.fn(),
+  publishMock: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({
@@ -38,9 +40,9 @@ vi.mock("@/config/env", () => ({
   isDocumentGenerationEnabled: generationEnabledMock,
 }));
 vi.mock("@/data/admin/documents", () => ({
-  createAiContextVersion: createContextMock,
+  saveAiContext: createContextMock,
   deleteDocumentArtifact: deleteArtifactMock,
-  publishPublicCvArtifact: vi.fn(),
+  publishPublicCvArtifact: publishMock,
 }));
 vi.mock("@/lib/documents/generate", () => ({
   DocumentSourceConflictError: SourceConflictMock,
@@ -58,6 +60,7 @@ import {
   saveAiContextAction,
   saveApplicationDocumentsAction,
   savePublicCvDraftAction,
+  publishPublicCvAction,
 } from "./actions";
 
 const initialDocumentState: DocumentActionState = { status: "idle" };
@@ -74,6 +77,7 @@ describe("document actions", () => {
     deleteArtifactMock.mockReset().mockResolvedValue({ kind: "ATS_CV", status: "DRAFT" });
     revalidatePathMock.mockReset();
     updateTagMock.mockReset();
+    publishMock.mockReset().mockResolvedValue(true);
   });
 
   it("saves professional context without optional personal context", async () => {
@@ -238,12 +242,15 @@ describe("document actions", () => {
     data.set("id", "2eb66473-aca8-4f1f-a312-9a697b75a2e3");
     data.set("locale", "en");
     data.set("confirmation", "delete");
+    data.set("expectedStatus", "DRAFT");
+    data.set("expectedPublishedAt", "");
 
     await expect(
       deleteDocumentArtifactAction({ status: "idle" }, data),
     ).resolves.toEqual({ status: "deleted" });
     expect(deleteArtifactMock).toHaveBeenCalledWith(
       "2eb66473-aca8-4f1f-a312-9a697b75a2e3",
+      { status: "DRAFT", publishedAt: null },
     );
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin/en/documents");
   });
@@ -254,6 +261,8 @@ describe("document actions", () => {
     data.set("id", "2eb66473-aca8-4f1f-a312-9a697b75a2e3");
     data.set("locale", "es");
     data.set("confirmation", "delete");
+    data.set("expectedStatus", "PUBLISHED");
+    data.set("expectedPublishedAt", "2026-09-08T12:00:00.000Z");
 
     await deleteDocumentArtifactAction({ status: "idle" }, data);
 
@@ -270,6 +279,8 @@ describe("document actions", () => {
     data.set("id", "2eb66473-aca8-4f1f-a312-9a697b75a2e3");
     data.set("locale", "es");
     data.set("confirmation", "delete");
+    data.set("expectedStatus", "PUBLISHED");
+    data.set("expectedPublishedAt", "2026-09-08T12:00:00.000Z");
 
     await expect(
       deleteDocumentArtifactAction({ status: "idle" }, data),
@@ -285,5 +296,56 @@ describe("document actions", () => {
       deleteDocumentArtifactAction({ status: "idle" }, new FormData()),
     ).resolves.toEqual({ status: "disabled" });
     expect(deleteArtifactMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects deletion without the expected-state token", async () => {
+    const data = new FormData();
+    data.set("id", "2eb66473-aca8-4f1f-a312-9a697b75a2e3");
+    data.set("locale", "en");
+    data.set("confirmation", "delete");
+    await expect(deleteDocumentArtifactAction({ status: "idle" }, data)).resolves.toEqual({ status: "conflict" });
+    expect(deleteArtifactMock).not.toHaveBeenCalled();
+  });
+
+  it("refreshes both workspaces and public cache only after publication commits", async () => {
+    const data = new FormData();
+    data.set("id", "2eb66473-aca8-4f1f-a312-9a697b75a2e3");
+    await expect(publishPublicCvAction(initialDocumentState, data)).resolves.toEqual({ status: "success" });
+    expect(updateTagMock).toHaveBeenCalledWith("portfolio");
+    expect(publishMock.mock.invocationCallOrder[0]).toBeLessThan(updateTagMock.mock.invocationCallOrder[0]);
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/es/documents", "layout");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/en/documents", "layout");
+  });
+
+  it("reports committed publication even if public invalidation fails, and still refreshes admin", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    updateTagMock.mockImplementation(() => { throw new Error("cache failed"); });
+    const data = new FormData();
+    data.set("id", "2eb66473-aca8-4f1f-a312-9a697b75a2e3");
+    await expect(publishPublicCvAction(initialDocumentState, data)).resolves.toEqual({ status: "cache-error" });
+    expect(revalidatePathMock).toHaveBeenCalledTimes(2);
+    log.mockRestore();
+  });
+
+  it("does not invalidate after a publication conflict", async () => {
+    publishMock.mockResolvedValue(false);
+    const data = new FormData();
+    data.set("id", "2eb66473-aca8-4f1f-a312-9a697b75a2e3");
+    await expect(publishPublicCvAction(initialDocumentState, data)).resolves.toEqual({ status: "invalid" });
+    expect(updateTagMock).not.toHaveBeenCalled();
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+
+  it("distinguishes context commit from refresh failure", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    revalidatePathMock.mockImplementation(() => { throw new Error("cache failed"); });
+    const data = new FormData();
+    data.set("professionalContext", "P".repeat(80));
+    data.set("personalContext", "");
+    await expect(saveAiContextAction(initialDocumentState, data)).resolves.toEqual({ status: "cache-error" });
+    expect(createContextMock).toHaveBeenCalledOnce();
+    expect(revalidatePathMock).toHaveBeenCalledTimes(2);
+    expect(updateTagMock).not.toHaveBeenCalled();
+    log.mockRestore();
   });
 });

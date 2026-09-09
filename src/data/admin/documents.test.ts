@@ -29,7 +29,7 @@ vi.mock("@/lib/auth/authorization", () => ({ requireAdmin: requireAdminMock }));
 vi.mock("@/lib/prisma", () => ({
   getPrisma: () => ({
     $transaction: transactionMock,
-    aiContextVersion: { findFirst: contextFindFirstMock },
+    aiContext: { findFirst: contextFindFirstMock },
     documentArtifact: {
       count: artifactCountMock,
       findUnique: findUniqueMock,
@@ -45,6 +45,7 @@ import {
   deleteDocumentArtifact,
   getAdminDocumentWorkspace,
   publishPublicCvArtifact,
+  saveAiContext,
 } from "./documents";
 
 describe("document publication", () => {
@@ -139,7 +140,7 @@ describe("document publication", () => {
     );
 
     await expect(
-      deleteDocumentArtifact("19781016-8a26-4483-93f4-9cd2c7208583"),
+      deleteDocumentArtifact("19781016-8a26-4483-93f4-9cd2c7208583", { status: "DRAFT", publishedAt: null }),
     ).resolves.toEqual({ kind: "ATS_CV", status: "DRAFT" });
     expect(applicationDeleteManyMock).toHaveBeenCalledWith({
       where: {
@@ -174,5 +175,55 @@ describe("document publication", () => {
       }),
     ).resolves.toEqual({ id });
     expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { status: "PUBLISHED", publishedAt: new Date("2026-09-08T12:00:00.000Z") },
+    { status: "ARCHIVED", publishedAt: new Date("2026-09-08T12:00:00.000Z") },
+  ])("rejects stale draft deletion after publication: $status", async (artifact) => {
+    findUniqueMock.mockResolvedValue({ kind: "PUBLIC_CV", applicationId: null, ...artifact });
+    await expect(deleteDocumentArtifact("id", { status: "DRAFT", publishedAt: null })).resolves.toBeNull();
+    expect(artifactDeleteMock).not.toHaveBeenCalled();
+    expect(applicationDeleteManyMock).not.toHaveBeenCalled();
+  });
+
+  it("compares publication time even when the expected status matches", async () => {
+    findUniqueMock.mockResolvedValue({ kind: "PUBLIC_CV", status: "PUBLISHED", publishedAt: new Date("2026-09-08T12:00:00.000Z") });
+    await expect(deleteDocumentArtifact("id", { status: "PUBLISHED", publishedAt: "2026-09-07T12:00:00.000Z" })).resolves.toBeNull();
+    expect(artifactDeleteMock).not.toHaveBeenCalled();
+  });
+
+  it("rechecks deletion expectations on a serialization retry", async () => {
+    transactionMock.mockRejectedValueOnce({ code: "P2034" });
+    findUniqueMock.mockResolvedValue({ kind: "PUBLIC_CV", status: "PUBLISHED", publishedAt: new Date() });
+    await expect(deleteDocumentArtifact("id", { status: "DRAFT", publishedAt: null })).resolves.toBeNull();
+    expect(transactionMock).toHaveBeenCalledTimes(2);
+    expect(artifactDeleteMock).not.toHaveBeenCalled();
+  });
+
+  it("updates the current context in place without appending history", async () => {
+    const update = vi.fn().mockResolvedValue({ id: "context" });
+    const create = vi.fn();
+    contextFindFirstMock.mockResolvedValue({ id: "context" });
+    transactionMock.mockImplementation((callback) => callback({ aiContext: { findFirst: contextFindFirstMock, update, create } }));
+    await expect(saveAiContext("professional", "personal")).resolves.toEqual({ id: "context" });
+    expect(update).toHaveBeenCalledWith({ where: { id: "context" }, data: { professionalContext: "professional", personalContext: "personal", createdAt: expect.any(Date) }, select: { id: true } });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("creates the initial context with bounded serializable retries", async () => {
+    const create = vi.fn().mockResolvedValue({ id: "context" });
+    transactionMock.mockRejectedValueOnce({ code: "P2034" }).mockImplementation((callback) => callback({ aiContext: { findFirst: contextFindFirstMock, create } }));
+    await expect(saveAiContext("professional", "")).resolves.toEqual({ id: "context" });
+    expect(create).toHaveBeenCalledOnce();
+    expect(transactionMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("creates public artifacts without allocating a counter", async () => {
+    findUniqueMock.mockResolvedValue(null);
+    const create = vi.fn().mockResolvedValue({ id: "draft" });
+    transactionMock.mockImplementation((callback) => callback({ documentArtifact: { create } }));
+    await createPublicCvDraft({ id: "draft", locale: "ES", title: "CV", content: {}, sourceHash: "hash", model: "model" });
+    expect(create.mock.calls[0][0].data).not.toHaveProperty("version");
   });
 });
