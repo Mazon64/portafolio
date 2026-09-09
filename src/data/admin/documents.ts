@@ -90,7 +90,7 @@ export async function getAdminDocumentWorkspace(
         : {}),
     };
     const [context, totalItems] = await Promise.all([
-      getPrisma().aiContextVersion.findFirst({ orderBy: { createdAt: "desc" } }),
+      getPrisma().aiContext.findFirst({ orderBy: [{ createdAt: "desc" }, { id: "desc" }] }),
       getPrisma().documentArtifact.count({ where }),
     ]);
     const totalPages = Math.max(1, Math.ceil(totalItems / documentHistoryPageSize));
@@ -139,16 +139,22 @@ export async function getAdminDocumentWorkspace(
   }
 }
 
-export async function deleteDocumentArtifact(id: string) {
+export async function deleteDocumentArtifact(
+  id: string,
+  expected: { status: DocumentStatus; publishedAt: string | null },
+) {
   await requireAdmin();
   return withSerializationRetry(() =>
     getPrisma().$transaction(
       async (tx) => {
         const artifact = await tx.documentArtifact.findUnique({
           where: { id },
-          select: { applicationId: true, kind: true, status: true },
+          select: { applicationId: true, kind: true, status: true, publishedAt: true },
         });
-        if (!artifact) return null;
+        if (
+          !artifact || artifact.status !== expected.status ||
+          (artifact.publishedAt?.toISOString() ?? null) !== expected.publishedAt
+        ) return null;
 
         await tx.documentArtifact.delete({ where: { id } });
         if (artifact.applicationId) {
@@ -165,18 +171,24 @@ export async function deleteDocumentArtifact(id: string) {
 
 export async function getLatestAiContext() {
   await requireAdmin();
-  return getPrisma().aiContextVersion.findFirst({ orderBy: { createdAt: "desc" } });
+  return getPrisma().aiContext.findFirst({ orderBy: [{ createdAt: "desc" }, { id: "desc" }] });
 }
 
-export async function createAiContextVersion(
+export async function saveAiContext(
   professionalContext: string,
   personalContext: string,
 ) {
   await requireAdmin();
-  return getPrisma().aiContextVersion.create({
-    data: { professionalContext, personalContext },
-    select: { id: true },
-  });
+  return withSerializationRetry(() => getPrisma().$transaction(async (tx) => {
+    const current = await tx.aiContext.findFirst({
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      select: { id: true },
+    });
+    const data = { professionalContext, personalContext, createdAt: new Date() };
+    return current
+      ? tx.aiContext.update({ where: { id: current.id }, data, select: { id: true } })
+      : tx.aiContext.create({ data, select: { id: true } });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
 }
 
 export async function createPublicCvDraft(input: {
@@ -205,15 +217,10 @@ export async function createPublicCvDraft(input: {
     return await withSerializationRetry(() =>
       getPrisma().$transaction(
         async (tx) => {
-          const latest = await tx.documentArtifact.aggregate({
-            where: { kind: DocumentKind.PUBLIC_CV, locale: input.locale },
-            _max: { version: true },
-          });
           return tx.documentArtifact.create({
             data: {
               ...input,
               kind: DocumentKind.PUBLIC_CV,
-              version: (latest._max.version ?? 0) + 1,
             },
             select: { id: true },
           });
@@ -291,23 +298,12 @@ export async function createApplicationArtifacts(input: {
       },
       select: { id: true },
     });
-    const [latestAts, latestCover] = await Promise.all([
-      tx.documentArtifact.aggregate({
-        where: { kind: DocumentKind.ATS_CV, locale: input.locale },
-        _max: { version: true },
-      }),
-      tx.documentArtifact.aggregate({
-        where: { kind: DocumentKind.COVER_LETTER, locale: input.locale },
-        _max: { version: true },
-      }),
-    ]);
     await tx.documentArtifact.createMany({
       data: [
         {
           applicationId: application.id,
           kind: DocumentKind.ATS_CV,
           locale: input.locale,
-          version: (latestAts._max.version ?? 0) + 1,
           title: input.atsTitle,
           content: input.atsContent,
           sourceHash: input.sourceHash,
@@ -317,7 +313,6 @@ export async function createApplicationArtifacts(input: {
           applicationId: application.id,
           kind: DocumentKind.COVER_LETTER,
           locale: input.locale,
-          version: (latestCover._max.version ?? 0) + 1,
           title: input.coverTitle,
           content: input.coverContent,
           sourceHash: input.sourceHash,

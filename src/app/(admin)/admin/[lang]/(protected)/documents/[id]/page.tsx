@@ -51,8 +51,8 @@ export default async function DocumentPreviewPage({
           </div>
           <div className="flex flex-wrap gap-3">
             <PrintButton label={copy.printPdf} documentTitle={artifact.title} />
-            {artifact.kind === DocumentKind.PUBLIC_CV && artifact.status === DocumentStatus.DRAFT && (
-              <PublishForm id={artifact.id} copy={copy} enabled />
+            {artifact.kind === DocumentKind.PUBLIC_CV && (
+              <PublishForm id={artifact.id} copy={copy} enabled={artifact.status === DocumentStatus.DRAFT} />
             )}
           </div>
         </div>

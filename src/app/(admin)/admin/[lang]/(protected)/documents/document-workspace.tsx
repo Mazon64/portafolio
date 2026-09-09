@@ -63,6 +63,13 @@ export function DocumentWorkspace({
     initialDocumentState,
   );
   const [generatingLocale, setGeneratingLocale] = useState<Locale | null>(null);
+  const router = useRouter();
+  const refreshContext = useEffectEvent(() => router.refresh());
+  useEffect(() => {
+    if (contextState.status === "success" || contextState.status === "cache-error") {
+      refreshContext();
+    }
+  }, [contextState]);
 
   return (
     <div className="mt-12 space-y-8">
@@ -523,6 +530,24 @@ function HistoryPanel({
   sourceHashes: Record<Locale, string>;
 }) {
   const { page, totalPages, totalItems } = workspace.history;
+  const router = useRouter();
+  const filterKey = JSON.stringify(workspace.filters);
+  const [previousFilterKey, setPreviousFilterKey] = useState(filterKey);
+  const [filters, setFilters] = useState({
+    query: workspace.filters.query ?? "",
+    kind: workspace.filters.kind ?? "",
+    locale: workspace.filters.locale ?? "",
+    status: workspace.filters.status ?? "",
+  });
+  if (filterKey !== previousFilterKey) {
+    setPreviousFilterKey(filterKey);
+    setFilters({
+      query: workspace.filters.query ?? "",
+      kind: workspace.filters.kind ?? "",
+      locale: workspace.filters.locale ?? "",
+      status: workspace.filters.status ?? "",
+    });
+  }
   const pageHref = (target: number) => {
     const params = new URLSearchParams();
     if (workspace.filters.kind) params.set("kind", workspace.filters.kind);
@@ -547,19 +572,32 @@ function HistoryPanel({
           {totalItems}
         </span>
       </div>
-      <form method="get" className="mt-6 grid gap-3 border-t border-border pt-5 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+      <form
+        action={`/admin/${locale}/documents`}
+        onSubmit={(event) => {
+          event.preventDefault();
+          const params = new URLSearchParams();
+          for (const [key, value] of Object.entries(filters)) {
+            if (value) params.set(key, value);
+          }
+          const query = params.toString();
+          router.push(`/admin/${locale}/documents${query ? `?${query}` : ""}`, { scroll: false });
+        }}
+        className="mt-6 grid gap-3 border-t border-border pt-5 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2"
+      >
         <label className="text-xs font-medium text-muted-foreground">
           {copy.filterQuery}
           <input
             name="query"
-            defaultValue={workspace.filters.query ?? ""}
+            value={filters.query}
+            onChange={(event) => setFilters({ ...filters, query: event.target.value })}
             className={fieldClass}
             placeholder={copy.filterQueryPlaceholder}
           />
         </label>
         <label className="text-xs font-medium text-muted-foreground">
           {copy.filterKind}
-          <select name="kind" defaultValue={workspace.filters.kind ?? ""} className={fieldClass}>
+          <select name="kind" value={filters.kind} onChange={(event) => setFilters({ ...filters, kind: event.target.value })} className={fieldClass}>
             <option value="">{copy.filterAll}</option>
             {Object.entries(copy.kinds).map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
@@ -568,7 +606,7 @@ function HistoryPanel({
         </label>
         <label className="text-xs font-medium text-muted-foreground">
           {copy.filterLocale}
-          <select name="locale" defaultValue={workspace.filters.locale ?? ""} className={fieldClass}>
+          <select name="locale" value={filters.locale} onChange={(event) => setFilters({ ...filters, locale: event.target.value })} className={fieldClass}>
             <option value="">{copy.filterAll}</option>
             <option value="ES">ES</option>
             <option value="EN">EN</option>
@@ -576,7 +614,7 @@ function HistoryPanel({
         </label>
         <label className="text-xs font-medium text-muted-foreground">
           {copy.filterStatus}
-          <select name="status" defaultValue={workspace.filters.status ?? ""} className={fieldClass}>
+          <select name="status" value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })} className={fieldClass}>
             <option value="">{copy.filterAll}</option>
             {Object.entries(copy.statuses).map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
@@ -588,7 +626,7 @@ function HistoryPanel({
             <ListFilterIcon />
             {copy.applyFilters}
           </Button>
-          <Button variant="ghost" render={<Link href={`/admin/${locale}/documents`} scroll={false} />}>
+          <Button nativeButton={false} variant="ghost" onClick={() => setFilters({ query: "", kind: "", locale: "", status: "" })} render={<Link href={`/admin/${locale}/documents`} scroll={false} />}>
             {copy.clearFilters}
           </Button>
         </div>
@@ -617,6 +655,7 @@ function HistoryPanel({
                 {stale && <p className="mt-2 text-sm font-medium">{copy.stale}</p>}
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Button
+                    nativeButton={false}
                     variant="outline"
                     size="sm"
                     render={
@@ -633,7 +672,12 @@ function HistoryPanel({
                   label={copy.deleteDocument}
                   confirmText={copy.confirmDeleteDocument}
                   messages={copy.deleteStatus}
-                  fields={{ locale, confirmation: "delete" }}
+                  fields={{
+                    locale,
+                    confirmation: "delete",
+                    expectedStatus: artifact.status,
+                    expectedPublishedAt: artifact.publishedAt ?? "",
+                  }}
                 />
               </article>
             );
@@ -644,6 +688,7 @@ function HistoryPanel({
         <nav className="mt-5 flex items-center justify-between gap-3" aria-label={copy.historyTitle}>
           {page > 1 ? (
             <Button
+              nativeButton={false}
               variant="outline"
               size="sm"
               render={<Link href={pageHref(page - 1)} scroll={false} />}
@@ -662,6 +707,7 @@ function HistoryPanel({
           </span>
           {page < totalPages ? (
             <Button
+              nativeButton={false}
               variant="outline"
               size="sm"
               render={<Link href={pageHref(page + 1)} scroll={false} />}
@@ -694,18 +740,26 @@ export function PublishForm({
     publishPublicCvAction,
     initialDocumentState,
   );
+  const router = useRouter();
+  const refreshPublication = useEffectEvent(() => router.refresh());
+  const committed = state.status === "success" || state.status === "cache-error";
+  useEffect(() => {
+    if (committed) refreshPublication();
+  }, [committed]);
   return (
     <form action={action} className="flex items-center gap-2">
       <input type="hidden" name="id" value={id} />
-      <Button
-        type="submit"
-        variant="secondary"
-        className="h-10 border border-border px-4 shadow-sm"
-        disabled={!enabled || pending}
-      >
-        {pending ? <LoaderCircleIcon className="animate-spin" /> : <SendIcon />}
-        {pending ? copy.publishing : copy.publish}
-      </Button>
+      {enabled && (
+        <Button
+          type="submit"
+          variant="secondary"
+          className="h-10 border border-border px-4 shadow-sm"
+          disabled={pending || committed}
+        >
+          {pending ? <LoaderCircleIcon className="animate-spin" /> : <SendIcon />}
+          {pending ? copy.publishing : copy.publish}
+        </Button>
+      )}
       <ActionStatus state={state.status} copy={copy} compact />
     </form>
   );

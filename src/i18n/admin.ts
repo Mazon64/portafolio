@@ -254,7 +254,7 @@ export const adminCopy = {
       stale: "La fuente cambió después de generar este documento.",
       kinds: { PUBLIC_CV: "CV público", ATS_CV: "CV ATS", COVER_LETTER: "Carta" },
       statuses: { DRAFT: "Borrador", PUBLISHED: "Publicado", ARCHIVED: "Archivado" },
-      actionStatus: { idle: "", generated: "Borrador generado. Revísalo antes de guardarlo.", success: "Cambios guardados.", invalid: "Revisa los campos.", disabled: "No puedes guardar cambios en este entorno.", unavailable: "La generación de documentos no está disponible.", conflict: "La información de origen cambió mientras editabas. Genera un borrador nuevo.", error: "No se pudo completar la acción." },
+      actionStatus: { idle: "", generated: "Borrador generado. Revísalo antes de guardarlo.", success: "Cambios guardados.", "cache-error": "Se guardó, pero los cambios pueden tardar en aparecer.", invalid: "Revisa los campos.", disabled: "No puedes guardar cambios en este entorno.", unavailable: "La generación de documentos no está disponible.", conflict: "La información de origen cambió mientras editabas. Genera un borrador nuevo.", error: "No se pudo completar la acción." },
     },
   },
   en: {
@@ -510,7 +510,7 @@ export const adminCopy = {
       stale: "The source changed after this document was generated.",
       kinds: { PUBLIC_CV: "Public CV", ATS_CV: "ATS CV", COVER_LETTER: "Cover letter" },
       statuses: { DRAFT: "Draft", PUBLISHED: "Published", ARCHIVED: "Archived" },
-      actionStatus: { idle: "", generated: "Draft generated. Review it before saving.", success: "Changes saved.", invalid: "Review the fields.", disabled: "You cannot save changes in this environment.", unavailable: "Document generation is not available.", conflict: "The source information changed while you were editing. Generate a new draft.", error: "Unable to complete the action." },
+      actionStatus: { idle: "", generated: "Draft generated. Review it before saving.", success: "Changes saved.", "cache-error": "Saved, but the changes may take a moment to appear.", invalid: "Review the fields.", disabled: "You cannot save changes in this environment.", unavailable: "Document generation is not available.", conflict: "The source information changed while you were editing. Generate a new draft.", error: "Unable to complete the action." },
     },
   },
 } as const satisfies Record<Locale, object>;
