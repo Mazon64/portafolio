@@ -73,7 +73,7 @@ Los documentos no ofrecen CRUD de contenido persistido. La generación crea un b
 
 El CMS permite consultar, filtrar, imprimir y eliminar los artefactos guardados. Publicar es una acción separada, exclusiva de un CV público en estado `DRAFT`, que archiva el CV publicado anterior del mismo idioma. El borrado exige confirmación y los valores observados `expectedStatus` y `expectedPublishedAt`; los comprueba dentro de una transacción serializable con reintentos acotados y devuelve `conflict` si cambiaron. Al eliminar el último artefacto de una solicitud también elimina la solicitud huérfana. Eliminar un CV publicado activa el fallback canónico del idioma.
 
-El contexto privado se actualiza en su fila actual, sin crear nuevas revisiones, y los artefactos no asignan contadores internos. Tras completar el rollout solo permanece el contexto actual: la eliminación física del historial legacy y de la columna de contador requiere el contract posterior, no aplicado junto con el código. La migración expand debe preceder a las nuevas escrituras documentales; los requisitos y el SQL contract pendiente están en [document-schema-transition.md](document-schema-transition.md).
+El contexto privado se actualiza en su fila actual, sin crear nuevas revisiones, y los artefactos no asignan contadores internos. La migración contract final conserva únicamente el contexto actual, impone una sola fila y elimina la columna de contador. La migración expand precede al cambio de aplicación, y el contract se ejecuta después mediante el workflow protegido; el orden y las garantías de conservación están en [document-schema-transition.md](document-schema-transition.md).
 
 ### 3.2 Refresco, Caché Y Errores
 
