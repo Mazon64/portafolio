@@ -41,7 +41,10 @@ Mi portafolio es una aplicación fullstack desarrollada en Next.js. Su alcance a
 * **RF-05.2: Presentación de Habilidades.** Las habilidades deben organizarse en categorías ordenadas que se presenten como cuadrículas de iconos o colecciones de badges.
 * **RF-05.3: Resumen Visual de Proyecto.** Cada card de proyecto debe mostrar nombre, resumen, espacio para imagen y porcentaje de progreso.
 * **RF-05.4: Detalle Expandible.** La expansión de un proyecto debe mostrar tecnologías, estado, repositorio, prototipo y una narrativa detallada de su desarrollo.
-* **RF-05.5: Narrativa Asistida.** En una etapa posterior, el sistema debe generar contenido técnico estructurado a partir de README, documentación e imágenes descritas, manteniendo trazabilidad hacia las fuentes y sin publicar HTML arbitrario producido por IA.
+* **RF-05.5: Narrativa Asistida.** El sistema debe generar contenido técnico estructurado ES/EN a partir de README, documentación e imágenes descritas, mantener trazabilidad al commit y exigir revisión antes de publicar. No debe publicar HTML arbitrario producido por IA.
+* **RF-05.6: Imágenes E Hitos.** Cada proyecto debe admitir portada/galería con textos alternativos y descripciones ES/EN e hitos ponderados con evidencia opcional. Con hitos, el progreso se calcula por peso completado; sin hitos conserva el porcentaje manual.
+* **RF-05.7: Sincronización Recuperable.** La recepción debe persistir y deduplicar entregas antes de responder. El procesamiento debe usar leases, reintentos limitados, rechazo de fuentes/configuraciones obsoletas y controles administrativos de estado y recuperación.
+* **RF-05.8: Consulta Por Proyecto.** Las preguntas deben recuperar únicamente el corpus publicado de un proyecto visible y habilitado, citar fuentes fijadas al commit y abstenerse cuando no hay evidencia. Deben existir límites de consumo y no se persistirá conversación en este módulo.
 
 ### 2.2 Módulo de Internacionalización
 * **RF-06: Idiomas Soportados.** Las rutas públicas deben ofrecer versiones en español (`/es`) e inglés (`/en`).
@@ -53,7 +56,7 @@ Mi portafolio es una aplicación fullstack desarrollada en Next.js. Su alcance a
 ### 2.3 Módulo de Telemetría por Webhooks
 * **RF-11: Recepción de Eventos.** Debe existir un endpoint `/api/webhooks/github` para recibir eventos de GitHub.
 * **RF-12: Procesamiento Semántico.** El sistema debe generar resúmenes y embeddings mediante Google Gemini.
-* **RF-13: Persistencia Vectorial.** El sistema debe persistir los embeddings en Supabase con pgvector y actualizar el estado de los proyectos.
+* **RF-13: Persistencia Vectorial.** El sistema debe persistir embeddings de fuentes públicas en Supabase con pgvector y registrar sincronizaciones exitosas. El estado editorial y los hitos no se infieren automáticamente de commits. El primer corpus usa `gemini-embedding-001` a 768 dimensiones; cambios de modelo/dimensión requieren reindexación.
 
 ### 2.4 Módulo de Autenticación y Panel de Administración
 * **RF-14: Autenticación OAuth.** El sistema debe integrar el inicio de sesión exclusivamente mediante GitHub y usar sesiones JWT cifradas sin almacenar contraseñas.

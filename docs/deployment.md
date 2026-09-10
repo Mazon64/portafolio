@@ -123,6 +123,23 @@ Para preparar Preview:
 
 ## 3. Migraciones
 
+### Integración De Proyectos
+
+El rollout de las cinco etapas y del piloto `Mazon64/portafolio` está descrito en
+[project-integration.md](project-integration.md). Promueve y aplica primero
+`20260909220000_project_integration` por el workflow protegido, antes del código
+dependiente. `extensions.vector` ya debe existir; la migración no instala extensiones.
+
+Configura `PROJECT_INTEGRATION_ENABLED=false` y `PROJECT_RAG_ENABLED=false` en
+Preview. Production requiere activación explícita, `CMS_WRITES_ENABLED=true`,
+`GITHUB_WEBHOOK_SECRET`, `CRON_SECRET` y el pool Gemini. `PROJECT_GITHUB_TOKEN` es
+opcional y de solo lectura. Estas credenciales no se incorporan a builds.
+El cron de Vercel ejecuta `/api/cron/project-sync` diariamente a las 06:00 UTC;
+el webhook inicia procesamiento inmediato con `after()` y la cola conserva trabajo
+ante interrupciones. Las imágenes remotas están limitadas a GitHub y deben fijarse
+a un commit. Crear el webhook y publicar el primer corpus son pasos explícitos de
+activación, no efectos del build o de la migración.
+
 En GitHub usa únicamente el environment protegido `production` para migraciones:
 
 | Nombre | Tipo | Valor |
