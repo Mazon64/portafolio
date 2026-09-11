@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750" viewBox="0 0 1200 750" role="img" aria-labelledby="title desc">
+  <title id="title">Portfolio architecture</title>
+  <desc id="desc">Browser connects to Next.js on Vercel. Next.js connects to Supabase, GitHub and Gemini.</desc>
+  <rect width="1200" height="750" rx="32" fill="#151515"/>
+  <g font-family="sans-serif" fill="#eeeeee">
+    <text x="70" y="92" font-size="22" letter-spacing="5">DAVID ARANDA / PORTFOLIO</text>
+    <text x="70" y="146" font-size="36" font-weight="700">Architecture</text>
+    <g fill="none" stroke="#888888" stroke-width="3">
+      <path d="M300 335H480M720 335H850M720 335V530H850M720 335V175H850"/>
+      <rect x="70" y="265" width="230" height="140" rx="16"/>
+      <rect x="480" y="265" width="240" height="140" rx="16"/>
+      <rect x="850" y="115" width="280" height="120" rx="16"/>
+      <rect x="850" y="275" width="280" height="120" rx="16"/>
+      <rect x="850" y="470" width="280" height="120" rx="16"/>
+    </g>
+    <g font-size="28" text-anchor="middle">
+      <text x="185" y="325">Browser</text><text x="600" y="325">Next.js</text>
+      <text x="990" y="163">GitHub</text><text x="990" y="323">Supabase</text><text x="990" y="518">Gemini</text>
+    </g>
+    <g font-size="18" text-anchor="middle" fill="#aaaaaa">
+      <text x="185" y="362">ES / EN</text><text x="600" y="362">Vercel · React · API</text>
+      <text x="990" y="198">OAuth · repository sources</text><text x="990" y="358">PostgreSQL · pgvector</text><text x="990" y="553">Structured generation</text>
+    </g>
+    <text x="70" y="662" font-size="20" fill="#aaaaaa">Project diagram · Public content and private administration</text>
+  </g>
+</svg>

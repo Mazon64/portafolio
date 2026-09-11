@@ -79,6 +79,7 @@ export async function PortfolioContent({
 
       <PortfolioSection id="projects" copy={dictionary.sections.projects}>
         <ProjectsSection
+          locale={locale}
           projects={portfolio.projects}
           copy={dictionary.projects}
         />

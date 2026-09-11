@@ -3,6 +3,7 @@ import "server-only";
 import { Locale, ProjectStatus } from "@/generated/prisma/client";
 import { requireAdmin } from "@/lib/auth/authorization";
 import { getPrisma } from "@/lib/prisma";
+import { milestoneProgress, milestonesSchema } from "@/lib/projects/schemas";
 
 export type AdminProject = {
   id: string;
@@ -17,11 +18,13 @@ export type AdminProject = {
   order: number;
   status: keyof typeof ProjectStatus;
   progressPct: number;
+  integrationManaged?: boolean;
+  milestoneManaged?: boolean;
   es: { name: string; summary: string; detailedInfo: string };
   en: { name: string; summary: string; detailedInfo: string };
 };
 
-export type AdminProjectInput = Omit<AdminProject, "id" | "updatedAt"> & {
+export type AdminProjectInput = Omit<AdminProject, "id" | "updatedAt" | "integrationManaged" | "milestoneManaged"> & {
   id?: string;
   updatedAt?: string;
 };
@@ -30,7 +33,7 @@ export async function getAdminProjects(): Promise<AdminProject[]> {
   await requireAdmin();
   const records = await getPrisma().project.findMany({
     orderBy: [{ order: "asc" }, { createdAt: "desc" }],
-    include: { translations: true },
+    include: { translations: true, integration: { select: { milestones: true } } },
   });
   return records.map((record) => {
     const es = record.translations.find(({ locale }) => locale === Locale.ES);
@@ -49,6 +52,8 @@ export async function getAdminProjects(): Promise<AdminProject[]> {
       order: record.order,
       status: record.status,
       progressPct: record.progressPct,
+      integrationManaged: Boolean(record.integration),
+      milestoneManaged: Boolean(record.integration && milestonesSchema.parse(record.integration.milestones).length),
       es: { name: es.name, summary: es.summary, detailedInfo: es.detailedInfo },
       en: { name: en.name, summary: en.summary, detailedInfo: en.detailedInfo },
     };
@@ -59,6 +64,10 @@ export async function saveAdminProject(input: AdminProjectInput) {
   await requireAdmin();
   return getPrisma().$transaction(async (tx) => {
     let id = input.id;
+    const integration = id ? await tx.projectIntegration.findUnique({ where: { projectId: id }, include: { project: { select: { repositoryFullName: true } } } }) : null;
+    // Repository binding and weighted progress are edited in the integration panel.
+    if (integration && input.repositoryFullName !== integration.project.repositoryFullName) return null;
+    const weightedProgress = integration ? milestoneProgress(milestonesSchema.parse(integration.milestones)) : null;
     const data = {
       slug: input.slug,
       repositoryFullName: input.repositoryFullName || null,
@@ -69,7 +78,7 @@ export async function saveAdminProject(input: AdminProjectInput) {
       showOnCv: input.showOnCv,
       order: input.order,
       status: ProjectStatus[input.status],
-      progressPct: input.progressPct,
+      progressPct: weightedProgress ?? input.progressPct,
     };
     if (id && input.updatedAt) {
       const result = await tx.project.updateMany({

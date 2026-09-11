@@ -28,6 +28,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [{ protocol: "https", hostname: "raw.githubusercontent.com", pathname: "/**", search: "" }],
+  },
   output: process.env.VERCEL ? undefined : "standalone",
   async headers() {
     return [

@@ -152,6 +152,9 @@ model Project {
   createdAt          DateTime             @default(now()) @db.Timestamptz(3)
   updatedAt          DateTime             @updatedAt @db.Timestamptz(3)
   translations       ProjectTranslation[]
+  integration        ProjectIntegration?
+  syncJobs           ProjectSyncJob[]
+  knowledge          ProjectKnowledge[]
 
   @@index([showOnPortfolio, order])
   @@index([showOnCv, order])
@@ -169,6 +172,79 @@ model ProjectTranslation {
 
   @@unique([projectId, locale])
   @@index([locale])
+}
+
+model ProjectIntegration {
+  projectId     String   @id @db.Uuid
+  repositoryId  String   @unique
+  branch        String   @default("main")
+  sourcePaths   String[]
+  enabled       Boolean  @default(false)
+  assets        Json     @default("[]") @db.JsonB
+  milestones    Json     @default("[]") @db.JsonB
+  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model ProjectSyncJob {
+  id                     String    @id @default(uuid()) @db.Uuid
+  projectId              String    @db.Uuid
+  deliveryId             String    @unique
+  requestedSha           String?
+  configurationUpdatedAt DateTime  @db.Timestamptz(3)
+  status                 String    @default("QUEUED")
+  attempts               Int       @default(0)
+  availableAt            DateTime  @default(now()) @db.Timestamptz(3)
+  leaseToken             String?   @db.Uuid
+  leaseUntil             DateTime? @db.Timestamptz(3)
+  error                  String?
+  createdAt              DateTime  @default(now()) @db.Timestamptz(3)
+  finishedAt             DateTime? @db.Timestamptz(3)
+  project                Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([status, availableAt])
+  @@index([projectId, createdAt(sort: Desc)])
+}
+
+model ProjectKnowledge {
+  id                     String    @id @default(uuid()) @db.Uuid
+  projectId              String    @db.Uuid
+  status                 String    @default("DRAFT")
+  commitSha              String
+  repositoryFullName     String
+  configurationUpdatedAt DateTime  @db.Timestamptz(3)
+  projectUpdatedAt       DateTime  @db.Timestamptz(3)
+  narrative              Json      @db.JsonB
+  generationModel        String
+  embeddingModel         String
+  createdAt              DateTime  @default(now()) @db.Timestamptz(3)
+  publishedAt            DateTime? @db.Timestamptz(3)
+  project                Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  chunks                 ProjectKnowledgeChunk[]
+
+  @@index([projectId, status])
+}
+
+model ProjectKnowledgeChunk {
+  id          String                    @id @default(uuid()) @db.Uuid
+  knowledgeId String                    @db.Uuid
+  path        String
+  ordinal     Int
+  content     String                    @db.Text
+  sourceHash  String
+  sourceUrl   String
+  embedding   Unsupported("vector(768)")
+  knowledge   ProjectKnowledge          @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+
+  @@unique([knowledgeId, path, ordinal])
+}
+
+model ProjectQueryQuota {
+  key       String   @id
+  count     Int      @default(1)
+  expiresAt DateTime @db.Timestamptz(3)
+
+  @@index([expiresAt])
 }
 
 model SkillCategory {
