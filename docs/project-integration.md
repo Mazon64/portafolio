@@ -3,10 +3,28 @@
 ## Alcance
 
 La integración reúne ficha visual, GitHub, narrativa ES/EN revisable, hitos y RAG.
-El piloto es el repositorio público `Mazon64/portafolio`, rama `main`. El código
-requiere la migración `20260909220000_project_integration` y activación explícita.
-La presencia del código no significa que el webhook, los secretos o el piloto ya
-estén configurados en Production.
+El piloto es el repositorio público `Mazon64/portafolio`, rama `main`. Está activo
+en Production desde el 11 de septiembre de 2026, con ficha visible ES/EN, imágenes,
+hitos, sincronización y corpus publicado para RAG.
+
+## Activación Verificada
+
+- Esquema promovido por PR #46 (`7fd772f`) y aplicado mediante el workflow protegido
+  [34610613317](https://github.com/Mazon64/portafolio/actions/runs/34610613317).
+- Aplicación promovida por PR #47 (`bc04759`). Los flags de integración/RAG están
+  activos en Production y desactivados en Preview.
+- Piloto `portafolio` vinculado al ID de repositorio `1348588167`. Webhook `push`
+  registrado; el `ping` firmado respondió `200`.
+- Primera sincronización real: un intento exitoso y 30 fragmentos de documentación.
+  La narrativa se revisó editorialmente y el corpus se publicó junto con ambas
+  traducciones. Sus fuentes iniciales están fijadas al commit `bc04759`.
+- Consultas reales ES/EN devolvieron respuestas con citas. Una pregunta sobre
+  clientes de pago e ingresos no documentados devolvió abstención sin fuentes.
+- La ficha se encuentra en `/es#projects` y `/en#projects`. Las cinco metas iniciales
+  del piloto están verificadas; el estado editorial conserva `IN_PROGRESS` porque
+  el portafolio continúa evolucionando. El chatbot global sigue siendo futuro.
+
+El procedimiento siguiente se conserva para nuevas instalaciones o proyectos.
 
 ## Datos Y Publicación
 
