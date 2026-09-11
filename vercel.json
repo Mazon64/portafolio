@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "ignoreCommand": "case \"$VERCEL_GIT_COMMIT_REF\" in main|develop|feature/*) exit 1 ;; *) exit 0 ;; esac",
-  "regions": ["sfo1"]
+  "regions": ["sfo1"],
+  "crons": [{ "path": "/api/cron/project-sync", "schedule": "0 6 * * *" }]
 }

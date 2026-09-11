@@ -90,18 +90,35 @@ El refresco administrativo mediante App Router conserva el estado cliente y cons
 
 Un rechazo por validación, autorización, concurrencia o persistencia no invalida la caché. Si falla la revalidación administrativa o la invalidación pública después del commit, las acciones que las ejecutan devuelven `cache-error`: la escritura ya ocurrió y no debe presentarse como un fallo de persistencia ni repetirse para corregir la caché. Los formularios de fuentes conservan la nueva versión optimista. Contexto y publicación intentan refrescar también ante `cache-error`; el detalle mantiene montado el estado de publicación al pasar a publicado o archivado para conservar el mensaje, sin mostrar un botón de publicación inaplicable. Los borrados devuelven estados explícitos `deleted`, `disabled`, `conflict`, `cache-error` o `error`.
 
-## 4. Webhook De Telemetría (Planificado)
+## 4. Integración De Proyectos
 
 ### 4.1 `POST /api/webhooks/github`
 
-Este endpoint todavía no está implementado. Recibirá eventos seleccionados del ciclo de desarrollo, validará `X-Hub-Signature-256`, responderá antes del procesamiento semántico prolongado y actualizará el contexto vectorial de proyectos autorizados.
+Recibe `push` de repositorios públicos vinculados por ID estable y de la rama configurada. Verifica HMAC sobre el cuerpo original (máximo 1 MB), deduplica por entrega y persiste un trabajo antes de responder. La continuación `after()` intenta procesarlo; el trabajo y su lease permiten recuperación independiente del request.
 
-Headers previstos:
+Headers:
 
 ```text
 Content-Type: application/json
 X-GitHub-Event: push
+X-GitHub-Delivery: <uuid>
 X-Hub-Signature-256: sha256=<hash_hmac>
 ```
 
-La especificación del payload y la política de eventos se cerrarán al comenzar el módulo de telemetría para no fijar anticipadamente un modelo de embeddings o una cola de procesamiento.
+El payload usa `repository.id`, `repository.private`, `ref`, `after` y `deleted`. Un `ping` firmado devuelve `200`; un evento aceptado, duplicado o ignorado devuelve `202`. Firma inválida: `403`; payload inválido: `400`; cuerpo excesivo: `413`; integración deshabilitada, cola llena o persistencia no disponible: `503`. No espera a Gemini para responder; el objetivo de recepción es menos de dos segundos, sujeto a la latencia de la base.
+
+### 4.2 `GET /api/cron/project-sync`
+
+Exige `Authorization: Bearer <CRON_SECRET>` y escrituras de integración habilitadas. Limpia contadores caducados/trabajos terminados antiguos y procesa un trabajo elegible. Responde `401` sin autorización, `503` si está deshabilitado o no disponible, o `200` con estado `idle`, `disabled`, `succeeded`, `superseded`, `retrying` o `failed`. El cron diario sirve como recuperación; el CMS permite invocar procesamiento y reintentos.
+
+### 4.3 `POST /api/projects/[slug]/ask`
+
+Recibe `{ "question": "...", "locale": "es" }`, con preguntas de 5–600 caracteres y cuerpo máximo de 4 KB. Requiere mismo origen, `PROJECT_RAG_ENABLED`, proyecto visible, integración habilitada y corpus publicado. Recupera fuentes mediante pgvector y devuelve `{ answer, insufficient, sources: [{ id, path, url }] }`, sin guardar la conversación. Todas las respuestas son `no-store`.
+
+Estados: `200` respuesta o abstención; `400` entrada inválida; `403` origen inválido; `404` corpus no disponible; `409` corpus retirado durante la petición; `429` cuota agotada; `503` integración/proveedor no disponible. Solo cita fuentes recuperadas del corpus publicado; ninguna consulta usa borradores, CVs o contexto privado.
+
+### 4.4 Acciones Administrativas
+
+`projectIntegrationAction` autoriza de nuevo y verifica flags antes de preparar el piloto, guardar configuración, encolar, procesar, reintentar, publicar o descartar. La publicación comprueba el ID de borrador, timestamps de configuración/proyecto y repositorio público; reemplaza el corpus y las traducciones en una transacción. Los fallos de refresco posteriores al commit devuelven `cache-error`.
+
+El contrato operativo, límites, modelo de embeddings y activación del piloto se describen en [project-integration.md](project-integration.md).

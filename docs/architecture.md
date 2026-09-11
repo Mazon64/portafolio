@@ -11,7 +11,7 @@ Mi portafolio utiliza una aplicación fullstack de Next.js (App Router) desplega
 * **Aplicación y API:** Vercel con Next.js y Vercel Functions.
 * **Dominio relacional y vectorial:** PostgreSQL y pgvector alojados en Supabase.
 * **Correo de contacto:** Resend con plantillas React Email y Gmail como destino.
-* **Servicios futuros:** MongoDB Atlas para conversaciones y Google Gemini para RAG.
+* **IA:** Google Gemini para documentos, narrativa de proyectos y RAG por proyecto; MongoDB Atlas permanece previsto para conversaciones futuras.
 
 ### 1.1 Internacionalización y Preferencias de Interfaz
 Los prefijos `/es` y `/en` son obligatorios para las rutas públicas. El Proxy interviene solo en `/`: selecciona español cuando es el idioma principal aceptado por el navegador e inglés para cualquier otro idioma. Cualquier otra ruta sin prefijo o con un idioma no soportado devuelve 404.
@@ -37,7 +37,7 @@ El esquema ejecutable se encuentra en `prisma/schema.prisma`. Sus decisiones pri
 * `ProjectStatus` normaliza el ciclo de vida y `progressPct` tiene una restricción SQL entre 0 y 100. `lastTelemetryAt` solo cambia al recibir telemetría y no al editar contenido.
 * `SkillPresentation` define categorías `ICON_TILES` o `BADGES`. Las claves de icono se resuelven mediante un registro permitido en la aplicación; la base de datos no almacena componentes ni SVG arbitrarios.
 * Las categorías de habilidades localizan su título y una descripción breve editable. Las tecnologías se presentan con iconos permitidos y las capacidades abstractas como badges de ancho adaptable.
-* pgvector se habilita una vez con el administrador de Supabase. La primera migración verifica esta precondición, pero no crea tablas vectoriales ni fija dimensiones hasta seleccionar el modelo de embeddings del módulo RAG.
+* pgvector se habilita una vez con el administrador de Supabase. La primera migración verifica esta precondición; la migración de integración de proyectos añade posteriormente vectores de 768 dimensiones para el modelo seleccionado `gemini-embedding-001`.
 
 El seed inicial contiene perfil, una experiencia, una formación académica y tres categorías de habilidades: desarrollo de software e infraestructura con iconos, y habilidades de ingeniería con badges. No crea ni elimina proyectos, por lo que puede repetirse después de incorporar propuestas públicas.
 
@@ -61,9 +61,11 @@ El CV público se genera por locale en primera persona, se edita en el workspace
 
 ### 2.4 Presentación y Evolución de Proyectos
 
-Las cards de proyectos muestran nombre, resumen, espacio visual para una imagen y progreso. El detalle se expande de forma accesible para mostrar tecnologías, estado, repositorio, prototipo y la descripción extensa existente. Mientras no haya proyectos publicados, la sección conserva su posición y presenta un estado vacío.
+Las cards de proyectos muestran nombre, resumen, portada y progreso. El detalle se expande de forma accesible para mostrar tecnologías, estado, repositorio, prototipo, descripción extensa, galería, hitos y fuentes publicadas. Mientras no haya proyectos publicados, la sección conserva su posición y presenta un estado vacío. Sin imágenes configuradas conserva el marcador visual anterior.
 
-La etapa RAG ampliará este modelo sin almacenar HTML generado. Cada imagen deberá tener URL, texto alternativo, descripción contextual, orden y procedencia. La IA producirá una secuencia estructurada de bloques de texto y referencias a medios a partir de README, documentación y descripciones de imágenes. El servidor validará estas referencias antes de publicarlas; la colocación sugerida será editorial y no una garantía sobre hechos no presentes en las fuentes.
+`ProjectIntegration` vincula un repositorio público por ID estable, selecciona archivos Markdown y guarda imágenes e hitos editoriales ES/EN. El avance se calcula por pesos explícitos, nunca por cantidad de commits. El webhook firma/deduplica entregas en `ProjectSyncJob`; workers con lease, reintento y comprobación de fuentes preparan un `ProjectKnowledge` pendiente y sus fragmentos vectoriales. La publicación revisada reemplaza el corpus público y actualiza las traducciones atómicamente. Se conserva como máximo un borrador y un corpus publicado por proyecto, sin numeración de versiones.
+
+Gemini redacta campos estructurados de resumen, problema, solución, arquitectura, decisiones y resultados. Recibe Markdown y descripciones de imágenes/hitos, sin contexto privado documental. `gemini-embedding-001` produce vectores normalizados de 768 dimensiones; `ProjectKnowledgeChunk` los almacena en `extensions.vector(768)`. RAG recupera hasta seis fragmentos públicos del proyecto visible, valida sus identificadores de cita y responde con referencias al commit o abstención. `ProjectQueryQuota` limita consumo sin guardar preguntas. La activación, límites y separación Preview/Production se detallan en [project-integration.md](project-integration.md).
 
 ---
 
@@ -122,6 +124,9 @@ Los secretos estarán disponibles solo en el servidor. El prefijo `NEXT_PUBLIC_`
 | `ADMIN_GITHUB_ID` | Identificador estable autorizado para el CMS. |
 | `CMS_WRITES_ENABLED` | Habilitación explícita de mutaciones administrativas. |
 | `DOCUMENT_GENERATION_ENABLED` | Habilitación explícita de llamadas a Gemini y creación de artefactos. |
+| `PROJECT_INTEGRATION_ENABLED` | Habilitación explícita de configuración y sincronización de proyectos; bloqueada en Preview. |
+| `PROJECT_RAG_ENABLED` | Habilita consultas sobre el corpus público, junto con el flag de integración. |
+| `PROJECT_GITHUB_TOKEN` | Token opcional de lectura de contenido/metadatos de repositorios públicos seleccionados. |
 | `CONTACT_DELIVERY_ENABLED` | Habilitación explícita de la entrega del formulario. |
 | `RESEND_API_KEY` | Credencial server-only para enviar correo mediante Resend. |
 | `CONTACT_FROM_EMAIL` | Remitente verificado de las notificaciones de contacto. |

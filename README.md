@@ -16,7 +16,7 @@ Actualmente incluye:
 - Pruebas unitarias para la negociación de idioma y el Proxy.
 - Esquema relacional bilingüe administrado mediante Prisma y Supabase.
 - Datos iniciales de perfil, experiencia, educación y habilidades.
-- pgvector habilitado para la futura etapa RAG.
+- pgvector para recuperación de fuentes publicadas de proyectos.
 - Secciones públicas conectadas a Supabase mediante un DAL server-only.
 - Caché de contenido por idioma con revalidación cada cinco minutos.
 - Cards de habilidades con logos permitidos y badges.
@@ -27,8 +27,11 @@ Actualmente incluye:
 - Acceso administrativo bilingüe mediante GitHub OAuth y whitelist por ID estable.
 - CMS CRUD para perfil, experiencia, educación, categorías de habilidades, habilidades y proyectos.
 - Escrituras bilingües atómicas, control de concurrencia y borrados con confirmación.
+- Documentos profesionales generados, contexto actual sin revisiones y previsualización/impresión compartidas.
+- Fichas de proyectos con galería ES/EN, hitos ponderados y fuentes fijadas a commits.
+- Webhook GitHub, cola duradera, narrativa revisable y consultas RAG por proyecto detrás de flags operativos.
 
-El CMS administra el contenido profesional completo que alimenta el portafolio y el CV. La telemetría, las imágenes editoriales, RAG y el chatbot permanecen en etapas futuras. La base inicial no publica proyectos hasta que existan propuestas propias que puedan mostrarse.
+El CMS administra el contenido profesional que alimenta el portafolio y el CV. La integración de proyectos usa este repositorio como piloto; requiere aplicar su migración, configurar los flags/proveedores y publicar el primer corpus. El chatbot global con historial de conversaciones permanece como etapa futura. Consulta [la guía de integración](docs/project-integration.md) para distinguir código disponible de activación en Production.
 
 ## Tecnologías
 
@@ -130,6 +133,9 @@ Los contratos se encuentran en `.env.example` y `.env.docker.example`.
 | `AUTH_GITHUB_SECRET` | Secreto OAuth de GitHub. |
 | `ADMIN_GITHUB_ID` | ID numérico e inmutable de la cuenta autorizada para el CMS. |
 | `CMS_WRITES_ENABLED` | Habilita explícitamente las mutaciones del CMS cuando vale `true`. |
+| `PROJECT_INTEGRATION_ENABLED` | Habilita configuración/sincronización de proyectos; Preview siempre bloquea escrituras. |
+| `PROJECT_RAG_ENABLED` | Habilita consultas sobre fuentes publicadas del proyecto. |
+| `PROJECT_GITHUB_TOKEN` | Token opcional de lectura para repositorios públicos seleccionados. |
 | `GITHUB_WEBHOOK_SECRET` | Firma de webhooks de GitHub. |
 | `GEMINI_API_KEYS` | Pool server-only de claves de Google Gemini separadas por comas o líneas. |
 | `GEMINI_MODEL` | Modelo de generación Gemini; usa `gemini-3-flash-preview` por defecto. |

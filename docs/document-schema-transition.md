@@ -13,6 +13,10 @@
    column and retains only the current context. Apply exclusively from `main`
    through the protected Production migration workflow after the checks below.
    Merging the migration does not apply it; workflow completion is authoritative.
+   Completed in Production through PR #43 (`31be868`) and protected workflow
+   [34408680867](https://github.com/Mazon64/portafolio/actions/runs/34408680867).
+   Read-only verification confirmed the column removal, singleton index,
+   publication constraint and zero orphan artifacts.
 
 ## Contract Preconditions
 
