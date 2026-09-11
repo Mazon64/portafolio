@@ -39,7 +39,7 @@ export function ProjectQuestion({ slug, locale }: { slug: string; locale: Locale
     </form>
     <div aria-live="polite" className="mt-4 text-sm leading-7">
       {error && <p role="status">{error}</p>}
-      {answer && <><p className="whitespace-pre-line">{answer.answer}</p><ul className="mt-3 flex flex-wrap gap-3">{answer.sources.map((source) => <li key={source.id}><a href={source.url} target="_blank" rel="noreferrer" className="underline underline-offset-4">{source.path}</a></li>)}</ul></>}
+      {answer && <><p className="whitespace-pre-line">{answer.answer}</p><ul className="mt-3 flex flex-wrap gap-3">{answer.sources.filter((source, index, sources) => sources.findIndex((item) => item.url === source.url) === index).map((source) => <li key={source.id}><a href={source.url} target="_blank" rel="noreferrer" className="underline underline-offset-4">{source.path}</a></li>)}</ul></>}
     </div>
   </section>;
 }
