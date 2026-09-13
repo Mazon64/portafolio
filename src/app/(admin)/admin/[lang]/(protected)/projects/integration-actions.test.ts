@@ -4,7 +4,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("next/server", () => ({ after: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: m.revalidate, updateTag: m.tag }));
 vi.mock("@/lib/auth/authorization", () => ({ requireAdmin: m.auth }));
-vi.mock("@/data/admin/project-integration", () => ({ saveProjectIntegration: m.save, publishProjectKnowledge: m.publish, discardProjectKnowledge: m.discard, retryProjectSync: m.retry, initializePortfolioPilot: m.pilot }));
+vi.mock("@/data/admin/project-integration", () => ({ saveProjectIntegration: m.save, connectProjectRepository: m.pilot, retryProjectSync: m.retry, initializePortfolioPilot: m.pilot }));
 vi.mock("@/lib/projects/sync", () => ({ enqueueProjectSync: m.enqueue, processProjectSync: m.process }));
 import { projectIntegrationAction } from "./integration-actions";
 beforeEach(() => {
@@ -13,7 +13,19 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 describe("project integration action boundary", () => {
-  it.each(["pilot", "save", "sync", "process", "retry", "publish", "discard"])("blocks %s in Preview before side effects", async (operation) => {
+  it("connects a repository and immediately schedules automatic synchronization", async () => {
+    m.pilot.mockResolvedValue("project");
+    const data = new FormData(); data.set("operation", "connect"); data.set("repositoryFullName", "https://github.com/owner/repo.git/");
+    expect(await projectIntegrationAction({ status: "idle" }, data)).toEqual({ status: "success", projectId: "project" });
+    expect(m.pilot).toHaveBeenCalledWith("owner/repo"); expect(m.enqueue).toHaveBeenCalledWith("project", expect.stringMatching(/^connect:/), null);
+  });
+  it("reports a committed connection when initial enqueuing fails", async () => {
+    m.pilot.mockResolvedValue("project"); m.enqueue.mockRejectedValue(new Error("Unavailable queue"));
+    const data = new FormData(); data.set("operation", "pilot");
+    expect(await projectIntegrationAction({ status: "idle" }, data)).toEqual({ status: "cache-error", projectId: "project" });
+    expect(m.pilot).toHaveBeenCalledOnce();
+  });
+  it.each(["connect", "pilot", "save", "sync", "process", "retry", "publish", "discard"])("blocks %s in Preview before side effects", async (operation) => {
     vi.stubEnv("VERCEL_ENV", "preview"); const data = new FormData(); data.set("operation", operation);
     expect(await projectIntegrationAction({ status: "idle" }, data)).toEqual({ status: "disabled" });
     for (const mock of [m.save, m.publish, m.discard, m.retry, m.pilot, m.enqueue, m.process]) expect(mock).not.toHaveBeenCalled();

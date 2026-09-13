@@ -94,7 +94,7 @@ Un rechazo por validación, autorización, concurrencia o persistencia no invali
 
 ### 4.1 `POST /api/webhooks/github`
 
-Recibe `push` de repositorios públicos vinculados por ID estable y de la rama configurada. Verifica HMAC sobre el cuerpo original (máximo 1 MB), deduplica por entrega y persiste un trabajo antes de responder. La continuación `after()` intenta procesarlo; el trabajo y su lease permiten recuperación independiente del request.
+Recibe `push` de la rama predeterminada, cambios de repositorio, milestones, releases e issues asociadas a hitos de repositorios públicos vinculados por ID estable. Verifica HMAC sobre el cuerpo original (máximo 1 MB), deduplica y persiste antes de responder. `after()` inicia descubrimiento y publicación automática; el trabajo y su lease permiten recuperación independiente del request.
 
 Headers:
 
@@ -105,11 +105,11 @@ X-GitHub-Delivery: <uuid>
 X-Hub-Signature-256: sha256=<hash_hmac>
 ```
 
-El payload usa `repository.id`, `repository.private`, `ref`, `after` y `deleted`. Un `ping` firmado devuelve `200`; un evento aceptado, duplicado o ignorado devuelve `202`. Firma inválida: `403`; payload inválido: `400`; cuerpo excesivo: `413`; integración deshabilitada, cola llena o persistencia no disponible: `503`. No espera a Gemini para responder; el objetivo de recepción es menos de dos segundos, sujeto a la latencia de la base.
+El payload común usa `repository.id`, `repository.private` y `repository.default_branch`; `push` exige además `ref` y `after` y contempla `deleted`. Los eventos sin commit solicitan sincronizar el HEAD actual. Un `ping` firmado devuelve `200`; un evento aceptado, duplicado o ignorado devuelve `202`. Firma inválida: `403`; payload inválido: `400`; cuerpo excesivo: `413`; integración deshabilitada, cola llena o persistencia no disponible: `503`. No espera a Gemini para responder; el objetivo de recepción es menos de dos segundos, sujeto a la latencia de la base.
 
 ### 4.2 `GET /api/cron/project-sync`
 
-Exige `Authorization: Bearer <CRON_SECRET>` y escrituras de integración habilitadas. Limpia contadores caducados/trabajos terminados antiguos y procesa un trabajo elegible. Responde `401` sin autorización, `503` si está deshabilitado o no disponible, o `200` con estado `idle`, `disabled`, `succeeded`, `superseded`, `retrying` o `failed`. El cron diario sirve como recuperación; el CMS permite invocar procesamiento y reintentos.
+Exige `Authorization: Bearer <CRON_SECRET>` y escrituras habilitadas. Limpia contadores/trabajos caducados, reconcilia conexiones y procesa hasta tres trabajos elegibles dentro de su presupuesto. Responde `401` sin autorización, `503` si está deshabilitado o no disponible, o `200` con `{ status: "processed", processed: <n> }` (`disabled` si faltan credenciales de IA). El cron diario y el workflow de recuperación de quince minutos usan este endpoint; el CMS conserva controles operativos opcionales.
 
 ### 4.3 `POST /api/projects/[slug]/ask`
 
@@ -119,6 +119,8 @@ Estados: `200` respuesta o abstención; `400` entrada inválida; `403` origen in
 
 ### 4.4 Acciones Administrativas
 
-`projectIntegrationAction` autoriza de nuevo y verifica flags antes de preparar el piloto, guardar configuración, encolar, procesar, reintentar, publicar o descartar. La publicación comprueba el ID de borrador, timestamps de configuración/proyecto y repositorio público; reemplaza el corpus y las traducciones en una transacción. Los fallos de refresco posteriores al commit devuelven `cache-error`.
+`projectIntegrationAction` autoriza y verifica flags para vincular un repositorio (`connect`), guardar conexión/habilitación (`save`), encolar (`sync`), procesar o reintentar. No acepta imágenes, captions, hitos, textos generados ni operaciones manuales `publish`/`discard`. La conexión inicial genera una ficha oculta hasta su primera publicación válida. Guardar usa `updatedAt` observado; cambios concurrentes producen `conflict`.
+
+El worker publica automáticamente nombres ES/EN, narrativa, imágenes analizadas, tecnologías, enlaces, estado, progreso y fuentes en una transacción protegida por lease y timestamps. Un fallo conserva la publicación anterior. Los fallos de encolado/refresco posteriores a un guardado ya confirmado se diferencian con `cache-error`; la reconciliación recupera el trabajo pendiente.
 
 El contrato operativo, límites, modelo de embeddings y activación del piloto se describen en [project-integration.md](project-integration.md).

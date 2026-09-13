@@ -134,11 +134,14 @@ Configura `PROJECT_INTEGRATION_ENABLED=false` y `PROJECT_RAG_ENABLED=false` en
 Preview. Production requiere activación explícita, `CMS_WRITES_ENABLED=true`,
 `GITHUB_WEBHOOK_SECRET`, `CRON_SECRET` y el pool Gemini. `PROJECT_GITHUB_TOKEN` es
 opcional y de solo lectura. Estas credenciales no se incorporan a builds.
-El cron de Vercel ejecuta `/api/cron/project-sync` diariamente a las 06:00 UTC;
-el webhook inicia procesamiento inmediato con `after()` y la cola conserva trabajo
-ante interrupciones. Las imágenes remotas están limitadas a GitHub y deben fijarse
-a un commit. Crear el webhook y publicar el primer corpus son pasos explícitos de
-activación, no efectos del build o de la migración.
+El cron de Vercel ejecuta `/api/cron/project-sync` diariamente a las 06:00 UTC.
+El workflow `Project Sync Recovery` lo invoca cada quince minutos desde `main`;
+su secret de repositorio `PROJECT_SYNC_CRON_SECRET` debe coincidir con `CRON_SECRET`
+de Vercel. No accede a la base ni ejecuta migraciones. El webhook inicia trabajo
+con `after()` y debe escuchar `push`, `repository`, `milestone`, `issues` y `release`.
+Vincular un repositorio inicia publicación automática; no hay paso manual de
+publicación del corpus. Las imágenes se toman de carpetas por propósito bajo
+`docs/portfolio/images/` y se analizan sin guardar binarios en PostgreSQL.
 
 En GitHub usa únicamente el environment protegido `production` para migraciones:
 

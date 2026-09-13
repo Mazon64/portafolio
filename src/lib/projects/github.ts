@@ -9,11 +9,17 @@ const repositorySchema = z.object({
   full_name: z.string().regex(/^[\w.-]+\/[\w.-]+$/),
   private: z.boolean(),
   default_branch: z.string(),
+  name: z.string().default(""),
+  description: z.string().nullable().default(null),
+  homepage: z.string().nullable().default(null),
+  archived: z.boolean().default(false),
+  topics: z.array(z.string()).default([]),
+  has_issues: z.boolean().optional(),
 });
 export type GithubRepository = z.infer<typeof repositorySchema>;
 export type SourceChunk = { path: string; ordinal: number; content: string; sourceHash: string; sourceUrl: string };
 
-async function githubJson(path: string, maxBytes = 300_000): Promise<unknown> {
+export async function githubJson(path: string, maxBytes = 300_000): Promise<unknown> {
   const token = process.env.PROJECT_GITHUB_TOKEN?.trim();
   const response = await fetch(`https://api.github.com${path}`, {
     headers: {

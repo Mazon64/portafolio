@@ -3,7 +3,7 @@ vi.mock("server-only", () => ({}));
 import { chunkSource, getProjectSources, getRepository } from "./github";
 
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
-const repository = { id: 42, full_name: "owner/repo", private: false, default_branch: "main" };
+const repository = { id: 42, full_name: "owner/repo", private: false, default_branch: "main", name: "repo", description: null, homepage: null, archived: false, topics: [] };
 
 describe("GitHub project ingestion", () => {
   it("does not admit private repositories even with a valid token", async () => {

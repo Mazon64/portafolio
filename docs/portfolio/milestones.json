@@ -1,0 +1,10 @@
+[
+  { "id": "bilingual-portfolio", "title": { "es": "Portafolio bilingüe y contenido profesional", "en": "Bilingual portfolio and professional content" }, "weight": 15, "completed": true, "evidence": "docs/architecture.md" },
+  { "id": "private-cms", "title": { "es": "CMS privado y despliegue protegido", "en": "Private CMS and protected deployment" }, "weight": 15, "completed": true, "evidence": "docs/deployment.md" },
+  { "id": "professional-documents", "title": { "es": "CV, ATS y cartas profesionales", "en": "CV, ATS and professional cover letters" }, "weight": 15, "completed": true, "evidence": "docs/document-schema-transition.md" },
+  { "id": "durable-project-sync", "title": { "es": "Sincronización GitHub recuperable", "en": "Recoverable GitHub synchronization" }, "weight": 15, "completed": true, "evidence": "docs/project-integration.md" },
+  { "id": "grounded-project-queries", "title": { "es": "RAG por proyecto con fuentes verificables", "en": "Project RAG with verifiable sources" }, "weight": 10, "completed": true, "evidence": "docs/project-integration.md" },
+  { "id": "automatic-publication", "title": { "es": "Descubrimiento y publicación automáticos", "en": "Automatic discovery and publication" }, "weight": 10, "completed": false, "evidence": "src/lib/projects/discovery.ts" },
+  { "id": "repository-visual-media", "title": { "es": "Imágenes del repositorio y análisis visual", "en": "Repository images and visual analysis" }, "weight": 10, "completed": false, "evidence": "src/lib/projects/media.ts" },
+  { "id": "accessible-project-modal", "title": { "es": "Detalle de proyecto en modal accesible", "en": "Accessible project detail modal" }, "weight": 10, "completed": true, "evidence": "src/components/portfolio/project-dialog-card.test.tsx" }
+]
