@@ -28,10 +28,11 @@ Actualmente incluye:
 - CMS CRUD para perfil, experiencia, educación, categorías de habilidades, habilidades y proyectos.
 - Escrituras bilingües atómicas, control de concurrencia y borrados con confirmación.
 - Documentos profesionales generados, contexto actual sin revisiones y previsualización/impresión compartidas.
-- Fichas de proyectos con galería ES/EN, hitos ponderados y fuentes fijadas a commits.
-- Webhook GitHub, cola duradera, narrativa revisable y consultas RAG por proyecto detrás de flags operativos.
+- Cards de proyectos con modal accesible, galería del repositorio y análisis visual ES/EN.
+- Descubrimiento de documentación/manifiestos y publicación automática de fichas, tecnologías, hitos y fuentes RAG.
+- Webhook GitHub, cola duradera y recuperación programada, detrás de flags operativos.
 
-El CMS administra el contenido profesional que alimenta el portafolio y el CV. La integración de proyectos usa este repositorio como piloto; requiere aplicar su migración, configurar los flags/proveedores y publicar el primer corpus. El chatbot global con historial de conversaciones permanece como etapa futura. Consulta [la guía de integración](docs/project-integration.md) para distinguir código disponible de activación en Production.
+El CMS administra el contenido profesional del portafolio y el CV. Los proyectos vinculados se generan y publican automáticamente a partir de su repositorio. Las imágenes se organizan por propósito y los hitos tienen evidencia en `docs/portfolio/milestones.json`. El chatbot global con historial permanece como etapa futura. Consulta [la guía de integración](docs/project-integration.md) y [el material del piloto](docs/portfolio/README.md).
 
 ## Tecnologías
 

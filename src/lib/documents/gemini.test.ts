@@ -15,6 +15,20 @@ afterEach(() => {
 });
 
 describe("Gemini document generation", () => {
+  it("sends labelled image bytes for project vision without applying CV-only wording", async () => {
+    vi.stubEnv("GEMINI_API_KEYS", "vision-test-key");
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ candidates: [{ content: { parts: [{ text: '{"value":"ok"}' }] } }] }));
+    vi.stubGlobal("fetch", fetchMock);
+    await generateStructuredDocument({
+      instruction: "Describe observable pixels.", source: { path: "interface/home.webp" }, domain: "projects",
+      images: [{ label: "interface/home.webp", mimeType: "image/webp", data: "dGVzdA==" }],
+      responseSchema: {}, validator: z.object({ value: z.literal("ok") }),
+    });
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.contents[0].parts[2]).toEqual({ inlineData: { mimeType: "image/webp", data: "dGVzdA==" } });
+    expect(body.systemInstruction.parts[0].text).not.toContain("Never mention AI");
+    expect(body.generationConfig.maxOutputTokens).toBe(8192);
+  });
   it("sends the key as a header and validates structured output", async () => {
     vi.stubEnv("GEMINI_API_KEYS", "secret-key");
     vi.stubEnv("GEMINI_MODEL", "configured-model");

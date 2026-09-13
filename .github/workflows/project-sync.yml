@@ -1,0 +1,30 @@
+name: Project Sync Recovery
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: production-project-sync
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    if: github.repository == 'Mazon64/portafolio' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Recover eligible project synchronization jobs
+        env:
+          PROJECT_SYNC_CRON_SECRET: ${{ secrets.PROJECT_SYNC_CRON_SECRET }}
+        run: |
+          test -n "$PROJECT_SYNC_CRON_SECRET" || {
+            echo "PROJECT_SYNC_CRON_SECRET must be configured for automated recovery"
+            exit 1
+          }
+          curl --fail-with-body --silent --show-error --max-time 290 \
+            --header "Authorization: Bearer $PROJECT_SYNC_CRON_SECRET" \
+            https://davidaranda.dev/api/cron/project-sync

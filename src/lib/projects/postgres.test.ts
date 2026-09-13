@@ -37,6 +37,18 @@ async function corpus(projectId: number, knowledgeId: number, status: "DRAFT" | 
 }
 
 describe("project integration with isolated PostgreSQL and pgvector", () => {
+  it("retains the previous published corpus when automatic replacement fails", async () => {
+    await project(1); await corpus(1, 11, "PUBLISHED");
+    await expect(db.transaction(async (tx) => {
+      await tx.query('DELETE FROM "ProjectKnowledge" WHERE "projectId"=$1', [id(1)]);
+      await tx.query(`INSERT INTO "ProjectKnowledge" (id,"projectId",status,"commitSha","repositoryFullName","configurationUpdatedAt","projectUpdatedAt",narrative,"generationModel","embeddingModel","publishedAt")
+        VALUES ($1,$2,'PUBLISHED','new','owner/repo',now(),now(),'{}','test','gemini-embedding-001',now())`, [id(12), id(1)]);
+      await tx.query(`INSERT INTO "ProjectKnowledgeChunk" (id,"knowledgeId",path,ordinal,content,"sourceHash","sourceUrl",embedding)
+        VALUES ($1,$2,'README.md',0,'invalid','hash','https://github.com/owner/repo','[1,2]'::extensions.vector)`, [id(1012), id(12)]);
+    })).rejects.toThrow();
+    const results = await retrieveProjectSources("project-1", embedding);
+    expect(results).toHaveLength(1); expect(results[0].knowledgeId).toBe(id(11));
+  });
   it("retrieves only the requested project's published corpus", async () => {
     await project(1); await corpus(1, 11, "PUBLISHED"); await corpus(1, 12, "DRAFT");
     await project(2); await corpus(2, 21, "PUBLISHED");

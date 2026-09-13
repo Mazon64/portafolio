@@ -1,7 +1,7 @@
 import { getPrisma } from "@/lib/prisma";
 import { projectIntegrationEnabled } from "@/lib/projects/configuration";
 import { validBearer } from "@/lib/projects/http";
-import { processProjectSync } from "@/lib/projects/sync";
+import { reconcileProjectQueue } from "@/lib/projects/sync";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -13,6 +13,6 @@ export async function GET(request: Request) {
     await getPrisma().projectSyncJob.deleteMany({ where: {
       status: { in: ["SUCCEEDED", "SUPERSEDED"] }, finishedAt: { lt: new Date(Date.now() - 30 * 86400_000) },
     } });
-    return Response.json(await processProjectSync(), { headers: { "Cache-Control": "no-store" } });
+    return Response.json(await reconcileProjectQueue(), { headers: { "Cache-Control": "no-store" } });
   } catch { return Response.json({ status: "unavailable" }, { status: 503 }); }
 }

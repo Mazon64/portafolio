@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { generateStructuredDocument, getApiKeyAttempts } from "@/lib/documents/gemini";
 import { boundedBody } from "./http";
-import { EMBEDDING_DIMENSIONS, EMBEDDING_MODEL, narrativeSchema, type ProjectAssets, type ProjectMilestones } from "./schemas";
+import { EMBEDDING_DIMENSIONS, EMBEDDING_MODEL, localizedText, narrativeSchema, type ProjectAssets, type ProjectMilestones } from "./schemas";
 import type { SourceChunk } from "./github";
 
 export function vectorLiteral(vector: number[]) {
@@ -42,16 +42,22 @@ export async function embedTexts(texts: string[], taskType: "RETRIEVAL_DOCUMENT"
   throw new Error("Embedding provider unavailable");
 }
 
-export async function generateProjectNarrative(chunks: SourceChunk[], presentation: { assets: ProjectAssets; milestones: ProjectMilestones }) {
+export async function generateProjectNarrative(chunks: SourceChunk[], presentation: { assets: ProjectAssets; milestones: ProjectMilestones; repositoryName?: string }) {
+  const validator = z.object({
+    names: z.object({ es: z.string().trim().min(1).max(160), en: z.string().trim().min(1).max(160) }),
+    narrative: narrativeSchema,
+    milestoneTitles: z.array(z.object({ id: z.string(), title: localizedText })).length(presentation.milestones.length),
+  });
   return generateStructuredDocument({
     domain: "projects",
-    instruction: "Describe this software project in Spanish and English. Distinguish implemented capabilities from plans stated in requirements. Explain the problem, solution, architecture, technical decisions and demonstrated results/scope. Do not claim future requirements are completed or invent impact metrics. Return plain text fields; no HTML.",
+    instruction: "Describe this software project in Spanish and English. Generate a concise project display name in each language using the repository name and documentation. Distinguish implemented capabilities from plans. Explain the problem, solution, architecture, decisions and demonstrated scope. Where information is absent, state that it is not documented; never invent metrics or implementation details. Translate each supplied milestone title, preserving its exact ID; do not add milestones or reinterpret completion. Plain text only.",
     source: {
       documentation: chunks.map(({ path, content }) => ({ path, content })),
       imageDescriptions: presentation.assets.map(({ alt, caption }) => ({ alt, caption })),
       milestones: presentation.milestones,
+      repositoryName: presentation.repositoryName,
     },
-    responseSchema: z.toJSONSchema(narrativeSchema), validator: narrativeSchema,
+    responseSchema: z.toJSONSchema(validator), validator,
   });
 }
 

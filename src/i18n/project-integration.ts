@@ -2,6 +2,17 @@ import type { Locale } from "./config";
 
 export const projectIntegrationCopy = {
   es: {
+    connect: "Vincular y publicar automáticamente",
+    automaticHint: "La ficha, las tecnologías, las imágenes, los hitos y las fuentes se obtienen del repositorio y se publican automáticamente. Aquí solo administras la conexión y su estado.",
+    mediaRoot: "Imágenes: docs/portfolio/images/{interface,features,diagrams,results}/",
+    progressUnknown: "Sin hitos documentados",
+    waitingAutomatic: "La primera sincronización publicará la ficha automáticamente.",
+    closeModal: "Cerrar detalle del proyecto",
+    openProject: "Ver detalle de",
+    gallery: "Imágenes del proyecto",
+    allImages: "Todas",
+    imageUnavailable: "Imagen no disponible",
+    categories: { interface: "Interfaz", features: "Funcionalidades", diagrams: "Diagramas", results: "Resultados" },
     title: "Integración del proyecto", manage: "Fuentes, imágenes e integración", back: "Volver a proyectos",
     pilot: "Preparar este portafolio como piloto", pilotHint: "Crea una ficha privada inicial de Mazon64/portafolio sin sobrescribir proyectos existentes.",
     disabled: "La integración está deshabilitada en este entorno.", schemaPending: "Primero debe aplicarse la migración de integración en Production.",
@@ -20,9 +31,20 @@ export const projectIntegrationCopy = {
     askPlaceholder: "¿Cómo funciona la arquitectura de este proyecto?", askError: "La consulta no está disponible ahora. Inténtalo más tarde.", rateLimited: "Se alcanzó el límite de consultas. Inténtalo más tarde.",
     askHint: "Respuestas basadas en la documentación publicada, con enlaces al commit de origen.",
     statuses: { idle: "", success: "Cambios guardados.", queued: "Sincronización en cola. Actualiza el estado para consultar el resultado.", conflict: "La configuración, el proyecto o el borrador cambió. Actualiza la página.", invalid: "Revisa los campos y los límites indicados.", disabled: "Las escrituras de integración están deshabilitadas.", error: "No se pudo completar la operación.", "cache-error": "Se guardó, pero el refresco puede tardar en aparecer." },
-    jobStatuses: { QUEUED: "En cola", PROCESSING: "Procesando", SUCCEEDED: "Borrador preparado", FAILED: "Falló", SUPERSEDED: "Sustituido por cambios más recientes" },
+    jobStatuses: { QUEUED: "En cola", PROCESSING: "Procesando", SUCCEEDED: "Publicado automáticamente", FAILED: "Falló", SUPERSEDED: "Sustituido por cambios más recientes" },
   },
   en: {
+    connect: "Connect and publish automatically",
+    automaticHint: "Project content, technologies, images, milestones and sources are discovered from the repository and published automatically. This panel manages only the connection and its status.",
+    mediaRoot: "Images: docs/portfolio/images/{interface,features,diagrams,results}/",
+    progressUnknown: "No documented milestones",
+    waitingAutomatic: "The first synchronization will publish the project automatically.",
+    closeModal: "Close project details",
+    openProject: "View details of",
+    gallery: "Project images",
+    allImages: "All",
+    imageUnavailable: "Image unavailable",
+    categories: { interface: "Interface", features: "Features", diagrams: "Diagrams", results: "Results" },
     title: "Project integration", manage: "Sources, images and integration", back: "Back to projects",
     pilot: "Prepare this portfolio as the pilot", pilotHint: "Creates an initial private Mazon64/portafolio entry without overwriting existing projects.",
     disabled: "Integration is disabled in this environment.", schemaPending: "The integration migration must first be applied in Production.",
@@ -41,7 +63,7 @@ export const projectIntegrationCopy = {
     askPlaceholder: "How does this project's architecture work?", askError: "Queries are unavailable right now. Please try again later.", rateLimited: "The query limit has been reached. Please try again later.",
     askHint: "Answers grounded in published documentation, with links to the source commit.",
     statuses: { idle: "", success: "Changes saved.", queued: "Synchronization queued. Refresh the status to see the result.", conflict: "The configuration, project or draft changed. Refresh the page.", invalid: "Review the fields and indicated limits.", disabled: "Integration writes are disabled.", error: "Unable to complete the operation.", "cache-error": "Saved, but the refresh may take a moment to appear." },
-    jobStatuses: { QUEUED: "Queued", PROCESSING: "Processing", SUCCEEDED: "Draft ready", FAILED: "Failed", SUPERSEDED: "Superseded by newer changes" },
+    jobStatuses: { QUEUED: "Queued", PROCESSING: "Processing", SUCCEEDED: "Automatically published", FAILED: "Failed", SUPERSEDED: "Superseded by newer changes" },
   },
 } as const satisfies Record<Locale, object>;
 export type ProjectIntegrationCopy = (typeof projectIntegrationCopy)[Locale];

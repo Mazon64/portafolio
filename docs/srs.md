@@ -39,10 +39,10 @@ Mi portafolio es una aplicación fullstack desarrollada en Next.js. Su alcance a
 * **RF-05: Proyectos Expandibles.** Cada proyecto debe mostrar un resumen y permitir consultar información detallada combinada con el estado generado por telemetría.
 * **RF-05.1: Repositorios Opcionales.** Un proyecto debe poder publicarse sin URL ni identificador de repositorio; la vinculación con GitHub solo aplica cuando exista un repositorio visible o autorizado para telemetría.
 * **RF-05.2: Presentación de Habilidades.** Las habilidades deben organizarse en categorías ordenadas que se presenten como cuadrículas de iconos o colecciones de badges.
-* **RF-05.3: Resumen Visual de Proyecto.** Cada card de proyecto debe mostrar nombre, resumen, espacio para imagen y porcentaje de progreso.
-* **RF-05.4: Detalle Expandible.** La expansión de un proyecto debe mostrar tecnologías, estado, repositorio, prototipo y una narrativa detallada de su desarrollo.
-* **RF-05.5: Narrativa Asistida.** El sistema debe generar contenido técnico estructurado ES/EN a partir de README, documentación e imágenes descritas, mantener trazabilidad al commit y exigir revisión antes de publicar. No debe publicar HTML arbitrario producido por IA.
-* **RF-05.6: Imágenes E Hitos.** Cada proyecto debe admitir portada/galería con textos alternativos y descripciones ES/EN e hitos ponderados con evidencia opcional. Con hitos, el progreso se calcula por peso completado; sin hitos conserva el porcentaje manual.
+* **RF-05.3: Resumen Visual de Proyecto.** Cada card debe mostrar nombre, resumen, tecnologías y una portada del repositorio cuando exista. Solo mostrará porcentaje cuando existan hitos medibles.
+* **RF-05.4: Modal De Proyecto.** Al activar la card se abrirá un modal con detalle, galería, tecnologías, estado, enlaces, hitos y consultas. Debe controlar el foco, cerrar con Escape/botón, devolver el foco al disparador y adaptarse a pantalla móvil y movimiento reducido.
+* **RF-05.5: Publicación Automática.** Vincular un repositorio debe iniciar descubrimiento y generación de nombres y contenido ES/EN. Las actualizaciones válidas deben publicarse junto con sus fuentes e imágenes sin aprobación manual; ante fallos se conservará la publicación anterior. No se publicará HTML generado arbitrario.
+* **RF-05.6: Imágenes E Hitos Del Repositorio.** Las imágenes se descubrirán en carpetas por propósito (`interface`, `features`, `diagrams`, `results`), con captions ES/EN derivados de análisis visual directo. Los binarios permanecen en GitHub. Los hitos proceden de un archivo con evidencia en el mismo commit o de GitHub Milestones; no se rellenan en el CMS ni se inventan porcentajes.
 * **RF-05.7: Sincronización Recuperable.** La recepción debe persistir y deduplicar entregas antes de responder. El procesamiento debe usar leases, reintentos limitados, rechazo de fuentes/configuraciones obsoletas y controles administrativos de estado y recuperación.
 * **RF-05.8: Consulta Por Proyecto.** Las preguntas deben recuperar únicamente el corpus publicado de un proyecto visible y habilitado, citar fuentes fijadas al commit y abstenerse cuando no hay evidencia. Deben existir límites de consumo y no se persistirá conversación en este módulo.
 
@@ -56,7 +56,7 @@ Mi portafolio es una aplicación fullstack desarrollada en Next.js. Su alcance a
 ### 2.3 Módulo de Telemetría por Webhooks
 * **RF-11: Recepción de Eventos.** Debe existir un endpoint `/api/webhooks/github` para recibir eventos de GitHub.
 * **RF-12: Procesamiento Semántico.** El sistema debe generar resúmenes y embeddings mediante Google Gemini.
-* **RF-13: Persistencia Vectorial.** El sistema debe persistir embeddings de fuentes públicas en Supabase con pgvector y registrar sincronizaciones exitosas. El estado editorial y los hitos no se infieren automáticamente de commits. El primer corpus usa `gemini-embedding-001` a 768 dimensiones; cambios de modelo/dimensión requieren reindexación.
+* **RF-13: Persistencia Vectorial.** El sistema debe persistir embeddings de fuentes públicas y observaciones visuales en Supabase con pgvector. Estado y progreso se derivan de metadatos e hitos documentados, no de cantidad de commits. El corpus usa `gemini-embedding-001` a 768 dimensiones; cambios de modelo/dimensión requieren reindexación.
 
 ### 2.4 Módulo de Autenticación y Panel de Administración
 * **RF-14: Autenticación OAuth.** El sistema debe integrar el inicio de sesión exclusivamente mediante GitHub y usar sesiones JWT cifradas sin almacenar contraseñas.

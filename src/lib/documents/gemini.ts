@@ -47,7 +47,7 @@ function canRetryWithAnotherKey(status: number): boolean {
   return RETRYABLE_STATUSES.has(status) || status >= 500;
 }
 
-function getDocumentGenerationModel() {
+export function getDocumentGenerationModel() {
   return process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL;
 }
 
@@ -57,14 +57,19 @@ export async function generateStructuredDocument<T>({
   responseSchema,
   validator,
   domain = "documents",
+  images = [],
 }: {
   instruction: string;
   source: unknown;
   responseSchema: Record<string, unknown>;
   validator: ZodType<T>;
   domain?: "documents" | "projects";
+  images?: Array<{ label: string; mimeType: "image/webp"; data: string }>;
 }): Promise<{ content: T; model: string }> {
   const model = getDocumentGenerationModel();
+  if (images.length > 8 || images.some((image) => image.data.length > 1_400_000)) {
+    throw new DocumentGenerationError("Image budget exceeded");
+  }
   const requestBody = JSON.stringify({
     systemInstruction: {
       parts: [
@@ -75,11 +80,18 @@ export async function generateStructuredDocument<T>({
         },
       ],
     },
-    contents: [{ role: "user", parts: [{ text: JSON.stringify(source) }] }],
+    contents: [{ role: "user", parts: [
+      { text: JSON.stringify(source) },
+      ...images.flatMap((image) => [
+        { text: `Source image: ${image.label}` },
+        { inlineData: { mimeType: image.mimeType, data: image.data } },
+      ]),
+    ] }],
     generationConfig: {
       responseMimeType: "application/json",
       responseJsonSchema: responseSchema,
       temperature: 0.2,
+      ...(domain === "projects" ? { maxOutputTokens: 8_192 } : {}),
     },
   });
   const failures: string[] = [];

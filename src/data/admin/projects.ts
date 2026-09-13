@@ -3,7 +3,6 @@ import "server-only";
 import { Locale, ProjectStatus } from "@/generated/prisma/client";
 import { requireAdmin } from "@/lib/auth/authorization";
 import { getPrisma } from "@/lib/prisma";
-import { milestoneProgress, milestonesSchema } from "@/lib/projects/schemas";
 
 export type AdminProject = {
   id: string;
@@ -33,7 +32,7 @@ export async function getAdminProjects(): Promise<AdminProject[]> {
   await requireAdmin();
   const records = await getPrisma().project.findMany({
     orderBy: [{ order: "asc" }, { createdAt: "desc" }],
-    include: { translations: true, integration: { select: { milestones: true } } },
+    include: { translations: true, integration: { select: { projectId: true } } },
   });
   return records.map((record) => {
     const es = record.translations.find(({ locale }) => locale === Locale.ES);
@@ -53,7 +52,7 @@ export async function getAdminProjects(): Promise<AdminProject[]> {
       status: record.status,
       progressPct: record.progressPct,
       integrationManaged: Boolean(record.integration),
-      milestoneManaged: Boolean(record.integration && milestonesSchema.parse(record.integration.milestones).length),
+      milestoneManaged: Boolean(record.integration),
       es: { name: es.name, summary: es.summary, detailedInfo: es.detailedInfo },
       en: { name: en.name, summary: en.summary, detailedInfo: en.detailedInfo },
     };
@@ -64,10 +63,9 @@ export async function saveAdminProject(input: AdminProjectInput) {
   await requireAdmin();
   return getPrisma().$transaction(async (tx) => {
     let id = input.id;
-    const integration = id ? await tx.projectIntegration.findUnique({ where: { projectId: id }, include: { project: { select: { repositoryFullName: true } } } }) : null;
-    // Repository binding and weighted progress are edited in the integration panel.
-    if (integration && input.repositoryFullName !== integration.project.repositoryFullName) return null;
-    const weightedProgress = integration ? milestoneProgress(milestonesSchema.parse(integration.milestones)) : null;
+    const integration = id ? await tx.projectIntegration.findUnique({ where: { projectId: id }, select: { projectId: true } }) : null;
+    // Connected projects are published exclusively by the repository worker.
+    if (integration) return null;
     const data = {
       slug: input.slug,
       repositoryFullName: input.repositoryFullName || null,
@@ -78,7 +76,7 @@ export async function saveAdminProject(input: AdminProjectInput) {
       showOnCv: input.showOnCv,
       order: input.order,
       status: ProjectStatus[input.status],
-      progressPct: weightedProgress ?? input.progressPct,
+      progressPct: input.progressPct,
     };
     if (id && input.updatedAt) {
       const result = await tx.project.updateMany({

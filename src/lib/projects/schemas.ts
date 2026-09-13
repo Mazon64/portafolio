@@ -4,6 +4,9 @@ export const EMBEDDING_MODEL = "gemini-embedding-001";
 export const EMBEDDING_DIMENSIONS = 768;
 export const MAX_CHUNKS = 64;
 export const MAX_SOURCE_BYTES = 120_000;
+export const MEDIA_ROOT = "docs/portfolio/images/";
+export const MEDIA_CATEGORIES = ["interface", "features", "diagrams", "results"] as const;
+export const VISION_POLICY_VERSION = "1";
 
 export const localizedText = z.object({
   es: z.string().trim().min(1).max(2_000),
@@ -18,7 +21,7 @@ export const assetUrlSchema = z.string().trim().max(2_000).refine((value) => {
     const url = new URL(value);
     return url.protocol === "https:" && url.hostname === "raw.githubusercontent.com" &&
       !url.username && !url.password && !url.port && !url.search && !url.hash &&
-      /^\/[\w.-]+\/[\w.-]+\/[a-f0-9]{40}\/[^?]+\.(png|jpg|jpeg|webp)$/.test(url.pathname);
+      /^\/[\w.-]+\/[\w.-]+\/[a-f0-9]{40}\/[^?]+\.(png|jpg|jpeg|webp)$/i.test(url.pathname);
   } catch { return false; }
 }, "Use a local project image or a commit-pinned GitHub PNG/JPEG/WebP.");
 export const assetsSchema = z.array(z.object({
@@ -26,6 +29,19 @@ export const assetsSchema = z.array(z.object({
   alt: localizedText,
   caption: localizedText,
 })).max(8);
+export const repositoryAssetSchema = z.object({
+  url: assetUrlSchema,
+  sourcePath: z.string().max(240),
+  blobSha: z.string().regex(/^[a-f0-9]{40}$/),
+  category: z.enum(MEDIA_CATEGORIES),
+  width: z.number().int().positive().max(20_000).optional(),
+  height: z.number().int().positive().max(20_000).optional(),
+  alt: localizedText,
+  caption: localizedText,
+  analysisModel: z.string().max(200),
+  analysisPolicy: z.string().max(20),
+});
+export const repositoryAssetsSchema = z.array(repositoryAssetSchema).max(8);
 export const milestonesSchema = z.array(z.object({
   id: z.string().regex(/^[a-z0-9-]{1,80}$/),
   title: localizedText,
@@ -42,11 +58,7 @@ export const integrationSchema = z.object({
   projectId: z.uuid(),
   updatedAt: z.union([z.literal(""), z.iso.datetime()]),
   repositoryFullName: z.string().regex(/^[\w.-]+\/[\w.-]+$/).max(240),
-  branch: z.string().min(1).max(120).regex(/^[\w./-]+$/).refine((x) => !x.includes("..")),
-  sourcePaths: z.array(sourcePathSchema).min(1).max(12).refine((x) => new Set(x).size === x.length),
   enabled: z.boolean(),
-  assets: assetsSchema,
-  milestones: milestonesSchema,
 });
 
 const narrativeLocaleSchema = z.object({
@@ -61,6 +73,23 @@ export const narrativeSchema = z.object({ es: narrativeLocaleSchema, en: narrati
 export type ProjectNarrative = z.infer<typeof narrativeSchema>;
 export type ProjectAssets = z.infer<typeof assetsSchema>;
 export type ProjectMilestones = z.infer<typeof milestonesSchema>;
+export const projectSnapshotSchema = narrativeSchema.extend({
+  automatic: z.literal(true),
+  names: localizedText,
+  assets: repositoryAssetsSchema,
+  milestones: milestonesSchema,
+  metadata: z.object({
+    repositoryId: z.string(),
+    repositoryFullName: z.string(),
+    branch: z.string(),
+    demoUrl: z.string().nullable(),
+    techStack: z.array(z.string().min(1).max(80)).max(20),
+    status: z.enum(["IN_PROGRESS", "COMPLETED", "ARCHIVED"]),
+    sourcePaths: z.array(z.string()),
+  }),
+});
+export type ProjectSnapshot = z.infer<typeof projectSnapshotSchema>;
+export type RepositoryAsset = z.infer<typeof repositoryAssetSchema>;
 
 export function milestoneProgress(items: ProjectMilestones): number | null {
   if (!items.length) return null;

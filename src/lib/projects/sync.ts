@@ -1,11 +1,14 @@
 import "server-only";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { revalidateTag } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { projectAiEnabled, projectIntegrationEnabled } from "./configuration";
 import { embedTexts, generateProjectNarrative } from "./ai";
-import { getBranchSha, getProjectSources, getRepository } from "./github";
-import { assetsSchema, EMBEDDING_MODEL, milestonesSchema } from "./schemas";
+import { getBranchSha, getRepository } from "./github";
+import { discoverProject } from "./discovery";
+import { analyzeRepositoryImages } from "./media";
+import { EMBEDDING_MODEL, milestoneProgress, narrativeText, projectSnapshotSchema, MAX_CHUNKS } from "./schemas";
 
 const LEASE_MS = 10 * 60_000;
 const MAX_ATTEMPTS = 5;
@@ -36,6 +39,25 @@ export async function enqueueProjectSync(projectId: string, deliveryId: string, 
   });
 }
 
+export async function reconcileProjectQueue() {
+  if (!projectAiEnabled()) return { status: "disabled", processed: 0 };
+  const integrations = await getPrisma().projectIntegration.findMany({ where: { enabled: true }, select: { projectId: true }, take: 20,
+    orderBy: [{ project: { lastTelemetryAt: { sort: "asc", nulls: "first" } } }, { projectId: "asc" }],
+  });
+  for (const config of integrations) {
+    const pending = await getPrisma().projectSyncJob.count({ where: { projectId: config.projectId, status: { in: ["QUEUED", "PROCESSING"] } } });
+    if (!pending) await enqueueProjectSync(config.projectId, `reconcile:${config.projectId}:${Math.floor(Date.now() / 86400_000)}`, null);
+  }
+  const deadline = Date.now() + 180_000;
+  let processed = 0;
+  while (processed < 3 && Date.now() < deadline) {
+    const result = await processProjectSync();
+    if (result.status === "idle" || result.status === "disabled") break;
+    processed++;
+  }
+  return { status: "processed", processed };
+}
+
 async function claimJob(projectId?: string) {
   const now = new Date();
   // Reclaim crashed workers. Their old lease token cannot commit after takeover.
@@ -44,19 +66,19 @@ async function claimJob(projectId?: string) {
     data: { status: "FAILED", error: "RETRIES_EXHAUSTED", finishedAt: now, leaseToken: null, leaseUntil: null },
   });
   for (let attempt = 0; attempt < 3; attempt++) {
-  const job = await getPrisma().projectSyncJob.findFirst({
-    where: { projectId, attempts: { lt: MAX_ATTEMPTS }, OR: [
-      { status: "QUEUED", availableAt: { lte: now } },
-      { status: "PROCESSING", leaseUntil: { lt: now } },
-    ] }, orderBy: { createdAt: "asc" },
-  });
-  if (!job) return null;
-  const leaseToken = randomUUID();
-  const result = await getPrisma().projectSyncJob.updateMany({
-    where: { id: job.id, status: job.status, attempts: job.attempts, leaseToken: job.leaseToken },
-    data: { status: "PROCESSING", leaseToken, leaseUntil: new Date(now.getTime() + LEASE_MS), attempts: { increment: 1 }, error: null },
-  });
-  if (result.count) return { ...job, attempts: job.attempts + 1, leaseToken };
+    const job = await getPrisma().projectSyncJob.findFirst({
+      where: { projectId, attempts: { lt: MAX_ATTEMPTS }, OR: [
+        { status: "QUEUED", availableAt: { lte: now } },
+        { status: "PROCESSING", leaseUntil: { lt: now } },
+      ] }, orderBy: { createdAt: "asc" },
+    });
+    if (!job) return null;
+    const leaseToken = randomUUID();
+    const result = await getPrisma().projectSyncJob.updateMany({
+      where: { id: job.id, status: job.status, attempts: job.attempts, leaseToken: job.leaseToken },
+      data: { status: "PROCESSING", leaseToken, leaseUntil: new Date(now.getTime() + LEASE_MS), attempts: { increment: 1 }, error: null },
+    });
+    if (result.count) return { ...job, attempts: job.attempts + 1, leaseToken };
   }
   return null;
 }
@@ -73,13 +95,22 @@ export async function processProjectSync(projectId?: string) {
       return { status: "superseded" };
     }
     const repository = await getRepository(config.repositoryId);
-    const sha = await getBranchSha(repository, config.branch);
+    const sha = await getBranchSha(repository, repository.default_branch);
     // Out-of-order webhook deliveries never replace a newer branch snapshot.
     if (job.requestedSha && job.requestedSha !== sha) {
       await finishSuperseded(job.id, job.leaseToken);
       return { status: "superseded" };
     }
-    const chunks = await getProjectSources(repository, sha, config.sourcePaths);
+    const discovered = await discoverProject(repository, sha);
+    const previous = await getPrisma().projectKnowledge.findFirst({ where: { projectId: job.projectId, status: "PUBLISHED" }, select: { narrative: true } });
+    const cachedSnapshot = projectSnapshotSchema.safeParse(previous?.narrative);
+    failure = "IMAGE_ANALYSIS_FAILED";
+    const assets = await analyzeRepositoryImages(repository, sha, discovered.images, cachedSnapshot.success ? cachedSnapshot.data.assets : []);
+    const chunks = [...discovered.chunks, ...assets.map((asset) => {
+      const content = `Visual observation, not proof of implementation.\nES: ${asset.caption.es}\nEN: ${asset.caption.en}`;
+      return { path: asset.sourcePath, ordinal: 0, content, sourceHash: createHash("sha256").update(`${asset.blobSha}:${content}`).digest("hex"), sourceUrl: `https://github.com/${repository.full_name}/blob/${sha}/${asset.sourcePath.split("/").map(encodeURIComponent).join("/")}` };
+    })];
+    if (chunks.length > MAX_CHUNKS) throw new Error("Corpus exceeds chunk budget");
     const cached = await getPrisma().$queryRaw<Array<{ path: string; ordinal: number; sourceHash: string; embedding: string }>>(Prisma.sql`
       SELECT c.path, c.ordinal, c."sourceHash", c.embedding::text AS embedding
       FROM "ProjectKnowledgeChunk" c JOIN "ProjectKnowledge" k ON k.id = c."knowledgeId"
@@ -94,11 +125,17 @@ export async function processProjectSync(projectId?: string) {
       missing.forEach(({ i }, index) => { vectors[i] = embedded[index]; });
     }
     const generated = await generateProjectNarrative(chunks, {
-      assets: assetsSchema.parse(config.assets), milestones: milestonesSchema.parse(config.milestones),
+      assets, milestones: discovered.milestones, repositoryName: repository.name || repository.full_name.split("/")[1],
+    });
+    const titles = new Map(generated.content.milestoneTitles.map((item) => [item.id, item.title]));
+    if (titles.size !== discovered.milestones.length || discovered.milestones.some((item) => !titles.has(item.id))) throw new Error("Milestone identities changed during generation");
+    const snapshot = projectSnapshotSchema.parse({
+      ...generated.content.narrative, automatic: true, names: generated.content.names, assets,
+      milestones: discovered.milestones.map((item) => ({ ...item, title: titles.get(item.id)! })), metadata: discovered.metadata,
     });
     // Check branch again after external calls, before saving the pending draft.
     failure = "SOURCE_UNAVAILABLE";
-    if (await getBranchSha(repository, config.branch) !== sha) {
+    if (await getBranchSha(await getRepository(config.repositoryId), repository.default_branch) !== sha) {
       await finishSuperseded(job.id, job.leaseToken);
       return { status: "superseded" };
     }
@@ -111,11 +148,13 @@ export async function processProjectSync(projectId?: string) {
         data: { status: "SUCCEEDED", finishedAt: new Date(), leaseUntil: null, leaseToken: null },
       });
       if (!owned.count) return false;
-      await tx.projectKnowledge.deleteMany({ where: { projectId: job.projectId, status: "DRAFT" } });
+      // Publish the entire generated snapshot in one transaction, never a manual draft.
+      await tx.projectKnowledge.deleteMany({ where: { projectId: job.projectId } });
       const knowledge = await tx.projectKnowledge.create({ data: {
+        status: "PUBLISHED", publishedAt: new Date(),
         projectId: job.projectId, commitSha: sha, repositoryFullName: repository.full_name,
         configurationUpdatedAt: config.updatedAt, projectUpdatedAt: config.project.updatedAt,
-        narrative: generated.content, generationModel: generated.model, embeddingModel: EMBEDDING_MODEL,
+        narrative: snapshot, generationModel: generated.model, embeddingModel: EMBEDDING_MODEL,
       } });
       for (const [index, chunk] of chunks.entries()) {
         await tx.$executeRaw(Prisma.sql`INSERT INTO "ProjectKnowledgeChunk"
@@ -123,11 +162,24 @@ export async function processProjectSync(projectId?: string) {
           VALUES (${randomUUID()}::uuid, ${knowledge.id}::uuid, ${chunk.path}, ${chunk.ordinal},
           ${chunk.content}, ${chunk.sourceHash}, ${chunk.sourceUrl}, ${vectors[index]!}::extensions.vector)`);
       }
-      // Sync metadata is distinct from editorial updatedAt and progress.
-      await tx.$executeRaw(Prisma.sql`UPDATE "Project" SET "lastTelemetryAt" = now() WHERE id = ${job.projectId}::uuid`);
+      for (const locale of ["ES", "EN"] as const) {
+        const key = locale === "ES" ? "es" : "en";
+        await tx.projectTranslation.upsert({ where: { projectId_locale: { projectId: job.projectId, locale } },
+          create: { projectId: job.projectId, locale, name: snapshot.names[key], summary: snapshot[key].summary, detailedInfo: narrativeText(snapshot, key) },
+          update: { name: snapshot.names[key], summary: snapshot[key].summary, detailedInfo: narrativeText(snapshot, key) },
+        });
+      }
+      await tx.project.update({ where: { id: job.projectId }, data: {
+        repositoryFullName: repository.full_name, repositoryUrl: `https://github.com/${repository.full_name}`,
+        demoUrl: snapshot.metadata.demoUrl, techStack: snapshot.metadata.techStack, status: snapshot.metadata.status,
+        progressPct: milestoneProgress(snapshot.milestones) ?? 0, lastTelemetryAt: new Date(), showOnPortfolio: true,
+      } });
       return true;
     });
     if (!saved) await finishSuperseded(job.id, job.leaseToken);
+    else {
+      try { revalidateTag("portfolio", { expire: 0 }); } catch { /* The committed snapshot remains valid; the cache also has a finite TTL. */ }
+    }
     return { status: saved ? "succeeded" : "superseded" };
   } catch {
     const exhausted = job.attempts >= MAX_ATTEMPTS;
