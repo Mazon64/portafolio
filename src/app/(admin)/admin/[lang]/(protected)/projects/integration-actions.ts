@@ -6,9 +6,9 @@ import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/authorization";
 import { projectIntegrationEnabled } from "@/lib/projects/configuration";
-import { integrationSchema, narrativeSchema } from "@/lib/projects/schemas";
+import { integrationSchema } from "@/lib/projects/schemas";
 import { enqueueProjectSync, processProjectSync } from "@/lib/projects/sync";
-import { discardProjectKnowledge, initializePortfolioPilot, publishProjectKnowledge, retryProjectSync, saveProjectIntegration } from "@/data/admin/project-integration";
+import { connectProjectRepository, initializePortfolioPilot, retryProjectSync, saveProjectIntegration } from "@/data/admin/project-integration";
 
 export type ProjectIntegrationState = {
   status: "idle" | "success" | "queued" | "conflict" | "invalid" | "disabled" | "error" | "cache-error";
@@ -29,10 +29,18 @@ export async function projectIntegrationAction(_state: ProjectIntegrationState, 
   try { await requireAdmin(); } catch { return { status: "disabled" }; }
   if (!projectIntegrationEnabled()) return { status: "disabled" };
   const operation = data.get("operation");
-  if (operation === "pilot") {
+  if (operation === "pilot" || operation === "connect") {
     try {
-      const projectId = await initializePortfolioPilot();
-      return { status: refreshProjects() ? "success" : "cache-error", projectId };
+      const fullName = String(data.get("repositoryFullName") ?? "").trim().replace(/^https:\/\/github\.com\//i, "").replace(/\/+$/, "").replace(/\.git$/, "");
+      if (operation === "connect" && !/^[\w.-]+\/[\w.-]+$/.test(fullName)) return { status: "invalid" };
+      const projectId = operation === "pilot" ? await initializePortfolioPilot() : await connectProjectRepository(fullName);
+      let queued = true;
+      try {
+        await enqueueProjectSync(projectId, `connect:${randomUUID()}`, null);
+        after(async () => { await processProjectSync(projectId); });
+      } catch { queued = false; }
+      const refreshed = refreshProjects();
+      return { status: queued && refreshed ? "success" : "cache-error", projectId };
     } catch { return { status: "error" }; }
   }
   const id = z.uuid().safeParse(data.get("projectId"));
@@ -42,13 +50,19 @@ export async function projectIntegrationAction(_state: ProjectIntegrationState, 
       let input;
       try { input = integrationSchema.parse({
         projectId: id.data, updatedAt: data.get("updatedAt"), repositoryFullName: data.get("repositoryFullName"),
-        branch: data.get("branch"), enabled: data.get("enabled") === "on",
-        sourcePaths: String(data.get("sourcePaths") ?? "").split(/\r?\n/).map((s) => s.trim()).filter(Boolean),
-        assets: JSON.parse(String(data.get("assets"))), milestones: JSON.parse(String(data.get("milestones"))),
+        enabled: data.get("enabled") === "on",
       }); } catch { return { status: "invalid" }; }
       const saved = await saveProjectIntegration(input);
       if (!saved) return { status: "conflict" };
-      return { status: refreshProjects() ? "success" : "cache-error", configurationUpdatedAt: saved.updatedAt };
+      let queued = true;
+      if (input.enabled) {
+        try {
+          await enqueueProjectSync(id.data, `configure:${randomUUID()}`, null);
+          after(async () => { await processProjectSync(id.data); });
+        } catch { queued = false; }
+      }
+      const refreshed = refreshProjects();
+      return { status: queued && refreshed ? "success" : "cache-error", configurationUpdatedAt: saved.updatedAt };
     } else if (operation === "sync") {
       await enqueueProjectSync(id.data, `manual:${randomUUID()}`, null);
       after(async () => { await processProjectSync(id.data); });
@@ -61,15 +75,6 @@ export async function projectIntegrationAction(_state: ProjectIntegrationState, 
       if (!jobId.success) return { status: "invalid" };
       if (!(await retryProjectSync(id.data, jobId.data))) return { status: "conflict" };
       after(async () => { await processProjectSync(id.data); });
-    } else if (operation === "publish" || operation === "discard") {
-      const knowledgeId = z.uuid().safeParse(data.get("knowledgeId"));
-      if (!knowledgeId.success) return { status: "invalid" };
-      if (operation === "publish") {
-        let narrative;
-        try { narrative = narrativeSchema.parse(JSON.parse(String(data.get("narrative")))); }
-        catch { return { status: "invalid" }; }
-        if (!(await publishProjectKnowledge(id.data, knowledgeId.data, narrative))) return { status: "conflict" };
-      } else if (!(await discardProjectKnowledge(id.data, knowledgeId.data))) return { status: "conflict" };
     } else { return { status: "invalid" }; }
     return { status: refreshProjects() ? "success" : "cache-error" };
   } catch { return { status: "error" }; }

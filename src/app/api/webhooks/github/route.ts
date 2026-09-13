@@ -19,21 +19,24 @@ export async function POST(request: Request) {
   }
   const event = request.headers.get("x-github-event");
   if (event === "ping") return Response.json({ status: "pong" });
-  if (event !== "push") return Response.json({ status: "ignored" }, { status: 202 });
+  if (!["push", "repository", "milestone", "issues", "release"].includes(event ?? "")) return Response.json({ status: "ignored" }, { status: 202 });
   const delivery = z.uuid().safeParse(request.headers.get("x-github-delivery"));
   const parsed = z.object({
-    ref: z.string().max(200), after: z.string().regex(/^[a-f0-9]{40}$/), deleted: z.boolean(),
-    repository: z.object({ id: z.number().int().positive(), private: z.boolean() }),
+    ref: z.string().max(200).optional(), after: z.string().regex(/^[a-f0-9]{40}$/).optional(), deleted: z.boolean().optional(),
+    repository: z.object({ id: z.number().int().positive(), private: z.boolean(), default_branch: z.string().optional() }),
+    issue: z.object({ milestone: z.unknown().optional() }).optional(), milestone: z.unknown().optional(),
   });
   let payload: z.infer<typeof parsed>;
   try { payload = parsed.parse(JSON.parse(body.toString("utf8"))); }
   catch { return Response.json({ status: "invalid" }, { status: 400 }); }
   if (!delivery.success) return Response.json({ status: "invalid" }, { status: 400 });
+  if (event === "push" && (!payload.ref || !payload.after)) return Response.json({ status: "invalid" }, { status: 400 });
+  if (event === "issues" && !payload.issue?.milestone && !payload.milestone) return Response.json({ status: "ignored" }, { status: 202 });
   if (payload.deleted || payload.repository.private) return Response.json({ status: "ignored" }, { status: 202 });
   try {
     const config = await getPrisma().projectIntegration.findUnique({ where: { repositoryId: String(payload.repository.id) } });
-    if (!config?.enabled || payload.ref !== `refs/heads/${config.branch}`) return Response.json({ status: "ignored" }, { status: 202 });
-    const result = await enqueueProjectSync(config.projectId, `github:${delivery.data}`, payload.after);
+    if (!config?.enabled || (event === "push" && payload.ref !== `refs/heads/${payload.repository.default_branch ?? config.branch}`)) return Response.json({ status: "ignored" }, { status: 202 });
+    const result = await enqueueProjectSync(config.projectId, `github:${delivery.data}`, event === "push" ? payload.after! : null);
     if (!result.duplicate) after(async () => { await processProjectSync(config.projectId); });
     return Response.json({ status: result.duplicate ? "duplicate" : "accepted" }, { status: 202 });
   } catch {

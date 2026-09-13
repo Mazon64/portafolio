@@ -1,40 +1,35 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-const m = vi.hoisted(() => ({ auth: vi.fn(), config: vi.fn(), draft: vi.fn(), remove: vi.fn(), update: vi.fn(), translation: vi.fn(), projectUpdate: vi.fn(), repository: vi.fn() }));
+const m = vi.hoisted(() => ({ auth: vi.fn(), config: vi.fn(), createConfig: vi.fn(), findProject: vi.fn(), findSlug: vi.fn(), createProject: vi.fn(), repository: vi.fn() }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/auth/authorization", () => ({ requireAdmin: m.auth }));
 vi.mock("@/lib/projects/github", () => ({ getRepository: m.repository }));
-vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({ projectIntegration: { findUnique: m.config } }) }));
+vi.mock("@/lib/prisma", () => ({ getPrisma: vi.fn() }));
 vi.mock("@/lib/projects/sync", () => ({ serializable: async (fn: (tx: unknown) => unknown) => fn({
-  projectKnowledge: { findFirst: m.draft, deleteMany: m.remove, update: m.update },
-  projectIntegration: { findUnique: m.config }, project: { update: m.projectUpdate }, projectTranslation: { update: m.translation },
+  projectIntegration: { findUnique: m.config, create: m.createConfig },
+  project: { findFirst: m.findProject, findUnique: m.findSlug, create: m.createProject },
 }) }));
-import { publishProjectKnowledge } from "./project-integration";
-const date = new Date("2026-09-01T00:00:00Z");
-const content = { es: { summary: "Resumen del proyecto", problem: "Problema", solution: "Solución", architecture: "Arquitectura", decisions: "Decisiones", results: "Resultados" }, en: { summary: "Project summary", problem: "Problem", solution: "Solution", architecture: "Architecture", decisions: "Decisions", results: "Results" } };
+import { connectProjectRepository } from "./project-integration";
 beforeEach(() => {
-  vi.clearAllMocks(); vi.stubEnv("CMS_WRITES_ENABLED", "true"); vi.stubEnv("PROJECT_INTEGRATION_ENABLED", "true"); vi.stubEnv("VERCEL_ENV", "production");
+  vi.resetAllMocks(); vi.stubEnv("CMS_WRITES_ENABLED", "true"); vi.stubEnv("PROJECT_INTEGRATION_ENABLED", "true"); vi.stubEnv("VERCEL_ENV", "production");
   m.auth.mockResolvedValue({ githubId: "1" });
-  m.repository.mockResolvedValue({ id: 42, private: false });
-  m.config.mockResolvedValue({ repositoryId: "42", enabled: true, updatedAt: date, project: { updatedAt: date } });
-  m.draft.mockResolvedValue({ id: "draft", configurationUpdatedAt: date, projectUpdatedAt: date });
+  m.repository.mockResolvedValue({ id: 42, name: "repo", full_name: "owner/repo", default_branch: "main", description: "Description" });
+  m.config.mockResolvedValue(null); m.findProject.mockResolvedValue(null); m.findSlug.mockResolvedValue(null); m.createProject.mockResolvedValue({ id: "project" });
 });
 afterEach(() => vi.unstubAllEnvs());
-describe("project corpus publication", () => {
-  it("blocks Preview before provider or persistence calls", async () => {
+describe("automatic project connection", () => {
+  it("blocks Preview before reading repository or writing data", async () => {
     vi.stubEnv("VERCEL_ENV", "preview");
-    await expect(publishProjectKnowledge("project", "draft", content)).rejects.toThrow("disabled");
-    expect(m.repository).not.toHaveBeenCalled(); expect(m.remove).not.toHaveBeenCalled();
+    await expect(connectProjectRepository("owner/repo")).rejects.toThrow("disabled");
+    expect(m.repository).not.toHaveBeenCalled(); expect(m.createProject).not.toHaveBeenCalled();
   });
-  it("rejects an editorial change since generation before deleting the published corpus", async () => {
-    m.draft.mockResolvedValue({ id: "draft", configurationUpdatedAt: date, projectUpdatedAt: new Date(0) });
-    expect(await publishProjectKnowledge("project", "draft", content)).toBe(false);
-    expect(m.remove).not.toHaveBeenCalled(); expect(m.translation).not.toHaveBeenCalled();
+  it("reuses an existing repository binding without overwriting its content", async () => {
+    m.config.mockResolvedValue({ projectId: "existing" });
+    expect(await connectProjectRepository("owner/repo")).toBe("existing");
+    expect(m.createProject).not.toHaveBeenCalled(); expect(m.createConfig).not.toHaveBeenCalled();
   });
-  it("publishes both languages and the corpus together after checking public repository access", async () => {
-    expect(await publishProjectKnowledge("project", "draft", content)).toBe(true);
-    expect(m.repository).toHaveBeenCalledWith("42");
-    expect(m.remove).toHaveBeenCalledWith({ where: { projectId: "project", status: "PUBLISHED" } });
-    expect(m.translation).toHaveBeenCalledTimes(2);
-    expect(m.projectUpdate).toHaveBeenCalledWith({ where: { id: "project" }, data: { showOnPortfolio: true } });
+  it("creates an initially hidden project using only repository metadata", async () => {
+    expect(await connectProjectRepository("owner/repo")).toBe("project");
+    expect(m.createProject).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ slug: "repo", showOnPortfolio: false, repositoryFullName: "owner/repo" }) }));
+    expect(m.createConfig).toHaveBeenCalledWith({ data: { projectId: "project", repositoryId: "42", branch: "main", sourcePaths: [], enabled: true } });
   });
 });

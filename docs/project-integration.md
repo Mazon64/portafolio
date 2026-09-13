@@ -1,165 +1,133 @@
-# Integración De Proyectos
+# Proyectos Automáticos
 
-## Alcance
+## Contrato
 
-La integración reúne ficha visual, GitHub, narrativa ES/EN revisable, hitos y RAG.
-El piloto es el repositorio público `Mazon64/portafolio`, rama `main`. Está activo
-en Production desde el 11 de septiembre de 2026, con ficha visible ES/EN, imágenes,
-hitos, sincronización y corpus publicado para RAG.
+Vincular un repositorio público basta para iniciar descubrimiento, generación ES/EN,
+análisis de imágenes, indexación y publicación. No se rellenan fichas, tecnologías,
+descripciones de imágenes o hitos en el CMS y no se aprueba cada actualización.
+El CMS administra la conexión, pausa, estado, reintentos y eliminación del proyecto.
+Los documentos profesionales (CV, ATS y cartas) conservan su flujo independiente.
 
-## Activación Verificada
+## Descubrimiento De Fuentes
 
-- Esquema promovido por PR #46 (`7fd772f`) y aplicado mediante el workflow protegido
-  [34610613317](https://github.com/Mazon64/portafolio/actions/runs/34610613317).
-- Aplicación promovida por PR #47 (`bc04759`). Los flags de integración/RAG están
-  activos en Production y desactivados en Preview.
-- Piloto `portafolio` vinculado al ID de repositorio `1348588167`. Webhook `push`
-  registrado; el `ping` firmado respondió `200`.
-- Primera sincronización real: un intento exitoso y 30 fragmentos de documentación.
-  La narrativa se revisó editorialmente y el corpus se publicó junto con ambas
-  traducciones. Sus fuentes iniciales están fijadas al commit `bc04759`.
-- Consultas reales ES/EN devolvieron respuestas con citas. Una pregunta sobre
-  clientes de pago e ingresos no documentados devolvió abstención sin fuentes.
-- La ficha se encuentra en `/es#projects` y `/en#projects`. Las cinco metas iniciales
-  del piloto están verificadas; el estado editorial conserva `IN_PROGRESS` porque
-  el portafolio continúa evolucionando. El chatbot global sigue siendo futuro.
+- GitHub aporta ID estable, nombre, descripción, rama predeterminada, homepage,
+  lenguajes y estado archivado. El slug se asigna una sola vez para conservar identidad.
+- Se detectan README y documentación de `docs/`, con prioridad para arquitectura,
+  SRS, API y la guía de integración. No se exige seleccionar rutas manualmente.
+- Manifiestos como `package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`,
+  `requirements.txt`, `pom.xml` y `composer.json` aportan tecnologías declaradas.
+  Dockerfile y vercel.json aportan sus plataformas. Nunca se ejecuta código del repo.
+- Un árbol truncado o excesivo se rechaza. Se excluyen rutas ocultas, traversal,
+  symlinks y árboles de dependencias. Los blobs se leen por SHA, no por una rama móvil.
+- La selección está limitada a doce Markdown, ocho manifiestos y 64 fragmentos;
+  reserva espacio para metadatos, hitos e imágenes dentro de 120 KB de texto.
+  Archivos opcionales que exceden el presupuesto no se importan parcialmente.
 
-El procedimiento siguiente se conserva para nuevas instalaciones o proyectos.
+## Imágenes Por Propósito
 
-## Datos Y Publicación
+```text
+docs/portfolio/images/
+├── interface/   # Pantallas, navegación y composición de la interfaz.
+├── features/    # Uso y resultados de una funcionalidad; admite subcarpetas.
+├── diagrams/    # Arquitectura, flujos y modelos de datos.
+└── results/     # Informes, salidas y evidencia visual de resultados.
+```
 
-- `Project` / `ProjectTranslation`: contenido editorial público existente.
-- `ProjectIntegration`: ID estable de repositorio, rama, rutas Markdown permitidas,
-  imágenes, hitos, habilitación y timestamp de concurrencia.
-- `ProjectSyncJob`: entrega deduplicada, estado, intentos, próxima ejecución y lease.
-- `ProjectKnowledge`: un borrador reemplazable y un corpus publicado por proyecto.
-- `ProjectKnowledgeChunk`: texto, SHA-256 de fragmento, URL fijada al commit y vector.
-- `ProjectQueryQuota`: contadores temporales de consumo, sin preguntas ni respuestas.
+Se descubren hasta ocho PNG/JPEG/WebP de hasta 4 MB. `cover.*` o `portada.*` tienen
+prioridad; después se priorizan interfaz, funcionalidades, resultados y diagramas.
+La organización no depende del tamaño de pantalla. Los SVG de plantilla y el
+diagrama antiguo de `public/project-media` quedan fuera de esta selección.
+Sin imágenes válidas, la card usa composición de texto y tecnologías, sin portada
+inventada ni una foto de reemplazo. Diagramas SVG pueden exportarse a PNG/WebP.
 
-El CMS enlaza cada proyecto con `/admin/[lang]/projects/[id]`. La configuración
-se guarda con un timestamp observado; otro guardado concurrente produce conflicto.
-Las imágenes e hitos de un proyecto visible son contenido editorial: guardar su
-configuración los actualiza e invalida la caché. Cambiar la configuración descarta
-el borrador generado que ya no corresponde a ella.
+Sharp verifica formato y tamaño (20 megapíxeles como máximo), normaliza orientación,
+quita metadatos y prepara WebP de hasta 1280px y 1 MB para Gemini. Se envían los
+píxeles reales, junto con ruta, categoría y contexto del repositorio. Gemini devuelve
+texto alternativo y descripción visual ES/EN para los identificadores exactos.
+La imagen no demuestra por sí sola tecnología interna, rendimiento o finalización.
 
-Una sincronización prepara el borrador y sus embeddings juntos; no publica ni
-sobrescribe la ficha visible. El editor presenta las fuentes fijadas al commit y
-los campos de resumen, problema, solución, arquitectura, decisiones y resultados
-en ambos idiomas. **Publicar ficha y fuentes** actualiza las dos traducciones,
-hace visible el proyecto y reemplaza atómicamente el corpus público anterior.
-La publicación rechaza un proyecto o una configuración que cambió desde la
-generación. No hay contadores de versiones ni un historial permanente de corpus.
+Los archivos permanecen en el repositorio y se sirven por URL fijada al commit;
+`next/image` aporta optimización/caché. PostgreSQL guarda únicamente referencias,
+hashes, dimensiones y descripciones. El análisis se reutiliza si coinciden blob,
+modelo y política visual. Los textos visuales se indexan para RAG indicando que son
+observaciones visuales, no prueba de implementación técnica.
 
-## Imágenes E Hitos
+## Hitos Y Estado
 
-Hasta ocho imágenes ordenadas, con texto alternativo y descripción ES/EN. Se admiten
-recursos locales de `/project-media/` y PNG/JPEG/WebP de `raw.githubusercontent.com`
-fijados a un SHA completo de commit. `next/image` optimiza imágenes remotas desde
-el host permitido. No se añade un proveedor de almacenamiento ni se aceptan URLs
-arbitrarias. El piloto incluye un diagrama SVG original identificado como diagrama,
-no una captura de pantalla.
+La fuente prioritaria es `docs/portfolio/milestones.json`: ID, título ES/EN, peso,
+completado y ruta de evidencia dentro del mismo commit. Se verifica que esa ruta
+exista y no sea un symlink. El modelo puede traducir títulos, pero no añadir objetivos,
+cambiar pesos o inventar finalizaciones.
 
-Hasta veinte hitos con identificador, título ES/EN, peso 1–100, completado y enlace
-opcional de evidencia. El porcentaje es `round(peso completado / peso total * 100)`.
-Con hitos, ese resultado se conserva también al guardar desde el formulario básico
-del proyecto; sin ellos se utiliza el porcentaje manual. Los commits no modifican
-porcentajes ni declaran completado un hito. El estado editorial del proyecto sigue
-siendo manual. El registro `lastTelemetryAt` representa una sincronización exitosa.
+Sin ese archivo se importan Milestones de GitHub con pesos iguales y su estado
+abierto/cerrado. Sin objetivos medibles se oculta el porcentaje. Con ellos se calcula
+`round(peso completado / peso total * 100)`. El estado se deriva: archivado en GitHub
+→ `ARCHIVED`; todos los hitos completos → `COMPLETED`; otros casos → `IN_PROGRESS`.
+El porcentaje corresponde al alcance documentado, no al número de commits ni a
+una estimación del esfuerzo total. El piloto define ocho metas en el repositorio,
+con evidencias y el estado que corresponde a su verificación.
 
-## Recepción Y Procesamiento
+## Publicación Atómica
 
-`POST /api/webhooks/github` acepta `push` de la rama configurada. Verifica
-`X-Hub-Signature-256` sobre bytes originales, un límite de 1 MB y el ID de repositorio
-autorizado. `ping` firmado responde `pong`; otros eventos, ramas, eliminaciones de
-rama y repositorios privados se ignoran. El login OAuth del CMS no se reutiliza para
-leer repositorios. Esta primera integración importa únicamente repositorios públicos.
+`ProjectIntegration` conserva conexión y habilitación. Sus antiguos campos de
+imágenes/hitos/rutas no son entradas del nuevo flujo. El resultado generado se
+almacena en `ProjectKnowledge.narrative` como snapshot validado: ES/EN, nombres,
+metadatos, imágenes e hitos. Esta transición usa JSON existente y no requiere DDL.
 
-La entrega se persiste antes de responder `202`. `after()` inicia un intento de
-procesamiento después de la respuesta; la durabilidad reside en PostgreSQL, no en
-la continuación serverless. Cada proyecto admite hasta veinte trabajos activos.
-El ID de entrega es único mientras se conserva el trabajo; los trabajos exitosos
-o sustituidos se limpian después de treinta días.
+El worker verifica rama, configuración, proyecto y lease antes de publicar. En una
+transacción reemplaza el corpus anterior, inserta vectores, actualiza traducciones,
+tecnologías, demo, progreso y estado, y hace visible la ficha. Solo después invalida
+`portfolio`. No hay intervención de publicación manual ni historial numerado de
+versiones. Si falla una etapa, se conserva la publicación anterior y se reintenta.
+Un fallo de caché después del commit no convierte el guardado en fallo de persistencia.
 
-Un worker obtiene un lease de diez minutos con adquisición condicional, hasta cinco
-intentos y backoff de `60s * 2^intentos`. Solo el dueño de un lease vigente puede
-guardar el resultado. Los procesos caídos son recuperables cuando expira el lease;
-las entregas fuera de orden y las configuraciones obsoletas se marcan `SUPERSEDED`.
-La fuente y la rama se comprueban antes y después de las llamadas externas. El CMS
-permite sincronización manual, procesamiento pendiente y reintento de fallos.
+## Cola Y Recuperación
 
-El cron protegido `GET /api/cron/project-sync` limpia cuotas/trabajos antiguos y
-procesa un trabajo elegible. Vercel incluye una ejecución diaria a las 06:00 UTC,
-compatible con el plan básico. La vía normal inmediata es `after()`; ante un fallo
-el siguiente evento, el control manual o el cron recuperan el trabajo. Una cola
-acumulada requiere invocaciones adicionales autenticadas; no se promete recuperación
-en un minuto con el cron diario. Se puede invocar el mismo endpoint desde un scheduler
-más frecuente sin cambiar el protocolo ni ejecutar migraciones.
+El webhook verifica HMAC y deduplica entregas antes de responder `202`. Escucha
+`push` de la rama predeterminada, `repository`, `milestone`, `release` e `issues`
+relacionadas con hitos. Solo acepta repositorios vinculados y públicos; no consume
+como instrucciones el contenido del webhook. `after()` inicia el procesamiento,
+pero la durabilidad está en PostgreSQL.
 
-## Fuentes, IA Y RAG
+Los leases duran diez minutos, con cinco intentos y backoff exponencial. Solo el
+dueño vigente puede publicar; eventos de commits obsoletos se marcan `SUPERSEDED`.
+El cron de Vercel conserva una ejecución diaria. El workflow **Project Sync Recovery**
+invoca el endpoint protegido cada quince minutos desde `main`, utilizando el secret
+de repositorio `PROJECT_SYNC_CRON_SECRET` con el mismo valor que `CRON_SECRET` en
+Vercel. No tiene acceso a la base ni a Gemini, ni ejecuta migraciones. Puede haber
+retrasos del scheduler; no es una garantía de tiempo real.
 
-Las fuentes se leen mediante GitHub REST desde un commit inmutable: máximo doce
-archivos Markdown, 120 KB totales y 64 fragmentos. No se recorre el repositorio ni
-se siguen enlaces del contenido. Las rutas ocultas, traversal y formatos distintos
-de Markdown se rechazan. Los fragmentos tienen hasta 2.400 caracteres con solapamiento
-de 400. Se reutiliza el embedding cuando coinciden ruta, ordinal, hash y modelo.
+Cada recuperación reconcilia hasta veinte conexiones, priorizando las menos
+sincronizadas, crea como máximo un trabajo periódico por proyecto/día y procesa
+hasta tres trabajos elegibles dentro del presupuesto. La rutina recupera también
+conexiones cuyo primer encolado falló. Los trabajos terminados se conservan treinta
+días para deduplicación; las cuotas caducadas se eliminan automáticamente.
 
-La narrativa usa `GEMINI_MODEL` y también recibe las descripciones editoriales de
-imágenes e hitos. Las instrucciones distinguen planes de implementación y tratan
-repositorio/preguntas como datos no confiables. El contexto privado de CVs no entra
-en esta integración. Los textos generados se validan y se revisan antes de publicar.
+## Modal Y RAG
 
-Los embeddings usan `gemini-embedding-001`, `outputDimensionality=768`, tareas
-`RETRIEVAL_DOCUMENT` / `RETRIEVAL_QUERY` y normalización. El esquema usa
-`extensions.vector(768)`, consistente con la extensión ya habilitada en Supabase.
-Cambiar el modelo o dimensión exige reindexar; no basta con cambiar una variable.
+La card es un disparador de diálogo, no un desplegable inline. El modal incluye
+detalle estructurado, galería filtrable por tipo, tecnologías, enlaces, hitos,
+fuentes y preguntas RAG. Base UI gestiona foco, Escape y retorno a la card. En
+móvil ocupa la pantalla; el cierre permanece visible al desplazar el contenido.
+Las animaciones respetan movimiento reducido.
 
-`POST /api/projects/[slug]/ask` recibe `{ question, locale }` y busca hasta seis
-fragmentos del corpus publicado del proyecto visible y habilitado. La búsqueda es
-exacta por distancia coseno, con umbral 0,65. Para este volumen pequeño no se usa
-un índice aproximado. El umbral deberá calibrarse con las preguntas del piloto.
+Los embeddings siguen usando `gemini-embedding-001` a 768 dimensiones normalizadas.
+RAG consulta únicamente un corpus publicado de un proyecto visible/habilitado,
+cita sus fuentes o se abstiene. Revalida visibilidad antes de responder. Mantiene
+las cuotas de tres preguntas por cliente/minuto, treinta globales/minuto y doscientas
+globales/día, sin almacenar conversaciones ni contexto privado de documentos.
 
-La respuesta incluye enlaces a fuentes y se abstiene si no encuentra evidencia
-o si el modelo propone identificadores de cita inexistentes. Antes de responder
-se vuelve a comprobar que el corpus siga publicado y el proyecto visible. Los
-embeddings y extractos internos no se entregan como parte del JSON público.
-Las consultas actuales cubren las fuentes Markdown publicadas; las descripciones
-de imágenes e hitos orientan la narrativa, pero no son fragmentos RAG independientes.
+## Operación
 
-Las preguntas no se persisten. Hay cuotas atómicas de tres peticiones por cliente
-y minuto, treinta globales por minuto y doscientas globales por día. El identificador
-se protege con HMAC y `AUTH_SECRET`; solo se guarda el contador temporal. En hosting
-propio el proxy debe sobrescribir `X-Forwarded-For`. El historial de conversaciones,
-MongoDB y un chatbot global siguen fuera de este módulo por proyecto.
+El esquema base se aplicó mediante PR #46 y workflow protegido
+[34610613317](https://github.com/Mazon64/portafolio/actions/runs/34610613317).
+La primera integración se activó por PR #47, con consultas ES/EN y deduplicación
+real verificadas. La publicación automática reemplaza el modo de revisión de esa
+primera entrega; el contrato actual es el descrito arriba.
 
-## Activación Del Piloto
-
-1. Promover **solo la migración expand** por `feature/* → develop → main`, revisar
-   Preview y aplicarla por el workflow protegido de Production. Verificar el rol
-   de aplicación y `extensions.vector` antes de promover el código dependiente.
-2. Desplegar la aplicación después de la migración. Mantener ambos flags nuevos
-   en `false` en Preview. Las rutas de escritura y proveedores bloquean Preview
-   aunque sus flags se activen accidentalmente.
-3. Configurar en Production `PROJECT_INTEGRATION_ENABLED=true`, las claves Gemini
-   ya utilizadas, `GITHUB_WEBHOOK_SECRET` y `CRON_SECRET`. `PROJECT_GITHUB_TOKEN`
-   es opcional; si se usa, limitarlo a lectura de contenido/metadatos del repositorio
-   público elegido. Crear un nuevo deployment para aplicar las variables.
-4. En Proyectos, pulsar **Preparar este portafolio como piloto**. El inicializador
-   crea una ficha oculta con diagrama e hitos verificables; no sobrescribe una ficha
-   existente. Revisar/guardar la configuración y las rutas permitidas.
-5. Crear el webhook del repositorio hacia
-   `https://davidaranda.dev/api/webhooks/github`, tipo JSON, secreto coincidente,
-   eventos `push`. Verificar el `ping`, la sincronización inicial y una redelivery.
-6. Sincronizar, consultar el estado, revisar el texto y sus enlaces y publicar.
-   Completar los hitos de sincronización/RAG únicamente después de verificarlos.
-7. Habilitar `PROJECT_RAG_ENABLED=true` en Production y redeploy. Probar preguntas
-   de arquitectura, decisiones, trabajo pendiente y una pregunta sin evidencia.
-   Confirmar citas al commit y abstención. No habilitar cuotas ni Gemini en Preview.
-
-## Verificación
-
-Las pruebas cubren firmas, Preview, duplicados, rutas de fuentes, cuotas/esquema,
-leases, fallos de proveedor, citas y visibilidad. PGlite con pgvector aplica la
-migración real sobre una base aislada y ejecuta el SQL real de recuperación para
-probar exclusión de borradores/proyectos ocultos, dimensiones y borrados en cascada.
-Eso no sustituye la validación final de credenciales, webhook y respuestas Gemini
-contra Production. El build no llama a esos servicios ni aplica migraciones.
+Para activar en otra instalación: aplicar primero el esquema desde `main`, configurar
+flags y secretos exclusivamente en Production, registrar los eventos del webhook,
+configurar el secret del scheduler y vincular el repositorio. Mantener ambos flags
+de proyectos en `false` en Preview: la aplicación bloquea allí escrituras y Gemini.
+Validar un push que cambie texto, una imagen y un hito, comprobar publicación sin
+intervención, navegación del modal, captions visuales y citas al commit de origen.

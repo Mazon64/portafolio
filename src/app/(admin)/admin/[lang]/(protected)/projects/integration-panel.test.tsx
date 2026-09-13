@@ -11,11 +11,10 @@ import { ProjectIntegrationPanel } from "./integration-panel";
 let container: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
 const date = "2026-09-01T00:00:00.000Z";
-const narrativeLocale = { summary: "Summary with enough detail", problem: "Problem with enough detail", solution: "Solution with enough detail", architecture: "Architecture with enough detail", decisions: "Decisions with enough detail", results: "Results with enough detail" };
 const workspace: ProjectIntegrationWorkspace = {
   project: { id: "project", name: "Portfolio", repositoryFullName: "Mazon64/portafolio", visible: false },
-  integration: { updatedAt: date, branch: "main", enabled: true, repositoryId: "42", sourcePaths: ["README.md"], assets: [], milestones: [] }, jobs: [],
-  knowledge: [{ id: "draft", status: "DRAFT", commitSha: "a".repeat(40), createdAt: date, narrative: { es: narrativeLocale, en: narrativeLocale }, chunks: [] }],
+  integration: { updatedAt: date, enabled: true, repositoryId: "42" }, jobs: [],
+  published: { id: "published", commitSha: "a".repeat(40), publishedAt: date, sources: [], snapshot: null },
 };
 async function render(value = workspace) {
   await act(async () => root.render(<ProjectIntegrationPanel workspace={value} copy={projectIntegrationCopy.en} enabled />));
@@ -42,11 +41,12 @@ describe("project integration UI state", () => {
     await submit("save");
     expect(token()).toBe("2026-09-03T00:00:00.000Z");
   });
-  it("retains committed cache-error feedback when publication removes the draft editor", async () => {
-    action.mockResolvedValue({ status: "cache-error" });
-    await render(); await submit("publish");
-    await render({ ...workspace, knowledge: [{ ...workspace.knowledge[0], status: "PUBLISHED" }] });
+  it("has no manual publication, media or milestone editor", async () => {
+    await render();
     expect(container.querySelector('input[name="operation"][value="publish"]')).toBeNull();
-    expect(container.textContent).toContain(projectIntegrationCopy.en.statuses["cache-error"]);
+    expect(container.querySelector('input[name="assets"]')).toBeNull();
+    expect(container.querySelector('input[name="milestones"]')).toBeNull();
+    expect(container.querySelector('textarea[name="sourcePaths"]')).toBeNull();
+    expect(container.textContent).toContain(projectIntegrationCopy.en.automaticHint);
   });
 });

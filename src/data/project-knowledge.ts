@@ -1,19 +1,21 @@
 import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
-import { assetsSchema, milestonesSchema, milestoneProgress, EMBEDDING_MODEL } from "@/lib/projects/schemas";
+import { projectSnapshotSchema, milestoneProgress, EMBEDDING_MODEL } from "@/lib/projects/schemas";
 
 export async function getPublicProjectExtras(slugs: string[]) {
   try {
     const projects = await getPrisma().project.findMany({
       where: { slug: { in: slugs }, showOnPortfolio: true },
-      select: { slug: true, integration: { select: { assets: true, milestones: true, enabled: true } }, knowledge: {
-        where: { status: "PUBLISHED" }, select: { id: true, publishedAt: true, chunks: { select: { path: true, sourceUrl: true }, distinct: ["path"] } },
+      select: { slug: true, integration: { select: { enabled: true } }, knowledge: {
+        where: { status: "PUBLISHED" }, select: { id: true, narrative: true, publishedAt: true, chunks: { select: { path: true, sourceUrl: true }, distinct: ["path"] } },
       } },
     });
     return Object.fromEntries(projects.map((project) => {
-      const milestones = milestonesSchema.parse(project.integration?.milestones ?? []);
-      return [project.slug, { assets: assetsSchema.parse(project.integration?.assets ?? []), milestones,
+      const snapshot = projectSnapshotSchema.safeParse(project.knowledge[0]?.narrative);
+      const milestones = snapshot.success ? snapshot.data.milestones : [];
+      return [project.slug, { assets: snapshot.success ? snapshot.data.assets : [], milestones,
+        narrative: snapshot.success ? { es: snapshot.data.es, en: snapshot.data.en } : null,
         progressPct: milestoneProgress(milestones), sources: project.knowledge[0]?.chunks ?? [],
         indexed: project.knowledge.length > 0 && Boolean(project.integration?.enabled) }];
     }));
