@@ -119,6 +119,23 @@ globales/día, sin almacenar conversaciones ni contexto privado de documentos.
 
 ## Operación
 
+### Verificación De La Publicación Automática
+
+La actualización se promovió mediante PR #51, commit `e9d47c9`. El workflow
+[Project Sync Recovery 34774545629](https://github.com/Mazon64/portafolio/actions/runs/34774545629)
+ejecutó el worker de Production y publicó automáticamente un snapshot con nombres
+ES/EN, tecnologías y demo detectadas, ocho hitos y dos imágenes analizadas desde
+`interface/` y `features/`. No se invocó publicación editorial ni se escribieron
+captions manuales. La primera comprobación registró 52 fragmentos indexados.
+
+En navegador real, escritorio ES y móvil EN cargaron las dos imágenes, abrieron y
+cerraron el modal correctamente y restauraron el foco, sin errores JavaScript.
+Una pregunta sobre la pantalla de inicio obtuvo una respuesta visual con cita a
+`docs/portfolio/images/interface/cover.webp`; una pregunta técnica EN citó la
+documentación del repositorio. Tras estas comprobaciones se marcaron los dos hitos
+que permanecían pendientes. Los secretos del scheduler y los cinco eventos del
+webhook están configurados; la homepage de GitHub apunta al dominio público actual.
+
 El esquema base se aplicó mediante PR #46 y workflow protegido
 [34610613317](https://github.com/Mazon64/portafolio/actions/runs/34610613317).
 La primera integración se activó por PR #47, con consultas ES/EN y deduplicación
