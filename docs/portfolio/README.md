@@ -3,9 +3,11 @@
 `milestones.json` es la fuente de hitos de esta entrega. Los cinco objetivos previos
 se marcaron completados según arquitectura, despliegue y la activación de proyectos
 documentada. El modal se verificó en navegador real de escritorio y móvil, con
-cierre, Escape y retorno del foco; por ello también está completado. Publicación
-automática y análisis visual quedan pendientes de su comprobación con proveedores
-reales. Los pesos suman 100; el porcentaje mide este alcance, no el número
+cierre, Escape y retorno del foco; por ello también está completado. La publicación
+automática y el análisis visual se verificaron en Production con proveedores reales:
+el worker publicó el snapshot sin aprobación manual y Gemini describió las dos
+capturas del repositorio. RAG citó la imagen de inicio en una respuesta visual.
+Los ocho hitos están completados. Los pesos suman 100; el porcentaje mide este alcance, no el número
 de commits ni el esfuerzo futuro de mantenimiento. El chatbot global con historial
 no pertenece a estos ocho objetivos y continúa planificado en el SRS.
 
