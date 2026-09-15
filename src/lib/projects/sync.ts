@@ -4,7 +4,7 @@ import { revalidateTag } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { projectAiEnabled, projectIntegrationEnabled } from "./configuration";
-import { embedTexts, generateProjectNarrative } from "./ai";
+import { embedTexts, generateProjectNarrative, projectAiFailureCode } from "./ai";
 import { getBranchSha, getRepository } from "./github";
 import { discoverProject } from "./discovery";
 import { analyzeRepositoryImages } from "./media";
@@ -181,11 +181,11 @@ export async function processProjectSync(projectId?: string) {
       try { revalidateTag("portfolio", { expire: 0 }); } catch { /* The committed snapshot remains valid; the cache also has a finite TTL. */ }
     }
     return { status: saved ? "succeeded" : "superseded" };
-  } catch {
+  } catch (error) {
     const exhausted = job.attempts >= MAX_ATTEMPTS;
     await getPrisma().projectSyncJob.updateMany({
       where: { id: job.id, leaseToken: job.leaseToken, status: "PROCESSING" },
-      data: { status: exhausted ? "FAILED" : "QUEUED", error: failure,
+      data: { status: exhausted ? "FAILED" : "QUEUED", error: `${failure}:${projectAiFailureCode(error)}`,
         availableAt: new Date(Date.now() + 60_000 * 2 ** job.attempts),
         finishedAt: exhausted ? new Date() : null, leaseToken: null, leaseUntil: null },
     });

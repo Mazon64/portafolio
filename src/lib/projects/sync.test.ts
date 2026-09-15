@@ -10,7 +10,7 @@ vi.mock("next/cache", () => ({ revalidateTag: mocks.cache }));
 vi.mock("./discovery", () => ({ discoverProject: mocks.discover }));
 vi.mock("./media", () => ({ analyzeRepositoryImages: mocks.images }));
 vi.mock("@/lib/projects/github", () => ({ getRepository: mocks.getRepo, getBranchSha: mocks.getSha, getProjectSources: mocks.getSources }));
-vi.mock("@/lib/projects/ai", () => ({ embedTexts: mocks.embed, generateProjectNarrative: mocks.narrative }));
+vi.mock("@/lib/projects/ai", () => ({ embedTexts: mocks.embed, generateProjectNarrative: mocks.narrative, projectAiFailureCode: () => "TEST_FAILURE" }));
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({
   $transaction: mocks.transaction, $queryRaw: mocks.query,
   projectSyncJob: { findFirst: mocks.findJob, updateMany: mocks.updateJob },
@@ -63,7 +63,7 @@ describe("durable project processing", () => {
   it("keeps failed provider work queued with a bounded retry instead of losing it", async () => {
     mocks.embed.mockRejectedValue(new Error("synthetic failure"));
     expect(await processProjectSync()).toEqual({ status: "retrying" });
-    expect(mocks.updateJob).toHaveBeenLastCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "QUEUED", error: "AI_UNAVAILABLE", leaseToken: null }) }));
+    expect(mocks.updateJob).toHaveBeenLastCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "QUEUED", error: "AI_UNAVAILABLE:TEST_FAILURE", leaseToken: null }) }));
     expect(mocks.createDraft).not.toHaveBeenCalled();
   });
   it("saves the narrative and vectors only after acquiring the commit lease", async () => {

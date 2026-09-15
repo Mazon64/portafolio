@@ -1,9 +1,24 @@
 import "server-only";
 import { z } from "zod";
-import { generateStructuredDocument, getApiKeyAttempts } from "@/lib/documents/gemini";
+import { DocumentGenerationError, generateStructuredDocument, getApiKeyAttempts, providerRejectionCode } from "@/lib/documents/gemini";
 import { boundedBody } from "./http";
 import { EMBEDDING_DIMENSIONS, EMBEDDING_MODEL, localizedText, narrativeSchema, type ProjectAssets, type ProjectMilestones } from "./schemas";
 import type { SourceChunk } from "./github";
+
+export class ProjectProviderError extends Error {
+  constructor(readonly code: string) { super(code); this.name = "ProjectProviderError"; }
+}
+
+export function projectAiFailureCode(error: unknown): string {
+  if (error instanceof ProjectProviderError) return error.code;
+  if (error instanceof DocumentGenerationError) {
+    const codes = error.message.match(/HTTP_\d{3}(?:_[A-Z_]+)?|MAX_TOKENS/g) ?? [];
+    return `GENERATION_${codes.length ? [...new Set(codes)].join("_") : "INVALID_OR_UNAVAILABLE"}`.slice(0, 180);
+  }
+  if (error instanceof z.ZodError) return "SNAPSHOT_INVALID";
+  if (error instanceof Error && error.message === "Milestone identities changed during generation") return "MILESTONE_IDENTITY";
+  return "OPERATION_FAILED";
+}
 
 export function vectorLiteral(vector: number[]) {
   if (vector.length !== EMBEDDING_DIMENSIONS || vector.some((x) => !Number.isFinite(x))) {
@@ -22,6 +37,7 @@ export async function embedTexts(texts: string[], taskType: "RETRIEVAL_DOCUMENT"
     taskType,
     outputDimensionality: EMBEDDING_DIMENSIONS,
   })) });
+  const failures: string[] = [];
   for (const key of getApiKeyAttempts()) {
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:batchEmbedContents`, {
@@ -29,17 +45,20 @@ export async function embedTexts(texts: string[], taskType: "RETRIEVAL_DOCUMENT"
         body: requestBody, signal: AbortSignal.timeout(30_000),
       });
       if (!response.ok) {
+        const code = await providerRejectionCode(response);
+        failures.push(code);
         if ([401,403,408,425,429].includes(response.status) || response.status >= 500) continue;
-        throw new Error("Embedding request rejected");
+        throw new ProjectProviderError(`EMBEDDING_${code}`);
       }
       const data = z.object({ embeddings: z.array(z.object({ values: z.array(z.number().finite()).length(EMBEDDING_DIMENSIONS) })).length(texts.length) })
         .parse(JSON.parse((await boundedBody(response, 4_000_000)).toString("utf8")));
       return data.embeddings.map((item) => vectorLiteral(item.values));
     } catch (error) {
-      if (error instanceof Error && error.message === "Embedding request rejected") throw error;
+      if (error instanceof ProjectProviderError) throw error;
+      failures.push("NETWORK_OR_INVALID_RESPONSE");
     }
   }
-  throw new Error("Embedding provider unavailable");
+  throw new ProjectProviderError(`EMBEDDING_${[...new Set(failures)].join("_")}`.slice(0, 180));
 }
 
 export async function generateProjectNarrative(chunks: SourceChunk[], presentation: { assets: ProjectAssets; milestones: ProjectMilestones; repositoryName?: string }) {
