@@ -6,7 +6,7 @@ const randomIntMock = vi.hoisted(() => vi.fn<(max: number) => number>(() => 0));
 vi.mock("server-only", () => ({}));
 vi.mock("node:crypto", () => ({ randomInt: randomIntMock }));
 
-import { DocumentGenerationError, generateStructuredDocument } from "./gemini";
+import { DocumentGenerationError, generateStructuredDocument, providerRejectionCode } from "./gemini";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -15,6 +15,12 @@ afterEach(() => {
 });
 
 describe("Gemini document generation", () => {
+  it("reports provider rejection codes without echoing credentials or provider messages", async () => {
+    const code = await providerRejectionCode(Response.json({ error: { status: "INVALID_ARGUMENT", message: "API key not valid: synthetic-sensitive-value", details: [{ reason: "API_KEY_INVALID" }] } }, { status: 400 }));
+    expect(code).toBe("HTTP_400_API_KEY_INVALID");
+    expect(code).not.toContain("synthetic-sensitive-value");
+    expect(await providerRejectionCode(Response.json({ error: { message: "opaque sensitive input" } }, { status: 503 }))).toBe("HTTP_503");
+  });
   it("sends labelled image bytes for project vision without applying CV-only wording", async () => {
     vi.stubEnv("GEMINI_API_KEYS", "vision-test-key");
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ candidates: [{ content: { parts: [{ text: '{"value":"ok"}' }] } }] }));
@@ -191,7 +197,7 @@ describe("Gemini document generation", () => {
         validator: z.object({ value: z.string() }),
       }),
     ).rejects.toThrow(
-      "Document generation failed: network or timeout, invalid structured response, HTTP 503",
+      "Document generation failed: network or timeout, invalid structured response, HTTP_503",
     );
     expect(
       fetchMock.mock.calls.map((call) => call[1].headers["x-goog-api-key"]),

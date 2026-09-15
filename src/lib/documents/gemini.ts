@@ -11,9 +11,25 @@ let nextApiKeyIndex = 0;
 
 type GeminiResponse = {
   candidates?: Array<{
+    finishReason?: string;
     content?: { parts?: Array<{ text?: string }> };
   }>;
 };
+
+export async function providerRejectionCode(response: Response): Promise<string> {
+  let reason = "";
+  try {
+    const body = await response.json() as { error?: { status?: string; message?: string; details?: Array<{ reason?: string }> } };
+    const allowed = new Set(["API_KEY_INVALID", "API_KEY_EXPIRED", "API_KEY_NOT_FOUND", "API_KEY_SERVICE_BLOCKED", "API_KEY_HTTP_REFERRER_BLOCKED", "API_KEY_IP_ADDRESS_BLOCKED", "BILLING_DISABLED", "SERVICE_DISABLED", "RATE_LIMIT_EXCEEDED", "QUOTA_EXCEEDED", "CONSUMER_INVALID"]);
+    reason = body.error?.details?.map((item) => item.reason).find((value) => value && allowed.has(value)) ?? "";
+    const message = body.error?.message?.toLowerCase() ?? "";
+    if (!reason && message.includes("api key expired")) reason = "API_KEY_EXPIRED";
+    if (!reason && message.includes("api key not valid")) reason = "API_KEY_INVALID";
+    if (!reason && ["RESOURCE_EXHAUSTED", "PERMISSION_DENIED", "UNAUTHENTICATED", "NOT_FOUND", "INVALID_ARGUMENT", "UNAVAILABLE"].includes(body.error?.status ?? "")) reason = body.error!.status!;
+  } catch { /* Status alone is sufficient when no structured error is available. */ }
+  // Never expose provider messages, headers, submitted text or credential values.
+  return `HTTP_${response.status}${reason ? `_${reason}` : ""}`;
+}
 
 export class DocumentGenerationError extends Error {
   constructor(message = "Document generation failed") {
@@ -117,13 +133,15 @@ export async function generateStructuredDocument<T>({
     }
 
     if (!response.ok) {
-      failures.push(`HTTP ${response.status}`);
+      failures.push(await providerRejectionCode(response));
       if (canRetryWithAnotherKey(response.status)) continue;
       throw new DocumentGenerationError(`Document generation failed: ${failures.join(", ")}`);
     }
 
+    let finishReason = "";
     try {
       const body = (await response.json()) as GeminiResponse;
+      finishReason = body.candidates?.[0]?.finishReason === "MAX_TOKENS" ? "MAX_TOKENS" : "";
       const text = body.candidates?.[0]?.content?.parts
         ?.map((part) => part.text ?? "")
         .join("");
@@ -131,7 +149,7 @@ export async function generateStructuredDocument<T>({
 
       return { content: validator.parse(JSON.parse(text)), model };
     } catch {
-      failures.push("invalid structured response");
+      failures.push(finishReason || "invalid structured response");
     }
   }
 
