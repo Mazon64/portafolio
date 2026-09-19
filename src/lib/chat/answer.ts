@@ -119,7 +119,11 @@ export async function generateChatAnswer(input: ChatInput, history: History) {
       if (corpus.length && await getPrisma().projectKnowledge.count({ where: { id: { in: corpus }, status: "PUBLISHED", project: { showOnPortfolio: true, integration: { is: { enabled: true } } } } }) !== corpus.length) throw new Error("Public sources changed");
       const scope = { ...result.scope, projectSlugs: result.scope.projectSlugs.filter((slug) => catalog.some((p) => p.slug === slug)) };
       if (scope.kind !== "projects") { scope.projectSlugs = []; scope.usePageContext = false; }
-      return { scope, answer: result.answer, sources: verified.map((source) => chatSourceSchema.parse(source)) };
+      // The UI is plain text; normalize common formatting emitted despite the
+      // prompt. Navigation URLs remain exclusively in server-resolved actions.
+      const answer = result.answer.replace(/^#{1,6}\s+/gm, "").replace(/\*\*([^*]+)\*\*/g, "$1")
+        .replace(/`([^`]+)`/g, "$1").replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, "$1").replace(/^\*\s+/gm, "- ");
+      return { scope, answer, sources: verified.map((source) => chatSourceSchema.parse(source)) };
     }
     contents.push(model);
     if (!calls.length || calls.length > 6) throw new Error("Chat function budget exceeded");

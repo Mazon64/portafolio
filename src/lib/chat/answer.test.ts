@@ -39,6 +39,14 @@ describe("automatic public chat functions", () => {
     m.generate.mockResolvedValue(final([], ["https://evil.test"], "site"));
     await expect(generateChatAnswer(input, [])).rejects.toThrow("Unverified chat source");
   });
+  it("normalizes provider Markdown while keeping navigation in verified action records", async () => {
+    const result = final([], ["action:cv"], "site");
+    Object.assign(result.parts[0].functionCall.args as object, { answer: "### Currículum\nAbre **tu CV** con [este enlace](https://invented.test)." });
+    m.generate.mockResolvedValueOnce(calls(["get_cv", {}])).mockResolvedValueOnce(result);
+    const answer = await generateChatAnswer(input, []);
+    expect(answer.answer).toBe("Currículum\nAbre tu CV con este enlace.");
+    expect(answer.sources[0].url).toContain("/en/cv");
+  });
   it("does not execute arbitrary functions or retrieve hidden projects", async () => {
     m.generate.mockResolvedValueOnce(calls(["run_sql", { query: "SELECT private" }], ["search_project_sources", { query: "secret", projectSlugs: ["hidden"] }]))
       .mockResolvedValueOnce(final([], [], "out_of_scope"));
