@@ -49,6 +49,9 @@ describe("chat API and cookie consent", () => {
   });
   it("blocks Preview before writes and provider calls", async () => {
     vi.stubEnv("VERCEL_ENV", "preview");
+    const preview = await GET(new Request("https://example.test/api/chat/session"));
+    expect(await preview.json()).toMatchObject({ enabled: false, preview: true, conversation: null });
+    expect(preview.headers.get("set-cookie")).toBeNull();
     expect((await POST(request({ accepted: true, locale: "es" }))).status).toBe(503);
     expect((await sendMessage(request(input, "messages"))).status).toBe(503);
     expect(m.find).not.toHaveBeenCalled(); expect(m.create).not.toHaveBeenCalled(); expect(m.generate).not.toHaveBeenCalled();

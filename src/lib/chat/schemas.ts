@@ -29,4 +29,4 @@ export type ChatScope = z.infer<typeof chatScopeSchema>;
 export type ChatSource = z.infer<typeof chatSourceSchema>;
 export type ChatMessageDto = { id: string; role: "USER" | "ASSISTANT"; content: string; sources: ChatSource[]; pinned: boolean; createdAt: string };
 export type ChatTurnDto = { id: string; requestId: string; locale: "es" | "en"; status: string; createdAt: string; context: ChatContext; scope: ChatScope | null; messages: ChatMessageDto[] };
-export type ChatSessionDto = { enabled: boolean; conversation: { id: string; expiresAt: string; pinned: boolean } | null; turns: ChatTurnDto[]; nextCursor: string | null };
+export type ChatSessionDto = { enabled: boolean; preview?: boolean; conversation: { id: string; expiresAt: string; pinned: boolean } | null; turns: ChatTurnDto[]; nextCursor: string | null };

@@ -12,7 +12,9 @@ export default async function ConversationPage({ params, searchParams }: { param
   const [{ lang, id }, query] = await Promise.all([params, searchParams]);
   if (!hasLocale(lang) || !z.uuid().safeParse(id).success) notFound();
   const page = Number(query.page ?? 1);
-  const conversation = await getAdminConversation(id, Number.isSafeInteger(page) ? page : 1);
+  let conversation;
+  try { conversation = await getAdminConversation(id, Number.isSafeInteger(page) ? page : 1); }
+  catch (error) { if ((error as { code?: string }).code === "P2021") notFound(); throw error; }
   if (!conversation) notFound();
   const copy = chatCopy[lang]; const enabled = isCmsWriteEnabled();
   return <div>

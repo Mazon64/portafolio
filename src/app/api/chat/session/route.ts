@@ -10,7 +10,7 @@ import { boundedBody } from "@/lib/projects/http";
 export const runtime = "nodejs";
 const headers = { "Cache-Control": "private, no-store" };
 export async function GET(request: Request) {
-  if (!chatEnabled()) return NextResponse.json({ enabled: false, conversation: null, turns: [], nextCursor: null }, { headers });
+  if (!chatEnabled()) return NextResponse.json({ enabled: false, preview: process.env.VERCEL_ENV === "preview", conversation: null, turns: [], nextCursor: null }, { headers });
   try {
     const token = (await cookies()).get(chatCookieName())?.value;
     const conversation = await findVisitorConversation(chatTokenHash(token));

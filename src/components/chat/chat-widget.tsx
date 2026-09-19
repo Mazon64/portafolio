@@ -58,7 +58,7 @@ export function ChatWidget({ locale }: { locale: Locale }) {
   }, [chat.open, chat.dock, pending, restart, session?.conversation?.id, session?.enabled]);
 
   async function start() {
-    if (inFlight.current) return;
+    if (inFlight.current || !session?.enabled) return;
     inFlight.current = true; setPending(true); setError("");
     generation.current++;
     lastRequest.current = null;
@@ -105,11 +105,12 @@ export function ChatWidget({ locale }: { locale: Locale }) {
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
         {!session && !error && <p role="status" className="text-sm text-muted-foreground">{copy.loading}</p>}
-        {session?.enabled === false && <p className="text-sm leading-6 text-muted-foreground">{copy.unavailable}</p>}
-        {session?.enabled && (!session.conversation || restart) && <div className="space-y-4">
+        {session?.enabled === false && <p role="status" className="mb-4 rounded-xl border border-border p-3 text-sm leading-6 text-muted-foreground">{session.preview ? copy.preview : copy.unavailable}</p>}
+        {(session?.enabled || session?.preview) && (!session.conversation || restart) && <div className="space-y-4">
           <p className="text-sm leading-6">{copy.welcome}</p><p className="rounded-xl bg-muted/50 p-3 text-sm leading-6 text-muted-foreground">{copy.notice}</p>
           {restart && <p className="text-xs text-muted-foreground">{copy.newChatHint}</p>}
-          <div className="flex gap-2"><Button data-chat-start disabled={pending} onClick={start}>{copy.start}</Button><Button variant="ghost" onClick={() => restart ? setRestart(false) : chat.setOpen(false)}>{copy.later}</Button></div>
+          <div className="flex gap-2"><Button data-chat-start disabled={pending || !session.enabled} onClick={start}>{copy.start}</Button><Button variant="ghost" onClick={() => restart ? setRestart(false) : chat.setOpen(false)}>{copy.later}</Button></div>
+          <p className="text-xs leading-5 text-muted-foreground">{copy.context}: {copy.sections[chat.location.section]}{chat.location.projectSlug && ` · ${chat.location.projectSlug}`}<br />{copy.contextHint}</p>
         </div>}
         {session?.conversation && !restart && <>
           {session.nextCursor && <Button size="sm" variant="ghost" onClick={() => void load(session.nextCursor!)}>{copy.older}</Button>}

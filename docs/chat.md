@@ -98,8 +98,17 @@ pestañas obsoletas. La navegación funciona también en móvil.
 
 ## Activación Y Operación
 
+La interfaz se entrega a `develop` antes de activar el servicio: Preview muestra la
+burbuja, el aviso de cookie, el contexto observado y el nuevo modal. El botón de
+inicio permanece deshabilitado y el servidor no crea cookies, mensajes ni llamadas
+a Gemini. Administración conserva su cabecera y filtros si falta la migración,
+con un aviso explícito y sin conversaciones simuladas. Esto permite revisar el
+diseño sin ejecutar migraciones en Preview.
+
 1. Promover y aplicar primero `20260915100000_contextual_chat` mediante el workflow
-   protegido desde `main`. La migración es expand-only, sin datos de prueba.
+   protegido desde `main`. La migración es expand-only, sin datos de prueba. La
+   promoción del esquema usa el snapshot revisado de `develop` que contiene solo
+   la migración, antes de promover la aplicación dependiente a Production.
 2. Desplegar la aplicación y configurar `CHAT_ENABLED=true` en Production junto
    con `CMS_WRITES_ENABLED=true` y Gemini. Preview debe mantener `CHAT_ENABLED=false`;
    el código bloquea allí sesiones, cookies nuevas, mensajes y limpieza.

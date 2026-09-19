@@ -39,6 +39,16 @@ beforeEach(() => {
 });
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.unstubAllGlobals(); });
 describe("site-wide chat experience", () => {
+  it("shows the consent and navigation context in read-only Preview without starting a session", async () => {
+    fetchMock.mockResolvedValue(Response.json({ enabled: false, preview: true, conversation: null, turns: [], nextCursor: null }));
+    await act(async () => root.render(<SiteChatProvider locale="en"><section id="projects"><ProjectDialogCard project={project} locale="en" copy={copy} /></section></SiteChatProvider>));
+    await click("View details of Portfolio"); await click("Open chat");
+    expect(document.body.textContent).toContain("No cookies are created or messages stored here.");
+    expect(document.body.textContent).toContain("This site stores messages for 3 days.");
+    expect(document.body.textContent).toContain("Projects · portfolio");
+    expect(document.querySelector<HTMLButtonElement>("[data-chat-start]")!.disabled).toBe(true);
+    expect(fetchMock.mock.calls.filter(([, options]) => options?.method === "POST")).toHaveLength(0);
+  });
   it("explains continuity and retention before starting, then resumes stored messages on reopening", async () => {
     await act(async () => root.render(<SiteChatProvider locale="en"><section id="about">About</section></SiteChatProvider>));
     expect(fetchMock).not.toHaveBeenCalled();

@@ -2,6 +2,7 @@ import type { Locale } from "./config";
 
 export const projectIntegrationCopy = {
   es: {
+    previewMilestones: "Vista previa: los hitos corresponden a esta versión del repositorio. El relato y las capturas proceden de la última publicación; se actualizarán al publicar en producción.",
     milestoneScope: "Avance de los hitos", milestoneDone: "Completado", milestonePending: "Pendiente", viewImage: "Abrir imagen completa",
     connect: "Vincular y publicar automáticamente",
     automaticHint: "La ficha, las tecnologías, las imágenes, los hitos y las fuentes se obtienen del repositorio y se publican automáticamente. Aquí solo administras la conexión y su estado.",
@@ -35,6 +36,7 @@ export const projectIntegrationCopy = {
     jobStatuses: { QUEUED: "En cola", PROCESSING: "Procesando", SUCCEEDED: "Publicado automáticamente", FAILED: "Falló", SUPERSEDED: "Sustituido por cambios más recientes" },
   },
   en: {
+    previewMilestones: "Preview: milestones reflect this repository version. The narrative and screenshots come from the latest publication and will update after the production release.",
     milestoneScope: "Milestone progress", milestoneDone: "Completed", milestonePending: "Pending", viewImage: "Open full image",
     connect: "Connect and publish automatically",
     automaticHint: "Project content, technologies, images, milestones and sources are discovered from the repository and published automatically. This panel manages only the connection and its status.",

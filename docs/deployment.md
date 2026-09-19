@@ -125,6 +125,12 @@ Para preparar Preview:
 
 ### Chat Contextual
 
+La interfaz puede integrarse en `develop` antes de aplicar el esquema para revisión
+visual: el chat ofrece el aviso y contexto en modo Preview de solo lectura y el
+listado administrativo informa si falta la migración. La entrega del esquema a
+`main` conserva un snapshot de `develop` anterior a la aplicación; no se promueve
+el código dependiente a Production hasta aplicar y verificar esa migración.
+
 Promover primero la migración expand `20260915100000_contextual_chat` y aplicarla
 por el workflow protegido desde `main`. El rol migrador y servidor `prisma` es
 propietario de las tablas; RLS bloquea a roles públicos de Supabase. Desplegar luego

@@ -151,3 +151,11 @@ configurar el secret del scheduler y vincular el repositorio. Mantener ambos fla
 de proyectos en `false` en Preview: la aplicación bloquea allí escrituras y Gemini.
 Validar un push que cambie texto, una imagen y un hito, comprobar publicación sin
 intervención, navegación del modal, captions visuales y citas al commit de origen.
+
+## Revisión Visual En Preview
+
+Preview muestra el modal y la burbuja de la versión candidata sin sincronizar ni
+escribir en la base compartida. Solo para `Mazon64/portafolio`, los hitos se leen
+del archivo versionado en ese deployment y las evidencias se fijan a su SHA; un
+aviso distingue esos hitos del relato y las capturas de la última publicación.
+Los demás proyectos y Production conservan los hitos de su corpus publicado.

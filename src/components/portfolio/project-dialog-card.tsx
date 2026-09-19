@@ -12,7 +12,7 @@ import { type RepositoryAsset, type ProjectMilestones, type ProjectNarrative } f
 import type { ProjectCopy } from "./projects-section";
 import { useSiteChat } from "@/components/chat/site-chat-context";
 
-type Extras = { assets: RepositoryAsset[]; milestones: ProjectMilestones; progressPct: number | null; sources: Array<{ path: string; sourceUrl: string }>; indexed: boolean; narrative: ProjectNarrative | null; managed?: boolean };
+type Extras = { assets: RepositoryAsset[]; milestones: ProjectMilestones; progressPct: number | null; sources: Array<{ path: string; sourceUrl: string }>; indexed: boolean; narrative: ProjectNarrative | null; managed?: boolean; milestonePreview?: boolean };
 
 export function ProjectDialogCard({ project, extra, copy, locale }: { project: ProjectDto; extra?: Extras; copy: ProjectCopy; locale: Locale }) {
   const labels = projectIntegrationCopy[locale];
@@ -48,6 +48,7 @@ export function ProjectDialogCard({ project, extra, copy, locale }: { project: P
             <Dialog.Close render={<Button variant="ghost" size="icon" />} aria-label={labels.closeModal}><XIcon aria-hidden="true" /></Dialog.Close>
           </div>
           <div data-project-scroll className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 pb-24 sm:p-8 sm:pb-24">
+            {extra?.milestonePreview && <p className="mb-6 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 text-sm text-muted-foreground">{labels.previewMilestones}</p>}
             <div className={`grid items-center gap-6 ${cover?.category === "interface" ? "lg:grid-cols-2" : ""}`}><Dialog.Description className="max-w-4xl text-lg leading-8 text-muted-foreground">{project.summary}</Dialog.Description>{cover?.category === "interface" && <StoryImage asset={cover} locale={locale} />}</div>
             <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(13rem,0.6fr)]">
               <div className="space-y-7">

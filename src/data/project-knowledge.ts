@@ -1,7 +1,8 @@
 import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
-import { projectSnapshotSchema, milestoneProgress, EMBEDDING_MODEL } from "@/lib/projects/schemas";
+import { projectSnapshotSchema, milestonesSchema, milestoneProgress, EMBEDDING_MODEL } from "@/lib/projects/schemas";
+import portfolioMilestones from "../../docs/portfolio/milestones.json";
 
 export async function getPublicProjectExtras(slugs: string[]) {
   try {
@@ -13,9 +14,15 @@ export async function getPublicProjectExtras(slugs: string[]) {
     });
     return Object.fromEntries(projects.map((project) => {
       const snapshot = projectSnapshotSchema.safeParse(project.knowledge[0]?.narrative);
-      const milestones = snapshot.success ? snapshot.data.milestones : [];
+      // Preview shares Production's published corpus. Show this repository's
+      // candidate roadmap without syncing or writing to the shared database.
+      const milestonePreview = process.env.VERCEL_ENV === "preview" && snapshot.success && snapshot.data.metadata.repositoryFullName.toLowerCase() === "mazon64/portafolio";
+      const revision = process.env.VERCEL_GIT_COMMIT_SHA;
+      const milestones = milestonePreview ? milestonesSchema.parse(portfolioMilestones.map((item) => ({ ...item,
+        evidence: revision && /^[a-f0-9]{40}$/.test(revision) ? `https://github.com/Mazon64/portafolio/blob/${revision}/${item.evidence}` : "",
+      }))) : snapshot.success ? snapshot.data.milestones : [];
       return [project.slug, { assets: snapshot.success ? snapshot.data.assets : [], milestones,
-        managed: Boolean(project.integration),
+        managed: Boolean(project.integration), milestonePreview,
         narrative: snapshot.success ? { es: snapshot.data.es, en: snapshot.data.en } : null,
         progressPct: milestoneProgress(milestones), sources: project.knowledge[0]?.chunks ?? [],
         indexed: project.knowledge.length > 0 && Boolean(project.integration?.enabled) }];
