@@ -22,7 +22,7 @@ export const chatScopeSchema = z.object({
 export const chatSourceSchema = z.object({ id: z.string(), title: z.string(), url: z.url().refine((value) => {
   const url = new URL(value);
   return !url.username && !url.password && (url.protocol === "https:" || (url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname)));
-}), projectSlug: z.string().optional() });
+}), projectSlug: z.string().optional(), action: z.enum(["cv", "project", "repository", "social", "contact", "demo"]).optional() });
 export type ChatContext = z.infer<typeof chatContextSchema>;
 export type ChatInput = z.infer<typeof chatInputSchema>;
 export type ChatScope = z.infer<typeof chatScopeSchema>;
