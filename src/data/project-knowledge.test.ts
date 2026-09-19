@@ -19,8 +19,8 @@ describe("candidate portfolio milestones", () => {
     findMany.mockResolvedValue([row("Mazon64/portafolio")]);
     const { portfolio } = await getPublicProjectExtras(["portfolio"]);
     expect(portfolio.milestonePreview).toBe(true);
-    expect(portfolio.progressPct).toBe(70);
-    expect(portfolio.milestones.filter((item) => !item.completed)).toHaveLength(3);
+    expect(portfolio.progressPct).toBe(90);
+    expect(portfolio.milestones.filter((item) => !item.completed).map((item) => item.id)).toEqual(["conversation-administration"]);
     expect(portfolio.milestones.every((item) => item.evidence.startsWith(`https://github.com/Mazon64/portafolio/blob/${"a".repeat(40)}/`))).toBe(true);
   });
   it.each([["production", "Mazon64/portafolio"], ["preview", "another/project"]])("keeps published milestones for %s / %s", async (environment, repository) => {

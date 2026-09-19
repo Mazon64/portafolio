@@ -8,9 +8,10 @@ automática y el análisis visual se verificaron en Production con proveedores r
 el worker publicó el snapshot sin aprobación manual y Gemini describió las dos
 capturas del repositorio. RAG citó la imagen de inicio en una respuesta visual.
 Los ocho hitos anteriores están completados, pero no constituyen todo el portafolio.
-Se añadieron chat global contextual, administración de conversaciones y continuidad
-con retención de tres días como objetivos pendientes. Sus pesos forman parte del
-total de 100. El porcentaje mide hitos documentados, no el estado general del
+El chat global y la continuidad con retención se activaron y verificaron según
+`docs/chat.md`. La aceptación del panel de conversaciones con la sesión GitHub del
+propietario sigue pendiente. El avance documentado es 90% (10 de 11 hitos), con
+pesos que suman 100. El porcentaje mide hitos documentados, no el estado general del
 proyecto: alcanzar 100% no cambia automáticamente el proyecto a “Completado”.
 
 Cada hito tiene ID estable, título ES/EN, peso, estado y una ruta de evidencia que
