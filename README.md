@@ -32,7 +32,7 @@ Actualmente incluye:
 - Descubrimiento de documentación/manifiestos y publicación automática de fichas, tecnologías, hitos y fuentes RAG.
 - Webhook GitHub, cola duradera y recuperación programada, detrás de flags operativos.
 
-El CMS administra el contenido profesional del portafolio y el CV. Los proyectos vinculados se generan y publican automáticamente a partir de su repositorio. Las imágenes se organizan por propósito y los hitos tienen evidencia en `docs/portfolio/milestones.json`. El chatbot global con historial permanece como etapa futura. Consulta [la guía de integración](docs/project-integration.md) y [el material del piloto](docs/portfolio/README.md).
+El CMS administra el contenido profesional del portafolio y el CV. Los proyectos vinculados se generan y publican automáticamente desde su repositorio, con capturas integradas en el detalle e hitos visuales. El chat global contextual mantiene conversaciones mediante cookie y las almacena durante tres días, con excepciones de fijado desde admin; requiere su migración y activación independiente. Consulta [la guía de integración](docs/project-integration.md), [el chat](docs/chat.md) y [los hitos](docs/portfolio/README.md).
 
 ## Tecnologías
 
@@ -136,6 +136,7 @@ Los contratos se encuentran en `.env.example` y `.env.docker.example`.
 | `CMS_WRITES_ENABLED` | Habilita explícitamente las mutaciones del CMS cuando vale `true`. |
 | `PROJECT_INTEGRATION_ENABLED` | Habilita configuración/sincronización de proyectos; Preview siempre bloquea escrituras. |
 | `PROJECT_RAG_ENABLED` | Habilita consultas sobre fuentes publicadas del proyecto. |
+| `CHAT_ENABLED` | Habilita el chat global y su persistencia únicamente en Production/local autorizado. |
 | `PROJECT_GITHUB_TOKEN` | Token opcional de lectura para repositorios públicos seleccionados. |
 | `GITHUB_WEBHOOK_SECRET` | Firma de webhooks de GitHub. |
 | `GEMINI_API_KEYS` | Pool server-only de claves de Google Gemini separadas por comas o líneas. |

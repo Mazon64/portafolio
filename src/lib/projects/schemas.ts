@@ -16,14 +16,13 @@ export const sourcePathSchema = z.string().trim().max(200).regex(
   /^(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_.-]+\.md$/,
 ).refine((path) => !path.split("/").some((part) => part.startsWith(".")));
 export const assetUrlSchema = z.string().trim().max(2_000).refine((value) => {
-  if (/^\/project-media\/[a-zA-Z0-9_/-]+\.(svg|png|jpg|jpeg|webp)$/.test(value)) return true;
   try {
     const url = new URL(value);
     return url.protocol === "https:" && url.hostname === "raw.githubusercontent.com" &&
       !url.username && !url.password && !url.port && !url.search && !url.hash &&
       /^\/[\w.-]+\/[\w.-]+\/[a-f0-9]{40}\/[^?]+\.(png|jpg|jpeg|webp)$/i.test(url.pathname);
   } catch { return false; }
-}, "Use a local project image or a commit-pinned GitHub PNG/JPEG/WebP.");
+}, "Use a commit-pinned GitHub PNG/JPEG/WebP.");
 export const assetsSchema = z.array(z.object({
   url: assetUrlSchema,
   alt: localizedText,

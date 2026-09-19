@@ -1,0 +1,23 @@
+name: Chat Retention
+on:
+  schedule:
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: production-chat-retention
+  cancel-in-progress: false
+jobs:
+  cleanup:
+    if: github.repository == 'Mazon64/portafolio' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Delete expired unpinned chat messages
+        env:
+          CRON_SECRET: ${{ secrets.PROJECT_SYNC_CRON_SECRET }}
+        run: |
+          test -n "$CRON_SECRET" || { echo "Maintenance secret missing"; exit 1; }
+          curl --fail-with-body --silent --show-error --max-time 90 \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            https://davidaranda.dev/api/cron/chat-cleanup

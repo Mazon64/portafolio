@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 const { generate, attempts } = vi.hoisted(() => ({ generate: vi.fn(), attempts: vi.fn(() => ["test-key-a", "test-key-b"]) }));
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/documents/gemini", () => ({ generateStructuredDocument: generate, getApiKeyAttempts: attempts, providerRejectionCode: async (response: Response) => `HTTP_${response.status}`, DocumentGenerationError: class extends Error {} }));
+vi.mock("@/lib/documents/gemini", async (importOriginal) => ({ ...await importOriginal<typeof import("@/lib/documents/gemini")>(), generateStructuredDocument: generate, getApiKeyAttempts: attempts }));
 import { answerProjectQuestion, embedTexts, vectorLiteral } from "./ai";
 afterEach(() => { vi.unstubAllGlobals(); generate.mockReset(); });
 

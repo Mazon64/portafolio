@@ -15,6 +15,7 @@ export async function getPublicProjectExtras(slugs: string[]) {
       const snapshot = projectSnapshotSchema.safeParse(project.knowledge[0]?.narrative);
       const milestones = snapshot.success ? snapshot.data.milestones : [];
       return [project.slug, { assets: snapshot.success ? snapshot.data.assets : [], milestones,
+        managed: Boolean(project.integration),
         narrative: snapshot.success ? { es: snapshot.data.es, en: snapshot.data.en } : null,
         progressPct: milestoneProgress(milestones), sources: project.knowledge[0]?.chunks ?? [],
         indexed: project.knowledge.length > 0 && Boolean(project.integration?.enabled) }];

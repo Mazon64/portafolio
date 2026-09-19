@@ -7,9 +7,11 @@ cierre, Escape y retorno del foco; por ello también está completado. La public
 automática y el análisis visual se verificaron en Production con proveedores reales:
 el worker publicó el snapshot sin aprobación manual y Gemini describió las dos
 capturas del repositorio. RAG citó la imagen de inicio en una respuesta visual.
-Los ocho hitos están completados. Los pesos suman 100; el porcentaje mide este alcance, no el número
-de commits ni el esfuerzo futuro de mantenimiento. El chatbot global con historial
-no pertenece a estos ocho objetivos y continúa planificado en el SRS.
+Los ocho hitos anteriores están completados, pero no constituyen todo el portafolio.
+Se añadieron chat global contextual, administración de conversaciones y continuidad
+con retención de tres días como objetivos pendientes. Sus pesos forman parte del
+total de 100. El porcentaje mide hitos documentados, no el estado general del
+proyecto: alcanzar 100% no cambia automáticamente el proyecto a “Completado”.
 
 Cada hito tiene ID estable, título ES/EN, peso, estado y una ruta de evidencia que
 debe existir en el mismo commit. Cambiar este archivo actualiza los hitos públicos
@@ -32,7 +34,7 @@ clasificación. Un archivo `cover.*` o `portada.*` tiene prioridad como portada;
 en su ausencia se priorizan interfaz, funcionalidades, resultados y diagramas.
 
 Se descubren hasta ocho PNG, JPEG o WebP de tamaño válido. Los SVG genéricos de
-plantilla y el diagrama antiguo de `public/project-media` no se usan como portada.
+plantilla no se usan como portada. El diagrama local obsoleto y su directorio se eliminaron.
 Sin imágenes válidas, la card muestra el texto y las tecnologías sin una imagen
 inventada. Diagramas vectoriales pueden exportarse como PNG/WebP en `diagrams/`.
 

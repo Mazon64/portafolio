@@ -113,9 +113,8 @@ Exige `Authorization: Bearer <CRON_SECRET>` y escrituras habilitadas. Limpia con
 
 ### 4.3 `POST /api/projects/[slug]/ask`
 
-Recibe `{ "question": "...", "locale": "es" }`, con preguntas de 5–600 caracteres y cuerpo máximo de 4 KB. Requiere mismo origen, `PROJECT_RAG_ENABLED`, proyecto visible, integración habilitada y corpus publicado. Recupera fuentes mediante pgvector y devuelve `{ answer, insufficient, sources: [{ id, path, url }] }`, sin guardar la conversación. Todas las respuestas son `no-store`.
-
-Estados: `200` respuesta o abstención; `400` entrada inválida; `403` origen inválido; `404` corpus no disponible; `409` corpus retirado durante la petición; `429` cuota agotada; `503` integración/proveedor no disponible. Solo cita fuentes recuperadas del corpus publicado; ninguna consulta usa borradores, CVs o contexto privado.
+Retirado. Las consultas pertenecen a la burbuja global y se procesan mediante
+`/api/chat/messages`, con continuidad y persistencia de conversaciones.
 
 ### 4.4 Acciones Administrativas
 
@@ -124,3 +123,50 @@ Estados: `200` respuesta o abstención; `400` entrada inválida; `403` origen in
 El worker publica automáticamente nombres ES/EN, narrativa, imágenes analizadas, tecnologías, enlaces, estado, progreso y fuentes en una transacción protegida por lease y timestamps. Un fallo conserva la publicación anterior. Los fallos de encolado/refresco posteriores a un guardado ya confirmado se diferencian con `cache-error`; la reconciliación recupera el trabajo pendiente.
 
 El contrato operativo, límites, modelo de embeddings y activación del piloto se describen en [project-integration.md](project-integration.md).
+
+## 5. Chat Contextual
+
+### 5.1 `/api/chat/session`
+
+- `GET`: consulta disponibilidad e historial propio mediante la cookie funcional.
+  No crea conversación ni cookie. `before=<turn-uuid>` pagina mensajes anteriores
+  dentro de la misma conversación; el UUID no concede acceso por sí mismo.
+- `POST`: recibe `{ accepted: true, locale: "es", restart?: true }`, exige mismo
+  origen y crea/reanuda una conversación. Solo aquí se inicia el identificador,
+  con aceptación explícita. Un reinicio retira la asociación anterior sin borrar
+  anticipadamente los mensajes que siguen dentro de su retención.
+- Respuesta: `{ enabled, conversation, turns, nextCursor }`. No incluye el token
+  ni su hash. Cookie host-only/HttpOnly/Secure/SameSite=Lax en Production.
+
+### 5.2 `POST /api/chat/messages`
+
+Recibe `{ conversationId, requestId, message, locale, context: { path, section, projectSlug } }`.
+La conversación siempre se obtiene de la cookie; el ID del cuerpo solo detecta una
+pestaña obsoleta y nunca autoriza acceso. El mensaje
+admite 1–1200 caracteres y el cuerpo hasta 8 KB. Contexto: rutas públicas localizadas,
+secciones conocidas y slug validado contra proyectos visibles al resolver intención.
+
+Guarda la pregunta antes de generar, utiliza historial propio acotado y un lease
+para respuestas concurrentes. Repetir `requestId` devuelve el resultado existente
+o `pending`; usarlo con otro contenido devuelve conflicto. La respuesta actualiza
+el historial y la cookie de continuidad, sin exponer errores internos ni secretos.
+
+Estados: `200` completado; `202` pendiente; `400` inválido; `401` conversación
+ausente/caducada; `403` origen inválido; `409` ocupada/conflicto; `429` cuota;
+`503` no disponible. `saved` distingue errores posteriores al guardado de la
+pregunta. Todas las respuestas del chat usan `Cache-Control: private, no-store`.
+
+### 5.3 `GET /api/cron/chat-cleanup`
+
+Requiere Bearer `CRON_SECRET` y escrituras habilitadas en Production/local autorizado.
+No depende del flag de chat ni de Gemini. Elimina mensajes sin fijar de 72 horas
+o más, turnos vacíos y conversaciones vacías vencidas. Conserva mensajes fijados y
+conversaciones fijadas. Usa locks compatibles con el fijado administrativo.
+
+### 5.4 Administración
+
+Las páginas `/admin/[lang]/conversations` y `/admin/[lang]/conversations/[id]`
+permiten búsqueda, paginación, lectura de contexto/tema/fuentes, fijado por mensaje
+o conversación y borrado. Cada mutación reautoriza y verifica timestamps. Los
+roles públicos de Supabase no pueden leer directamente las tablas del chat.
+El contrato completo de consentimiento, retención y aislamiento está en [chat.md](chat.md).

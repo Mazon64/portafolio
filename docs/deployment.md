@@ -65,7 +65,7 @@ Preview y Production comparten `DATABASE_URL`, pero Preview debe mantener `CMS_W
 
 Los cambios de variables en Vercel solo se aplican a deployments nuevos. Después de editar una variable de Production, crea un Redeploy del último deployment de `main` o promueve un nuevo commit verificado; volver a ejecutar únicamente GitHub Actions no actualiza el runtime. Confirma siempre el target **Production** y deja Preview con sus valores propios.
 
-`GEMINI_API_KEYS` debe almacenarse como Secret y contener al menos una clave. El servidor descarta entradas vacías y duplicadas, reparte solicitudes por round-robin dentro de cada instancia activa y prueba las claves restantes ante `401`, `403`, `408`, `425`, `429`, errores `5xx`, fallos de red o una respuesta estructural inválida. Los demás errores `4xx` detienen el intento. Al agregar, revocar o rotar claves, reemplaza el valor completo y vuelve a desplegar Production. No configures este pool en Preview.
+`GEMINI_API_KEYS` debe almacenarse como Secret y contener al menos una clave. El servidor descarta entradas vacías y duplicadas, reparte solicitudes por round-robin dentro de cada instancia activa y prueba las claves restantes ante `401`, `403`, `408`, `425`, `429`, errores `5xx`, fallos de red o una respuesta estructural inválida. También prueba la siguiente clave ante un `400` que identifique explícitamente una API key inválida o caducada; los demás errores `4xx` detienen el intento. Al agregar, revocar o rotar claves, reemplaza el valor completo y vuelve a desplegar Production. No configures este pool en Preview.
 
 `GEMINI_MODEL` no es secreto, pero solo se necesita en Production. La aplicación usa `gemini-3-flash-preview` cuando falta; configúralo explícitamente para poder cambiar de modelo con un redeploy si Google retira una versión.
 
@@ -122,6 +122,20 @@ Para preparar Preview:
 6. Revisa `/admin/es/documents`: antes de la migración debe mostrar el estado pendiente sin romper el resto del CMS.
 
 ## 3. Migraciones
+
+### Chat Contextual
+
+Promover primero la migración expand `20260915100000_contextual_chat` y aplicarla
+por el workflow protegido desde `main`. El rol migrador y servidor `prisma` es
+propietario de las tablas; RLS bloquea a roles públicos de Supabase. Desplegar luego
+el código y habilitar `CHAT_ENABLED=true` solo en Production. Preview conserva el
+flag en `false` y rechaza escrituras incluso si se configura erróneamente.
+
+El workflow `Chat Retention` llama a `/api/cron/chat-cleanup` cada quince minutos
+usando el secret existente `PROJECT_SYNC_CRON_SECRET`/`CRON_SECRET`; Vercel mantiene
+una ejecución diaria de respaldo. No depende de Gemini ni de que el chat esté
+habilitado, para conservar la retención durante una pausa del servicio. Las
+comprobaciones y el contrato de cookie se describen en [chat.md](chat.md).
 
 ### Integración De Proyectos
 
