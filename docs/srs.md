@@ -40,11 +40,11 @@ Mi portafolio es una aplicación fullstack desarrollada en Next.js. Su alcance a
 * **RF-05.1: Repositorios Opcionales.** Un proyecto debe poder publicarse sin URL ni identificador de repositorio; la vinculación con GitHub solo aplica cuando exista un repositorio visible o autorizado para telemetría.
 * **RF-05.2: Presentación de Habilidades.** Las habilidades deben organizarse en categorías ordenadas que se presenten como cuadrículas de iconos o colecciones de badges.
 * **RF-05.3: Resumen Visual de Proyecto.** Cada card debe mostrar nombre, resumen, tecnologías y una portada del repositorio cuando exista. Solo mostrará porcentaje cuando existan hitos medibles.
-* **RF-05.4: Modal De Proyecto.** Al activar la card se abrirá un modal con detalle, galería, tecnologías, estado, enlaces, hitos y consultas. Debe controlar el foco, cerrar con Escape/botón, devolver el foco al disparador y adaptarse a pantalla móvil y movimiento reducido.
+* **RF-05.4: Modal De Proyecto.** Al activar la card se abrirá un modal con capturas integradas en las secciones del contenido, tecnologías, estado, enlaces e hitos visuales con iconos y etiquetas. Las consultas pertenecen a la burbuja global. Debe controlar el foco, cerrar con Escape/botón y adaptarse a móvil y movimiento reducido.
 * **RF-05.5: Publicación Automática.** Vincular un repositorio debe iniciar descubrimiento y generación de nombres y contenido ES/EN. Las actualizaciones válidas deben publicarse junto con sus fuentes e imágenes sin aprobación manual; ante fallos se conservará la publicación anterior. No se publicará HTML generado arbitrario.
 * **RF-05.6: Imágenes E Hitos Del Repositorio.** Las imágenes se descubrirán en carpetas por propósito (`interface`, `features`, `diagrams`, `results`), con captions ES/EN derivados de análisis visual directo. Los binarios permanecen en GitHub. Los hitos proceden de un archivo con evidencia en el mismo commit o de GitHub Milestones; no se rellenan en el CMS ni se inventan porcentajes.
 * **RF-05.7: Sincronización Recuperable.** La recepción debe persistir y deduplicar entregas antes de responder. El procesamiento debe usar leases, reintentos limitados, rechazo de fuentes/configuraciones obsoletas y controles administrativos de estado y recuperación.
-* **RF-05.8: Consulta Por Proyecto.** Las preguntas deben recuperar únicamente el corpus publicado de un proyecto visible y habilitado, citar fuentes fijadas al commit y abstenerse cuando no hay evidencia. Deben existir límites de consumo y no se persistirá conversación en este módulo.
+* **RF-05.8: Fuentes De Proyectos En El Chat.** La burbuja global puede consultar los corpus publicados de proyectos visibles y habilitados, citar fuentes fijadas al commit y abstenerse cuando no hay evidencia. El historial se persiste aparte del corpus público, con límites de consumo y retención definidos en RF-20.
 
 ### 2.2 Módulo de Internacionalización
 * **RF-06: Idiomas Soportados.** Las rutas públicas deben ofrecer versiones en español (`/es`) e inglés (`/en`).
@@ -66,12 +66,15 @@ Mi portafolio es una aplicación fullstack desarrollada en Next.js. Su alcance a
 * **RF-16.2: Aislamiento De Escrituras.** Las mutaciones deben requerir una habilitación explícita del servidor. Preview puede compartir la base de Production únicamente con escrituras, migraciones y seeds deshabilitados; `VERCEL_ENV=preview` debe bloquear escrituras incluso si el flag se configura erróneamente.
 * **RF-16.3: Consistencia De Edición.** El CMS debe rechazar formularios basados en una versión obsoleta, invalidar la caché pública solo después del commit y distinguir un fallo de invalidación de un fallo de persistencia.
 * **RF-16.4: Periodos Por Mes.** Experiencia y educación deben capturar y mostrar periodos por mes y año. Cada registro debe declarar explícitamente si continúa vigente; si no está vigente, debe incluir un mes final, sin presuponer que exista empleo o formación actual.
-* **RF-17: Gestión de Chats.** El CMS debe permitir visualizar conversaciones, eliminarlas y marcarlas como fijadas.
+* **RF-17: Gestión de Chats.** El CMS debe permitir buscar y visualizar conversaciones con sus mensajes, fuentes y contexto; eliminarlas y fijar conversaciones completas o mensajes individuales.
+* **RF-17.1: Chat Global Contextual.** Una burbuja independiente de los proyectos debe responder sobre el perfil público y los proyectos visibles. La sección/proyecto observado es solo una pista: la pregunta explícita y el historial prevalecen; ante ambigüedad se pide aclaración.
+* **RF-17.2: Funciones Automáticas.** La IA debe inferir el tema del mensaje y ejecutar funciones públicas permitidas para consultar información específica, buscar proyectos y devolver acciones al CV, repositorios, demos y redes sociales. Las peticiones combinadas se resuelven sin un selector de tema ni preguntas adicionales cuando la intención es clara. Los enlaces se validan y resuelven en el servidor.
 
 ### 2.5 Módulo de Retención y Continuidad de Sesión
-* **RF-18: Identificación de Invitados.** Al iniciar un chat, el sistema debe generar un UUID de sesión y almacenarlo en una cookie.
+* **RF-18: Identificación de Invitados.** Al iniciar expresamente el chat, tras un aviso comprensible, el sistema debe asignar un identificador opaco impredecible en una cookie funcional HttpOnly/Secure. Solo su hash se guarda en la base; abrir la burbuja no crea cookies ni conversaciones.
 * **RF-19: Recuperación de Contexto.** Una cookie válida debe permitir recuperar el historial previo del visitante.
-* **RF-20: Política de Retención.** Los mensajes y sesiones con más de 30 días deben eliminarse, excepto aquellos fijados desde el CMS.
+* **RF-20: Política de Retención.** Los mensajes sin fijar vencen a las 72 horas desde su creación y se eliminan por mantenimiento periódico. Los fijados o pertenecientes a una conversación fijada se conservan. No se reviven mensajes vencidos al fijar después su conversación.
+* **RF-20.1: Continuidad Y Fallos.** Una cookie válida permite retomar el historial propio. El guardado precede a la generación de IA, las peticiones son idempotentes y una respuesta fallida puede reintentarse sin duplicar mensajes.
 
 ---
 

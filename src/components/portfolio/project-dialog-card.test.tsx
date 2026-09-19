@@ -18,23 +18,23 @@ let container: HTMLDivElement;
 beforeEach(() => { Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true }); container = document.createElement("div"); document.body.append(container); root = createRoot(container); });
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); });
 describe("project detail modal", () => {
-  it("opens details on card click, groups gallery by purpose, closes with Escape and restores focus", async () => {
-    await act(async () => root.render(<ProjectDialogCard project={project} locale="en" copy={copy} ragEnabled={false} extra={{ assets: [asset("interface", "Home screen"), asset("features", "Feature output")], milestones: [], progressPct: null, indexed: false, narrative: null, sources: [] }} />));
+  it("integrates screenshots into the detail and keeps queries outside the project", async () => {
+    await act(async () => root.render(<ProjectDialogCard project={project} locale="en" copy={copy} extra={{ assets: [asset("interface", "Home screen"), asset("features", "Feature output")], milestones: [], progressPct: null, indexed: false, narrative: null, sources: [] }} />));
     expect(container.querySelector('[role="progressbar"]')).toBeNull();
     const trigger = container.querySelector("button")!;
     await act(async () => { trigger.focus(); trigger.click(); });
     const modal = document.querySelector<HTMLElement>('[role="dialog"]')!;
     expect(modal).not.toBeNull(); expect(modal.textContent).toContain("Technical details");
-    const category = [...modal.querySelectorAll("button")].find((button) => button.textContent === "Features")!;
-    await act(async () => category.click());
     expect(modal.querySelector('img[alt="Feature output"]')).not.toBeNull();
-    expect(modal.querySelector('img[alt="Home screen"]')).toBeNull();
+    expect(modal.querySelector('img[alt="Home screen"]')).not.toBeNull();
+    expect(modal.querySelector("textarea")).toBeNull();
+    expect(modal.querySelector('img[alt="Feature output"]')!.closest("section")!.textContent).toContain("Technical details");
     await act(async () => { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); });
     await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')).toBeNull());
     await vi.waitFor(() => expect(document.activeElement).toBe(trigger));
   });
   it("opens without a fabricated cover and has an explicitly labelled close button", async () => {
-    await act(async () => root.render(<ProjectDialogCard project={project} locale="es" copy={copy} ragEnabled={false} />));
+    await act(async () => root.render(<ProjectDialogCard project={project} locale="es" copy={copy} />));
     expect(container.querySelector("img")).toBeNull();
     await act(async () => container.querySelector("button")!.click());
     const close = document.querySelector<HTMLButtonElement>('button[aria-label="Cerrar detalle del proyecto"]')!;

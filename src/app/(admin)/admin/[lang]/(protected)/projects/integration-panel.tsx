@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { CircleCheckIcon, CircleDashedIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ProjectIntegrationWorkspace } from "@/data/admin/project-integration";
 import type { ProjectIntegrationCopy } from "@/i18n/project-integration";
@@ -62,7 +63,7 @@ export function ProjectIntegrationPanel({ workspace, copy, enabled }: { workspac
           <p>{published.snapshot.metadata.techStack.join(" · ")}</p>
           <p>{copy.progress}: {milestoneProgress(published.snapshot.milestones) === null ? copy.progressUnknown : `${milestoneProgress(published.snapshot.milestones)}%`}</p>
           <p>{copy.assets}: {published.snapshot.assets.length} · {copy.mediaRoot}</p>
-          <ul className="space-y-2">{published.snapshot.milestones.map((m) => <li key={m.id}>{m.completed ? "✓" : "○"} {m.title.es} / {m.title.en}</li>)}</ul>
+          <ul className="space-y-2">{published.snapshot.milestones.map((m) => <li key={m.id} className="flex items-start gap-2">{m.completed ? <CircleCheckIcon className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-label={copy.milestoneDone} /> : <CircleDashedIcon className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" aria-label={copy.milestonePending} />}<span>{m.title.es} / {m.title.en}</span></li>)}</ul>
         </div>}
       </> : <p className="mt-3 text-sm text-muted-foreground">{copy.waitingAutomatic}</p>}
     </section>

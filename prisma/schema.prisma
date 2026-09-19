@@ -247,6 +247,56 @@ model ProjectQueryQuota {
   @@index([expiresAt])
 }
 
+model ChatConversation {
+  id             String     @id @default(uuid()) @db.Uuid
+  tokenHash      String     @unique
+  locale         Locale
+  pinned         Boolean    @default(false)
+  createdAt      DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime   @updatedAt @db.Timestamptz(3)
+  lastActivityAt DateTime   @default(now()) @db.Timestamptz(3)
+  expiresAt      DateTime   @db.Timestamptz(3)
+  lockToken      String?    @db.Uuid
+  lockUntil      DateTime?  @db.Timestamptz(3)
+  turns          ChatTurn[]
+
+  @@index([pinned, lastActivityAt(sort: Desc)])
+  @@index([expiresAt])
+}
+
+model ChatTurn {
+  id             String           @id @default(uuid()) @db.Uuid
+  conversationId String           @db.Uuid
+  requestId      String           @db.Uuid
+  locale         Locale
+  context        Json             @db.JsonB
+  scope          Json?            @db.JsonB
+  status         String           @default("PENDING")
+  failureCode    String?
+  createdAt      DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime         @default(now()) @updatedAt @db.Timestamptz(3)
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  messages       ChatMessage[]
+
+  @@unique([conversationId, requestId])
+  @@index([conversationId, updatedAt(sort: Desc), id])
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid()) @db.Uuid
+  turnId    String   @db.Uuid
+  role      String
+  content   String   @db.Text
+  sources   Json     @default("[]") @db.JsonB
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  turn      ChatTurn @relation(fields: [turnId], references: [id], onDelete: Cascade)
+
+  @@unique([turnId, role])
+  @@index([pinned, createdAt])
+}
+
 model SkillCategory {
   id              String                     @id @default(uuid()) @db.Uuid
   slug            String                     @unique

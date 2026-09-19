@@ -15,6 +15,14 @@ afterEach(() => {
 });
 
 describe("Gemini document generation", () => {
+  it("tries another key for explicit key-invalid HTTP 400 responses", async () => {
+    vi.stubEnv("GEMINI_API_KEYS", "key-400-a,key-400-b");
+    const fetchMock = vi.fn().mockResolvedValueOnce(Response.json({ error: { details: [{ reason: "API_KEY_INVALID" }] } }, { status: 400 }))
+      .mockResolvedValueOnce(Response.json({ candidates: [{ content: { parts: [{ text: '{"value":"ok"}' }] } }] }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(generateStructuredDocument({ instruction: "Grounded content", source: {}, responseSchema: {}, validator: z.object({ value: z.literal("ok") }) })).resolves.toMatchObject({ content: { value: "ok" } });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
   it("reports provider rejection codes without echoing credentials or provider messages", async () => {
     const code = await providerRejectionCode(Response.json({ error: { status: "INVALID_ARGUMENT", message: "API key not valid: synthetic-sensitive-value", details: [{ reason: "API_KEY_INVALID" }] } }, { status: 400 }));
     expect(code).toBe("HTTP_400_API_KEY_INVALID");

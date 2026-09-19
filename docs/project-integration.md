@@ -35,8 +35,8 @@ docs/portfolio/images/
 
 Se descubren hasta ocho PNG/JPEG/WebP de hasta 4 MB. `cover.*` o `portada.*` tienen
 prioridad; después se priorizan interfaz, funcionalidades, resultados y diagramas.
-La organización no depende del tamaño de pantalla. Los SVG de plantilla y el
-diagrama antiguo de `public/project-media` quedan fuera de esta selección.
+La organización no depende del tamaño de pantalla. Los SVG de plantilla no se usan
+como portadas; el antiguo diagrama local y su directorio se eliminaron.
 Sin imágenes válidas, la card usa composición de texto y tecnologías, sin portada
 inventada ni una foto de reemplazo. Diagramas SVG pueden exportarse a PNG/WebP.
 
@@ -62,9 +62,10 @@ cambiar pesos o inventar finalizaciones.
 Sin ese archivo se importan Milestones de GitHub con pesos iguales y su estado
 abierto/cerrado. Sin objetivos medibles se oculta el porcentaje. Con ellos se calcula
 `round(peso completado / peso total * 100)`. El estado se deriva: archivado en GitHub
-→ `ARCHIVED`; todos los hitos completos → `COMPLETED`; otros casos → `IN_PROGRESS`.
+→ `ARCHIVED`; en otros casos → `IN_PROGRESS`. Terminar una lista no declara terminado
+el portafolio. El alcance incluye ahora también chat, administración y retención.
 El porcentaje corresponde al alcance documentado, no al número de commits ni a
-una estimación del esfuerzo total. El piloto define ocho metas en el repositorio,
+una estimación del esfuerzo total. El piloto define sus metas en el repositorio,
 con evidencias y el estado que corresponde a su verificación.
 
 ## Publicación Atómica
@@ -105,17 +106,19 @@ días para deduplicación; las cuotas caducadas se eliminan automáticamente.
 
 ## Modal Y RAG
 
-La card es un disparador de diálogo, no un desplegable inline. El modal incluye
-detalle estructurado, galería filtrable por tipo, tecnologías, enlaces, hitos,
-fuentes y preguntas RAG. Base UI gestiona foco, Escape y retorno a la card. En
-móvil ocupa la pantalla; el cierre permanece visible al desplazar el contenido.
-Las animaciones respetan movimiento reducido.
+La card abre un diálogo cuyo contenido integra las capturas con sus secciones:
+interfaz en la introducción, funcionalidades con la solución, diagramas con
+arquitectura y resultados con sus evidencias. Los hitos tienen iconos SVG, colores
+y etiquetas de estado. Base UI gestiona foco y cierre; el contenido se desplaza
+independientemente del encabezado. Las consultas están en la burbuja global,
+accesible también con el modal abierto; su contexto no fuerza el tema de la pregunta.
 
 Los embeddings siguen usando `gemini-embedding-001` a 768 dimensiones normalizadas.
-RAG consulta únicamente un corpus publicado de un proyecto visible/habilitado,
-cita sus fuentes o se abstiene. Revalida visibilidad antes de responder. Mantiene
-las cuotas de tres preguntas por cliente/minuto, treinta globales/minuto y doscientas
-globales/día, sin almacenar conversaciones ni contexto privado de documentos.
+El chat global consulta corpus publicados de proyectos visibles/habilitados y
+datos públicos del perfil. Cita fuentes, revalida visibilidad y separa la navegación
+del tema solicitado. Sus conversaciones se almacenan en tablas privadas con
+retención de tres días y fijado; nunca se incorporan al índice público. Véase
+[chat.md](chat.md). El antiguo endpoint de preguntas por proyecto fue retirado.
 
 ## Operación
 
@@ -148,3 +151,11 @@ configurar el secret del scheduler y vincular el repositorio. Mantener ambos fla
 de proyectos en `false` en Preview: la aplicación bloquea allí escrituras y Gemini.
 Validar un push que cambie texto, una imagen y un hito, comprobar publicación sin
 intervención, navegación del modal, captions visuales y citas al commit de origen.
+
+## Revisión Visual En Preview
+
+Preview muestra el modal y la burbuja de la versión candidata sin sincronizar ni
+escribir en la base compartida. Solo para `Mazon64/portafolio`, los hitos se leen
+del archivo versionado en ese deployment y las evidencias se fijan a su SHA; un
+aviso distingue esos hitos del relato y las capturas de la última publicación.
+Los demás proyectos y Production conservan los hitos de su corpus publicado.
