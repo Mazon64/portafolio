@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Analytics } from "@vercel/analytics/next";
 import { SiteHeader } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SiteChatProvider } from "@/components/chat/site-chat-context";
 import { getSiteUrl } from "@/config/env";
 import { hasLocale, locales } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
@@ -88,7 +89,7 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="min-h-screen bg-background text-foreground">
+          <SiteChatProvider locale={lang}><div className="min-h-screen bg-background text-foreground">
             <a
               href="#main-content"
               data-print-hidden
@@ -107,7 +108,7 @@ export default async function RootLayout({
               }}
             />
             {children}
-          </div>
+          </div></SiteChatProvider>
         </ThemeProvider>
         <Analytics />
       </body>

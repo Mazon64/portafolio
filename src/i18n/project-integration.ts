@@ -2,6 +2,8 @@ import type { Locale } from "./config";
 
 export const projectIntegrationCopy = {
   es: {
+    previewMilestones: "Vista previa: los hitos corresponden a esta versión del repositorio. El relato y las capturas proceden de la última publicación; se actualizarán al publicar en producción.",
+    milestoneScope: "Avance de los hitos", milestoneDone: "Completado", milestonePending: "Pendiente", viewImage: "Abrir imagen completa",
     connect: "Vincular y publicar automáticamente",
     automaticHint: "La ficha, las tecnologías, las imágenes, los hitos y las fuentes se obtienen del repositorio y se publican automáticamente. Aquí solo administras la conexión y su estado.",
     mediaRoot: "Imágenes: docs/portfolio/images/{interface,features,diagrams,results}/",
@@ -19,7 +21,7 @@ export const projectIntegrationCopy = {
     repository: "Repositorio público (propietario/nombre)", branch: "Rama", enabled: "Habilitar sincronización y consultas de este repositorio",
     paths: "Documentación autorizada (un archivo Markdown por línea)", sourcesHint: "Solo se importan los archivos indicados, fijados a un commit. Las fuentes se harán consultables al publicar.",
     assets: "Imágenes", addAsset: "Añadir imagen", imageUrl: "URL de imagen", alt: "Texto alternativo", caption: "Descripción de imagen", remove: "Quitar",
-    assetHint: "Usa /project-media/... o una imagen PNG/JPEG/WebP de raw.githubusercontent.com fijada a un SHA de commit.",
+    assetHint: "Las imágenes se descubren en el repositorio y se fijan a su commit de origen.",
     milestones: "Hitos de avance", addMilestone: "Añadir hito", milestoneTitle: "Hito", weight: "Peso", completed: "Completado", evidence: "Evidencia (URL HTTPS)",
     milestoneHint: "Avance = suma del peso completado / peso total. Sin hitos se conserva el porcentaje manual.",
     save: "Guardar configuración", saving: "Guardando…", sync: "Sincronizar ahora", process: "Procesar trabajo pendiente", retry: "Reintentar", working: "Procesando…",
@@ -34,6 +36,8 @@ export const projectIntegrationCopy = {
     jobStatuses: { QUEUED: "En cola", PROCESSING: "Procesando", SUCCEEDED: "Publicado automáticamente", FAILED: "Falló", SUPERSEDED: "Sustituido por cambios más recientes" },
   },
   en: {
+    previewMilestones: "Preview: milestones reflect this repository version. The narrative and screenshots come from the latest publication and will update after the production release.",
+    milestoneScope: "Milestone progress", milestoneDone: "Completed", milestonePending: "Pending", viewImage: "Open full image",
     connect: "Connect and publish automatically",
     automaticHint: "Project content, technologies, images, milestones and sources are discovered from the repository and published automatically. This panel manages only the connection and its status.",
     mediaRoot: "Images: docs/portfolio/images/{interface,features,diagrams,results}/",
@@ -51,7 +55,7 @@ export const projectIntegrationCopy = {
     repository: "Public repository (owner/name)", branch: "Branch", enabled: "Enable synchronization and queries for this repository",
     paths: "Allowed documentation (one Markdown file per line)", sourcesHint: "Only the listed files are imported, pinned to a commit. These sources become queryable when published.",
     assets: "Images", addAsset: "Add image", imageUrl: "Image URL", alt: "Alternative text", caption: "Image description", remove: "Remove",
-    assetHint: "Use /project-media/... or a commit-SHA-pinned PNG/JPEG/WebP from raw.githubusercontent.com.",
+    assetHint: "Images are discovered in the repository and pinned to their source commit.",
     milestones: "Progress milestones", addMilestone: "Add milestone", milestoneTitle: "Milestone", weight: "Weight", completed: "Completed", evidence: "Evidence (HTTPS URL)",
     milestoneHint: "Progress = completed weight / total weight. With no milestones, the manual percentage is retained.",
     save: "Save configuration", saving: "Saving…", sync: "Synchronize now", process: "Process pending job", retry: "Retry", working: "Processing…",

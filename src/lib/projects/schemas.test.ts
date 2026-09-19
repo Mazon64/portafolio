@@ -17,7 +17,7 @@ describe("project source and presentation contracts", () => {
   });
   it("requires commit-pinned remote images and bilingual accessible text", () => {
     const base = { alt: { es: "Diagrama", en: "Diagram" }, caption: { es: "Arquitectura", en: "Architecture" } };
-    expect(assetsSchema.safeParse([{ ...base, url: "/project-media/portfolio-architecture.svg" }]).success).toBe(true);
+    expect(assetsSchema.safeParse([{ ...base, url: "/legacy-diagram.svg" }]).success).toBe(false);
     expect(assetsSchema.safeParse([{ ...base, url: `https://raw.githubusercontent.com/Mazon64/portafolio/${"a".repeat(40)}/public/cover.png` }]).success).toBe(true);
     for (const url of ["javascript:alert(1)", "https://private-host/cover.png", "https://raw.githubusercontent.com/Mazon64/portafolio/main/cover.png"]) {
       expect(assetsSchema.safeParse([{ ...base, url }]).success).toBe(false);

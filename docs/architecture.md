@@ -11,7 +11,7 @@ Mi portafolio utiliza una aplicación fullstack de Next.js (App Router) desplega
 * **Aplicación y API:** Vercel con Next.js y Vercel Functions.
 * **Dominio relacional y vectorial:** PostgreSQL y pgvector alojados en Supabase.
 * **Correo de contacto:** Resend con plantillas React Email y Gmail como destino.
-* **IA:** Google Gemini para documentos, narrativa de proyectos y RAG por proyecto; MongoDB Atlas permanece previsto para conversaciones futuras.
+* **IA:** Google Gemini para documentos, proyectos y chat contextual. Las conversaciones se guardan en el PostgreSQL existente con RLS y retención de tres días.
 
 ### 1.1 Internacionalización y Preferencias de Interfaz
 Los prefijos `/es` y `/en` son obligatorios para las rutas públicas. El Proxy interviene solo en `/`: selecciona español cuando es el idioma principal aceptado por el navegador e inglés para cualquier otro idioma. Cualquier otra ruta sin prefijo o con un idioma no soportado devuelve 404.
@@ -55,13 +55,13 @@ El DAL selecciona únicamente campos públicos, exige la traducción solicitada,
 
 La generación es manual y requiere simultáneamente autorización, `CMS_WRITES_ENABLED=true`, `DOCUMENT_GENERATION_ENABLED=true` y al menos una clave en `GEMINI_API_KEYS`. Gemini recibe las fuentes como JSON tratado como datos y devuelve JSON conforme a un schema cerrado. El servidor valida la respuesta con Zod, exige que los slugs coincidan exactamente y entrega al cliente únicamente un borrador narrativo efímero. El administrador puede editar ese contenido antes de guardarlo. La procedencia inmutable del borrador se firma con `AUTH_SECRET`, y su UUID actúa como clave idempotente ante reintentos. La acción de guardado vuelve a cargar las fuentes, rechaza el borrador si cambió su `sourceHash` y recompone fechas, empresas, URLs, habilidades e identidad desde el DTO canónico; así la IA y el editor solo controlan síntesis, descripciones y bullets.
 
-Las claves de Gemini forman un pool server-only sin persistencia. Cada instancia activa selecciona un inicio aleatorio y asigna las solicitudes sucesivas por round-robin. Si una credencial recibe `401`, `403`, `408`, `425`, `429` o un error `5xx`, si falla la red, o si la respuesta no satisface el contrato estructurado, la misma solicitud prueba una vez cada clave restante en orden circular. Los demás errores `4xx` no se reintentan porque cambiar de credencial no puede corregir la solicitud. La coordinación es deliberadamente local a cada instancia serverless; el inicio aleatorio evita concentrar todos los cold starts en la primera clave sin introducir almacenamiento compartido.
+Las claves de Gemini forman un pool server-only sin persistencia. Cada instancia activa selecciona un inicio aleatorio y asigna las solicitudes sucesivas por round-robin. Si una credencial recibe `401`, `403`, `408`, `425`, `429` o un error `5xx`, si falla la red, o si la respuesta no satisface el contrato estructurado, la misma solicitud prueba una vez cada clave restante en orden circular. También se permite continuar ante un `400` que identifique explícitamente una API key inválida, caducada o bloqueada; los demás errores `4xx` no se reintentan porque cambiar de credencial no puede corregir la solicitud. La coordinación es deliberadamente local a cada instancia serverless; el inicio aleatorio evita concentrar todos los cold starts en la primera clave sin introducir almacenamiento compartido.
 
 El CV público se genera por locale en primera persona, se edita en el workspace y solo se guarda como borrador cuando el administrador lo confirma; otra acción separada permite publicarlo. Publicar archiva el CV público anterior. `sourceHash` permite marcar documentos desactualizados sin regenerarlos. Si se elimina el CV publicado, `/es/cv` o `/en/cv` vuelve al CV derivado directamente de las fuentes. Los CV ATS y cartas siguen el mismo flujo de generación, edición y guardado y permanecen bajo `/admin`. La vista privada y el documento impreso usan los mismos componentes React y estilos de impresión que el CV público; el navegador permite imprimir o guardar esa composición como PDF sin mantener un segundo renderizador ni persistir binarios duplicados. Los documentos se consultan con filtros y paginación server-side y la interfaz se actualiza mediante el App Router después de cada mutación.
 
 ### 2.4 Presentación y Evolución de Proyectos
 
-Las cards de proyectos muestran nombre, resumen, tecnologías y portada cuando existe una imagen válida del repositorio. Abren un modal accesible con detalle técnico, galería por propósito, enlaces, hitos, fuentes y RAG. En móvil el modal ocupa la pantalla; Escape/cierre devuelve el foco a la card. Sin imágenes no se inventa portada; sin hitos documentados no se muestra un porcentaje.
+Las cards muestran nombre, resumen, tecnologías y una portada válida del repositorio. El modal integra capturas con las secciones del relato: interfaz junto al resumen, funcionalidades junto a la solución, diagramas con arquitectura y resultados con sus evidencias. Los hitos usan iconos, etiquetas y colores, separados del estado general. En móvil el modal ocupa la pantalla. La burbuja global permanece accesible mientras se ve el proyecto; no hay un formulario de consultas dentro del relato. El diagrama local obsoleto y su directorio fueron retirados.
 
 `ProjectIntegration` vincula un repositorio público por ID estable. El worker descubre metadatos, documentación, manifiestos e imágenes, importa hitos del repositorio/GitHub y publica automáticamente nombres, traducciones, tecnologías, demo, estado, avance y corpus. No hay formularios de contenido generado ni aprobación manual. Un snapshot validado en `ProjectKnowledge.narrative` conserva referencias y metadatos derivados; las imágenes binarias permanecen en GitHub. El avance se calcula por pesos documentados, nunca por cantidad de commits. Las comprobaciones de lease y fuentes protegen la sustitución atómica de la publicación anterior.
 
@@ -70,6 +70,14 @@ Gemini redacta campos estructurados ES/EN y analiza imágenes reales normalizada
 ---
 
 ## 3. Estrategia de Autenticación y Autorización
+
+El chat público tiene su propio límite de identidad por cookie opaca y nunca usa
+la cookie OAuth como identidad del visitante. `ChatConversation`, `ChatTurn` y
+`ChatMessage` están protegidos por RLS para impedir acceso directo de roles públicos.
+El servidor aplica propiedad de conversación, idempotencia y leases; el administrador
+se autoriza mediante el mecanismo existente. Las conversaciones no se mezclan con
+el corpus vectorial público. La retención se evalúa por mensaje (72 horas), con
+excepciones de fijado. Véase [chat.md](chat.md).
 
 ### 3.1 Autenticación (SSO con GitHub)
 El acceso al CMS se realiza exclusivamente mediante Single Sign-On con GitHub. NextAuth.js orquesta OAuth 2.0 sin gestionar contraseñas propias y mantiene una sesión JWT cifrada con una duración absoluta máxima de doce horas. Un timestamp firmado e inmutable evita que la renovación deslizante prolongue ese límite.
@@ -126,6 +134,7 @@ Los secretos estarán disponibles solo en el servidor. El prefijo `NEXT_PUBLIC_`
 | `DOCUMENT_GENERATION_ENABLED` | Habilitación explícita de llamadas a Gemini y creación de artefactos. |
 | `PROJECT_INTEGRATION_ENABLED` | Habilitación explícita de configuración y sincronización de proyectos; bloqueada en Preview. |
 | `PROJECT_RAG_ENABLED` | Habilita consultas sobre el corpus público, junto con el flag de integración. |
+| `CHAT_ENABLED` | Habilita la burbuja global y persistencia privada; siempre bloqueada en Preview. |
 | `PROJECT_GITHUB_TOKEN` | Token opcional de lectura de contenido/metadatos de repositorios públicos seleccionados. |
 | `CONTACT_DELIVERY_ENABLED` | Habilitación explícita de la entrega del formulario. |
 | `RESEND_API_KEY` | Credencial server-only para enviar correo mediante Resend. |
@@ -136,7 +145,7 @@ Los secretos estarán disponibles solo en el servidor. El prefijo `NEXT_PUBLIC_`
 | `GITHUB_WEBHOOK_SECRET` | Validación de firmas del webhook. |
 | `GEMINI_API_KEYS` | Pool server-only de claves de Google Gemini, separadas por comas o saltos de línea. |
 | `GEMINI_MODEL` | Modelo Gemini usado para generación; por defecto `gemini-3-flash-preview`. |
-| `MONGODB_URI` | Conexión a MongoDB Atlas. |
+| `MONGODB_URI` | Reservada para integraciones futuras; el chat actual utiliza PostgreSQL. |
 | `CRON_SECRET` | Autorización de tareas programadas. |
 
 El repositorio versiona `.env.example` para desarrollo nativo y `.env.docker.example` para ejecución local en contenedor, ambos sin secretos. Los archivos reales `.env` y `.env.docker` permanecen fuera de Git. Cada plataforma mantiene una configuración equivalente. `SITE_URL` es la única variable de aplicación proporcionada durante el build porque forma parte de los metadatos estáticos. Las variables operativas, conexiones y credenciales se inyectan en runtime; ninguna credencial se incorpora como argumento de build. `NODE_ENV=production` permanece fija como invariante de la imagen.

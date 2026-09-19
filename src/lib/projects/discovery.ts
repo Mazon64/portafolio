@@ -118,7 +118,7 @@ export async function discoverProject(repository: GithubRepository, sha: string)
   const metadata = {
     repositoryId: String(repository.id), repositoryFullName: repository.full_name, branch: repository.default_branch,
     demoUrl: repositoryDemoUrl(repository.homepage), techStack,
-    status: repository.archived ? "ARCHIVED" as const : milestones.length && milestones.every((m) => m.completed) ? "COMPLETED" as const : "IN_PROGRESS" as const,
+    status: repository.archived ? "ARCHIVED" as const : "IN_PROGRESS" as const,
     sourcePaths: [...new Set(chunks.map((c) => c.path))],
   };
   const summary = JSON.stringify({ name: repository.name, description: repository.description, ...metadata });

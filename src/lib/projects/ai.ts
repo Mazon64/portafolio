@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { DocumentGenerationError, generateStructuredDocument, getApiKeyAttempts, providerRejectionCode } from "@/lib/documents/gemini";
+import { DocumentGenerationError, generateStructuredDocument, getApiKeyAttempts, providerRejectionCode, canRetryWithAnotherKey } from "@/lib/documents/gemini";
 import { boundedBody } from "./http";
 import { EMBEDDING_DIMENSIONS, EMBEDDING_MODEL, localizedText, narrativeSchema, type ProjectAssets, type ProjectMilestones } from "./schemas";
 import type { SourceChunk } from "./github";
@@ -47,7 +47,7 @@ export async function embedTexts(texts: string[], taskType: "RETRIEVAL_DOCUMENT"
       if (!response.ok) {
         const code = await providerRejectionCode(response);
         failures.push(code);
-        if ([401,403,408,425,429].includes(response.status) || response.status >= 500) continue;
+        if (canRetryWithAnotherKey(response.status, code)) continue;
         throw new ProjectProviderError(`EMBEDDING_${code}`);
       }
       const data = z.object({ embeddings: z.array(z.object({ values: z.array(z.number().finite()).length(EMBEDDING_DIMENSIONS) })).length(texts.length) })

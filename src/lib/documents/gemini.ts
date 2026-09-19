@@ -59,8 +59,9 @@ export function getApiKeyAttempts(): string[] {
   return apiKeys.map((_, offset) => apiKeys[(startIndex + offset) % apiKeys.length]);
 }
 
-function canRetryWithAnotherKey(status: number): boolean {
-  return RETRYABLE_STATUSES.has(status) || status >= 500;
+export function canRetryWithAnotherKey(status: number, code = ""): boolean {
+  return RETRYABLE_STATUSES.has(status) || status >= 500 ||
+    (status === 400 && /_API_KEY_(INVALID|EXPIRED|NOT_FOUND|SERVICE_BLOCKED|HTTP_REFERRER_BLOCKED|IP_ADDRESS_BLOCKED)$/.test(code));
 }
 
 export function getDocumentGenerationModel() {
@@ -133,8 +134,9 @@ export async function generateStructuredDocument<T>({
     }
 
     if (!response.ok) {
-      failures.push(await providerRejectionCode(response));
-      if (canRetryWithAnotherKey(response.status)) continue;
+      const code = await providerRejectionCode(response);
+      failures.push(code);
+      if (canRetryWithAnotherKey(response.status, code)) continue;
       throw new DocumentGenerationError(`Document generation failed: ${failures.join(", ")}`);
     }
 

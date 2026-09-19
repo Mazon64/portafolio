@@ -16,7 +16,7 @@ describe("automatic repository discovery", () => {
     const selection = discoverFiles([
       file("docs/portfolio/images/diagrams/data.png"), file("docs/portfolio/images/interface/home.webp"),
       file("docs/portfolio/images/features/login/cover.png"), file("docs/portfolio/images/features/secret.png", "120000"),
-      file("public/project-media/portfolio-architecture.svg"), file("public/next.svg"), file(".env.md"), file("docs/../secret.md"), file("README.md"),
+      file("public/legacy-diagram.svg"), file("public/next.svg"), file(".env.md"), file("docs/../secret.md"), file("README.md"),
     ]);
     expect(selection.images.map((f) => f.path)).toEqual([
       "docs/portfolio/images/features/login/cover.png", "docs/portfolio/images/interface/home.webp", "docs/portfolio/images/diagrams/data.png",

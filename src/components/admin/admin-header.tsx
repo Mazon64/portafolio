@@ -39,10 +39,11 @@ export function AdminHeader({
     { href: `/admin/${locale}/skills`, label: copy.navigation.skills },
     { href: `/admin/${locale}/projects`, label: copy.navigation.projects },
     { href: `/admin/${locale}/documents`, label: copy.navigation.documents },
+    { href: `/admin/${locale}/conversations`, label: copy.navigation.conversations },
   ];
 
   function isCurrent(href: string) {
-    return pathname === href;
+    return pathname === href || (href !== `/admin/${locale}` && pathname.startsWith(`${href}/`));
   }
 
   return (
@@ -144,7 +145,7 @@ export function AdminHeader({
                   aria-label={`${copy.navigation.viewSite}. ${copy.navigation.newTab}`}
                   className="flex items-center gap-4 border-b border-border px-2 py-4 text-base font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  <span className="font-mono text-xs">08</span>
+                  <span className="font-mono text-xs">{String(items.length + 1).padStart(2, "0")}</span>
                   <span className="flex flex-1 items-center justify-between gap-3">
                     {copy.navigation.viewSite}
                     <ArrowUpRightIcon className="size-4" aria-hidden="true" />
