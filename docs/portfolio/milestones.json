@@ -7,7 +7,7 @@
   { "id": "automatic-publication", "title": { "es": "Descubrimiento y publicación automáticos", "en": "Automatic discovery and publication" }, "weight": 10, "completed": true, "evidence": "docs/project-integration.md" },
   { "id": "repository-visual-media", "title": { "es": "Imágenes del repositorio y análisis visual", "en": "Repository images and visual analysis" }, "weight": 5, "completed": true, "evidence": "docs/project-integration.md" },
   { "id": "accessible-project-modal", "title": { "es": "Detalle de proyecto en modal accesible", "en": "Accessible project detail modal" }, "weight": 5, "completed": true, "evidence": "src/components/portfolio/project-dialog-card.test.tsx" },
-  { "id": "contextual-site-chat", "title": { "es": "Chat global con contexto de navegación", "en": "Site-wide chat with browsing context" }, "weight": 15, "completed": false, "evidence": "docs/srs.md" },
+  { "id": "contextual-site-chat", "title": { "es": "Chat global con contexto de navegación", "en": "Site-wide chat with browsing context" }, "weight": 15, "completed": true, "evidence": "docs/chat.md" },
   { "id": "conversation-administration", "title": { "es": "Conversaciones y mensajes fijados en admin", "en": "Conversation administration and pinned messages" }, "weight": 10, "completed": false, "evidence": "docs/srs.md" },
-  { "id": "chat-continuity-retention", "title": { "es": "Continuidad por cookie y retención de tres días", "en": "Cookie continuity and three-day retention" }, "weight": 5, "completed": false, "evidence": "docs/srs.md" }
+  { "id": "chat-continuity-retention", "title": { "es": "Continuidad por cookie y retención de tres días", "en": "Cookie continuity and three-day retention" }, "weight": 5, "completed": true, "evidence": "docs/chat.md" }
 ]

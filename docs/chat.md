@@ -112,6 +112,24 @@ pestañas obsoletas. La navegación funciona también en móvil.
 
 ## Activación Y Operación
 
+### Verificación De La Activación
+
+La migración `20260915100000_contextual_chat` se aplicó mediante el workflow
+protegido `35418556074`; las tres tablas pertenecen al rol servidor `prisma`,
+tienen RLS habilitado y acceso de lectura verificado. La aplicación se activó en
+Production con el PR #61 y `CHAT_ENABLED=true` (Preview permanece en `false`).
+
+La verificación real con Gemini y navegador a 2560×1440 confirmó una solicitud
+combinada de CV, LinkedIn y repositorio; intención personal con un proyecto abierto;
+acción que abre el modal; respuesta RAG con citas; persistencia tras recargar y
+continuidad en móvil EN mediante cookie HttpOnly/Secure/SameSite=Lax. No hubo
+errores JavaScript. `Chat Retention` se ejecutó correctamente en `35464208677`.
+El fijado, desfijado, cascadas y expiración exacta tienen pruebas automatizadas;
+queda pendiente la aceptación del panel con la sesión GitHub real del propietario.
+No se considera completado ese hito solo por publicar su interfaz.
+
+### Secuencia De Entrega
+
 La interfaz se entrega a `develop` antes de activar el servicio: Preview muestra la
 burbuja, el aviso de cookie, el contexto observado y el nuevo modal. El botón de
 inicio permanece deshabilitado y el servidor no crea cookies, mensajes ni llamadas
