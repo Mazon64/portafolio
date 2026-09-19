@@ -10,7 +10,7 @@ Escape cierra primero el chat y después el modal. El chat no aparece al imprimi
 
 El contexto se observa localmente: ruta pública, sección visible y slug del
 proyecto abierto. Se envía únicamente junto con un mensaje, no como seguimiento
-continuo de navegación. El router semántico prioriza la pregunta explícita, después
+continuo de navegación. La IA infiere el tema del mensaje y prioriza la pregunta explícita, después
 el tema de la conversación y finalmente la pantalla como pista. Preguntar por
 David mientras se ve un proyecto sigue siendo una consulta personal. Referencias
 ambiguas entre proyectos provocan una aclaración. Los slugs se contrastan con el
@@ -25,7 +25,21 @@ abierto. La pregunta y el historial propio son contexto no confiable, no fuentes
 para inventar hechos sobre el propietario. No se consulta `AiContext`, documentos
 privados ni conversaciones de otros visitantes.
 
-El router y la respuesta usan JSON validado de Gemini. Las citas se resuelven en
+Gemini selecciona funciones nativas automáticamente, sin un clasificador separado
+ni un selector de tema para el visitante. Puede consultar perfil, experiencia,
+formación y habilidades públicos, buscar proyectos y evidencia RAG, obtener el CV
+y filtrar redes sociales. Combina funciones en una misma petición para responder
+sin pedir consultas adicionales. El servidor valida nombres y argumentos y solo
+ejecuta funciones de lectura permitidas, nunca SQL arbitrario ni acciones del CMS.
+
+Las funciones devuelven fuentes y acciones con identificadores. La respuesta final
+solo puede elegir esos identificadores: las URLs salen del servidor y la base, no
+del modelo. El chat presenta botones al CV, proyectos, repositorios, demos y redes.
+Los proyectos enlazados se abren en su modal y el CV usa navegación interna. Estas
+acciones se conservan junto a las fuentes del mensaje. Hay un máximo de cuatro
+rondas y seis funciones por ronda, conservando las firmas de pensamiento de Gemini.
+
+Las llamadas y la respuesta usan JSON validado de Gemini. Las citas se resuelven en
 el servidor contra fuentes suministradas. Se verifica de nuevo la visibilidad de
 los proyectos/corpus citados antes de completar una respuesta. Ante falta de
 evidencia se pide aclaración o se informa de la limitación. El chat no persiste ni

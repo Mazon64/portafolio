@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import Image from "next/image";
 import { ArrowUpRightIcon, XIcon, CircleCheckIcon, CircleDashedIcon, FlagIcon } from "lucide-react";
@@ -22,10 +22,21 @@ export function ProjectDialogCard({ project, extra, copy, locale }: { project: P
   const setChatDock = chat.setDock;
   const attachChatDock = useCallback((node: HTMLDivElement | null) => setChatDock(node), [setChatDock]);
   const projectStatus = extra?.managed && project.status === "completed" ? "inProgress" : project.status;
+  const [open, setOpen] = useState(false);
+  const setViewedProject = chat.setProject;
+  useEffect(() => {
+    const followLink = () => {
+      if (window.location.hash === `#project-${project.slug}`) { setOpen(true); setViewedProject(project.slug); }
+    };
+    followLink(); window.addEventListener("hashchange", followLink);
+    return () => window.removeEventListener("hashchange", followLink);
+  }, [project.slug, setViewedProject]);
   return <article id={`project-${project.slug}`}>
-    <Dialog.Root onOpenChange={(open, details) => {
+    <Dialog.Root open={open} onOpenChange={(open, details) => {
       if (!open && details.reason === "escape-key" && chat.open) { details.cancel(); chat.setOpen(false); return; }
       chat.setProject(open ? project.slug : null);
+      setOpen(open);
+      if (!open && window.location.hash === `#project-${project.slug}`) window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
     }}>
       <Dialog.Trigger aria-label={`${labels.openProject} ${project.name}`} className={`group grid w-full cursor-pointer overflow-hidden rounded-2xl border border-border bg-card text-left shadow-sm transition hover:border-foreground/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${cover ? "lg:grid-cols-[minmax(16rem,0.85fr)_minmax(0,1.15fr)]" : ""}`}>
         {cover && <span className="relative block aspect-[16/10] overflow-hidden bg-muted/30 lg:aspect-auto lg:min-h-72"><RepositoryImage asset={cover} locale={locale} fill /></span>}

@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { LoaderCircleIcon, MessageCircleIcon, PlusIcon, SendIcon, XIcon, RotateCcwIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { chatCopy } from "@/i18n/chat";
@@ -95,12 +96,11 @@ export function ChatWidget({ locale }: { locale: Locale }) {
     void send({ conversationId: session.conversation.id, requestId: turn.requestId, message: user.content, locale: turn.locale, context: turn.context });
   }
   const content = <div data-print-hidden id="chat" onKeyDown={(event) => { if (event.key === "Escape" && chat.open) { event.stopPropagation(); chat.setOpen(false); } }} className="fixed right-4 bottom-4 z-[70] print:hidden sm:right-6 sm:bottom-6">
-    {chat.open && <section ref={panel} role="region" aria-label={copy.title} className={`absolute right-0 bottom-16 flex w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-background text-foreground shadow-2xl ${chat.dock ? "h-[min(32rem,calc(80dvh-6rem))]" : "h-[min(36rem,calc(100dvh-7rem))]"}`}>
+    {chat.open && <section ref={panel} role="region" aria-label={copy.title} className={`absolute right-0 bottom-20 flex w-[min(26rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-background text-foreground shadow-2xl 2xl:w-[30rem] ${chat.dock ? "h-[min(36rem,calc(80dvh-7rem))]" : "h-[min(40rem,calc(100dvh-8rem))]"}`}>
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-muted/30 px-4 py-3">
         <div><h2 className="text-sm font-semibold">{copy.title}</h2><p className="text-xs text-muted-foreground">{copy.subtitle}</p></div>
         <div className="flex gap-1">
           {session?.conversation && <Button variant="ghost" size="icon-sm" aria-label={copy.newChat} disabled={pending || waiting} onClick={() => { setRestart(true); setError(""); }}><PlusIcon /></Button>}
-          <Button variant="ghost" size="icon-sm" aria-label={copy.close} onClick={() => chat.setOpen(false)}><XIcon /></Button>
         </div>
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
@@ -118,7 +118,19 @@ export function ChatWidget({ locale }: { locale: Locale }) {
           <div role="log" aria-live="polite" aria-relevant="additions text" className="space-y-5">{session.turns.map((turn) => <div key={turn.id} className="space-y-3">{turn.messages.map((message) => <div key={message.id} className={message.role === "USER" ? "ml-7 rounded-2xl rounded-br-sm bg-foreground p-3 text-background" : "mr-3 rounded-2xl rounded-bl-sm bg-muted/50 p-3"}>
             <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wide opacity-60">{message.role === "USER" ? copy.visitor : copy.assistant}</p>
             <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.content}</p>
-            {message.sources.length > 0 && <ul aria-label={copy.sources} className="mt-2 flex flex-wrap gap-2 text-xs">{message.sources.filter((source, index, sources) => sources.findIndex((s) => s.url === source.url) === index).map((source) => <li key={source.id}><a href={source.url} target="_blank" rel="noreferrer" className="break-all underline underline-offset-4">{source.title}</a></li>)}</ul>}
+            {message.sources.some((source) => source.action) && <div className="mt-3 flex flex-wrap gap-2">{message.sources.filter((source) => source.action).map((source) => {
+              const internal = ["cv", "project", "contact"].includes(source.action!);
+              const href = internal ? `${new URL(source.url).pathname}${new URL(source.url).hash}` : source.url;
+              return <Link key={source.id} href={href} target={internal ? undefined : "_blank"} rel={internal ? undefined : "noreferrer"} onClick={(event) => {
+                if (internal && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+                  chat.setOpen(false);
+                  if (source.action === "project" && window.location.pathname === new URL(source.url).pathname) {
+                    event.preventDefault(); window.history.pushState(null, "", href); window.dispatchEvent(new HashChangeEvent("hashchange"));
+                  }
+                }
+              }} className="rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{source.title}</Link>;
+            })}</div>}
+            {message.sources.some((source) => !source.action) && <ul aria-label={copy.sources} className="mt-2 flex flex-wrap gap-2 text-xs">{message.sources.filter((source, index, sources) => !source.action && sources.findIndex((s) => !s.action && s.url === source.url) === index).map((source) => <li key={source.id}><a href={source.url} target="_blank" rel="noreferrer" className="break-all underline underline-offset-4">{source.title}</a></li>)}</ul>}
           </div>)}
             {turn.status === "FAILED" && <Button variant="ghost" size="sm" disabled={pending || waiting} onClick={() => retry(turn)}><RotateCcwIcon />{copy.retry}</Button>}
           </div>)}</div>
@@ -137,7 +149,7 @@ export function ChatWidget({ locale }: { locale: Locale }) {
         </form>
       </footer>}
     </section>}
-    <Button ref={trigger} type="button" aria-label={chat.open ? copy.close : copy.open} aria-expanded={chat.open} onClick={() => chat.setOpen(!chat.open)} className="size-13 rounded-full border border-border shadow-lg"><MessageCircleIcon className="size-6" /></Button>
+    <Button ref={trigger} type="button" aria-label={chat.open ? copy.close : copy.open} aria-expanded={chat.open} onClick={() => chat.setOpen(!chat.open)} className="size-16 rounded-full border border-border shadow-xl 2xl:size-18">{chat.open ? <XIcon className="size-8" /> : <MessageCircleIcon className="size-8" />}</Button>
   </div>;
   return chat.dock ? createPortal(content, chat.dock) : content;
 }

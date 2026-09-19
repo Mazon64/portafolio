@@ -53,6 +53,8 @@ describe("site-wide chat experience", () => {
     await act(async () => root.render(<SiteChatProvider locale="en"><section id="about">About</section></SiteChatProvider>));
     expect(fetchMock).not.toHaveBeenCalled();
     await click("Open chat");
+    expect(document.querySelector('[aria-label="Portfolio assistant"] header button[aria-label="Close chat"]')).toBeNull();
+    expect(document.querySelector('button[aria-label="Close chat"] svg.lucide-x')).not.toBeNull();
     expect(document.body.textContent).toContain("3 days");
     expect(fetchMock.mock.calls.filter(([, options]) => options?.method === "POST")).toHaveLength(0);
     await click("Start chat");
