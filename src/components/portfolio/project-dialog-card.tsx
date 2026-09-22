@@ -12,7 +12,7 @@ import { type RepositoryAsset, type ProjectMilestones, type ProjectNarrative } f
 import type { ProjectCopy } from "./projects-section";
 import { useSiteChat } from "@/components/chat/site-chat-context";
 
-type Extras = { assets: RepositoryAsset[]; milestones: ProjectMilestones; progressPct: number | null; sources: Array<{ path: string; sourceUrl: string }>; indexed: boolean; narrative: ProjectNarrative | null; managed?: boolean; milestonePreview?: boolean };
+type Extras = { assets: RepositoryAsset[]; milestones: ProjectMilestones; progressPct: number | null; sources: Array<{ path: string; sourceUrl: string }>; indexed: boolean; narrative: ProjectNarrative | null; managed?: boolean };
 
 export function ProjectDialogCard({ project, extra, copy, locale }: { project: ProjectDto; extra?: Extras; copy: ProjectCopy; locale: Locale }) {
   const labels = projectIntegrationCopy[locale];
@@ -59,7 +59,6 @@ export function ProjectDialogCard({ project, extra, copy, locale }: { project: P
             <Dialog.Close render={<Button variant="ghost" size="icon" />} aria-label={labels.closeModal}><XIcon aria-hidden="true" /></Dialog.Close>
           </div>
           <div data-project-scroll className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 pb-24 sm:p-8 sm:pb-24">
-            {extra?.milestonePreview && <p className="mb-6 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 text-sm text-muted-foreground">{labels.previewMilestones}</p>}
             <div className={`grid items-center gap-6 ${cover?.category === "interface" ? "lg:grid-cols-2" : ""}`}><Dialog.Description className="max-w-4xl text-lg leading-8 text-muted-foreground">{project.summary}</Dialog.Description>{cover?.category === "interface" && <StoryImage asset={cover} locale={locale} />}</div>
             <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(13rem,0.6fr)]">
               <div className="space-y-7">
@@ -76,8 +75,8 @@ export function ProjectDialogCard({ project, extra, copy, locale }: { project: P
                 <div className="flex flex-wrap gap-3">{project.repositoryUrl && <a href={project.repositoryUrl} target="_blank" rel="noreferrer" className={buttonVariants({ variant: "outline" })}>{copy.repository}<ArrowUpRightIcon aria-hidden="true" /><span className="sr-only">{copy.newTab}</span></a>}{project.demoUrl && <a href={project.demoUrl} target="_blank" rel="noreferrer" className={buttonVariants()}>{copy.prototype}<ArrowUpRightIcon aria-hidden="true" /><span className="sr-only">{copy.newTab}</span></a>}</div>
                 {extra?.milestones.length ? <section className="rounded-2xl border border-border p-4"><h3 className="flex items-center gap-2 font-semibold"><FlagIcon className="size-4" />{labels.milestones}</h3><p className="mt-2 text-xs text-muted-foreground">{extra.milestones.filter((m) => m.completed).length} / {extra.milestones.length} · {labels.milestoneScope}</p><ol className="mt-5 space-y-3">{extra.milestones.map((milestone) => <li key={milestone.id} className={`flex gap-3 rounded-xl border p-3 text-sm ${milestone.completed ? "border-emerald-500/25 bg-emerald-500/5" : "border-amber-500/25 bg-amber-500/5"}`}>
                   {milestone.completed ? <CircleCheckIcon className="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" /> : <CircleDashedIcon className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />}
-                  <div><p className="font-medium leading-6">{milestone.title[locale]}</p><span className={`mt-1 inline-block text-xs ${milestone.completed ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>{milestone.completed ? labels.milestoneDone : labels.milestonePending}</span>{milestone.evidence && <a href={milestone.evidence} target="_blank" rel="noreferrer" className="mt-2 block text-xs underline underline-offset-4">{labels.evidence.split(" (")[0]}</a>}</div>
-                </li>)}</ol></section> : null}
+                  <div><p className="font-medium leading-6">{milestone.title[locale]}</p><span className={`mt-1 inline-block text-xs ${milestone.completed ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>{milestone.completed ? labels.milestoneDone : milestone.assessment?.status === "unverified" ? labels.milestoneUnverified : labels.milestonePending}</span>{milestone.assessment && <p className="mt-2 text-xs leading-5 text-muted-foreground">{milestone.assessment.reason[locale]}</p>}{milestone.evidence && <a href={milestone.evidence} target="_blank" rel="noreferrer" className="mt-2 block text-xs underline underline-offset-4">{labels.evidence.split(" (")[0]}</a>}</div>
+                </li>)}</ol>{extra.milestones.some((m) => m.assessment) && <p className="mt-4 text-xs leading-5 text-muted-foreground">{labels.milestoneHint}</p>}</section> : null}
               </aside>
             </div>
             {extra?.sources.length ? <section className="mt-8 border-t border-border pt-6"><h3 className="font-semibold">{labels.published}</h3><ul className="mt-3 flex flex-wrap gap-3 text-xs">{extra.sources.map((source) => <li key={source.path}><a href={source.sourceUrl} target="_blank" rel="noreferrer" className="break-all underline underline-offset-4">{source.path}</a></li>)}</ul></section> : null}

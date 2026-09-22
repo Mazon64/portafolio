@@ -52,6 +52,15 @@ npm run db:seed       # Carga inicial de contenido profesional
 npm run db:validate   # Validación del esquema Prisma
 ```
 
+## Proyectos Automáticos
+
+Solo se vincula un repositorio público mediante `propietario/nombre`. El servicio
+descubre sus fuentes habituales, genera la ficha ES/EN y los hitos con IA, y guarda
+estado, identidad y evidencia en PostgreSQL. No requiere JSON de hitos ni fichas
+especiales en el repositorio. README, roadmap, Issues/releases y capturas son
+fuentes opcionales; las limitaciones y requisitos se explican en
+[Integración Automática de Proyectos](docs/project-integration.md).
+
 ## Documentación Técnica
 
 Toda la especificación e información operativa detallada se encuentra en el directorio `docs/`:

@@ -1,24 +1,19 @@
 # Material Del Proyecto
 
-`milestones.json` es la fuente de hitos de esta entrega. Los cinco objetivos previos
-se marcaron completados según arquitectura, despliegue y la activación de proyectos
-documentada. El modal se verificó en navegador real de escritorio y móvil, con
-cierre, Escape y retorno del foco; por ello también está completado. La publicación
-automática y el análisis visual se verificaron en Production con proveedores reales:
-el worker publicó el snapshot sin aprobación manual y Gemini describió las dos
-capturas del repositorio. RAG citó la imagen de inicio en una respuesta visual.
-Los ocho hitos anteriores están completados, pero no constituyen todo el portafolio.
-El chat global y la continuidad con retención se activaron y verificaron según
-`docs/chat.md`. La aceptación del panel de conversaciones con la sesión GitHub del
-propietario sigue pendiente. El avance documentado es 90% (10 de 11 hitos), con
-pesos que suman 100. El porcentaje mide hitos documentados, no el estado general del
-proyecto: alcanzar 100% no cambia automáticamente el proyecto a “Completado”.
+Este directorio conserva material visual opcional. Los hitos ya no se mantienen
+en un archivo: los genera y reevalúa la IA dentro del servicio de portafolio, que
+guarda identidad, estado, justificación y evidencia en PostgreSQL. Consulta
+[el contrato automático](../project-integration.md).
 
-Cada hito tiene ID estable, título ES/EN, peso, estado y una ruta de evidencia que
-debe existir en el mismo commit. Cambiar este archivo actualiza los hitos públicos
-en la siguiente sincronización, sin duplicarlos en formularios del CMS.
+La documentación normal sigue describiendo hechos y pendientes: el chat global y
+la retención se activaron según [chat.md](../chat.md), mientras la aceptación del
+panel de conversaciones con la sesión GitHub del propietario continúa pendiente.
+No se fija un porcentaje manual en este repositorio.
 
 ## Imágenes Por Propósito
+
+Esta organización es opcional. También se descubren imágenes locales enlazadas
+desde Markdown y carpetas `screenshots/` o `captures/`, sin crear esta estructura.
 
 ```text
 docs/portfolio/images/

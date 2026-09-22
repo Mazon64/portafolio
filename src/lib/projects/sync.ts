@@ -8,7 +8,8 @@ import { embedTexts, generateProjectNarrative, projectAiFailureCode } from "./ai
 import { getBranchSha, getRepository } from "./github";
 import { discoverProject } from "./discovery";
 import { analyzeRepositoryImages } from "./media";
-import { EMBEDDING_MODEL, milestoneProgress, narrativeText, projectSnapshotSchema, MAX_CHUNKS } from "./schemas";
+import { resolveMilestones } from "./milestones";
+import { EMBEDDING_MODEL, milestoneProgress, narrativeText, projectSnapshotSchema, MAX_CHUNKS, MAX_SOURCE_BYTES } from "./schemas";
 
 const LEASE_MS = 10 * 60_000;
 const MAX_ATTEMPTS = 5;
@@ -104,13 +105,14 @@ export async function processProjectSync(projectId?: string) {
     const discovered = await discoverProject(repository, sha);
     const previous = await getPrisma().projectKnowledge.findFirst({ where: { projectId: job.projectId, status: "PUBLISHED" }, select: { narrative: true } });
     const cachedSnapshot = projectSnapshotSchema.safeParse(previous?.narrative);
+    const previousMilestones = cachedSnapshot.success && cachedSnapshot.data.metadata.repositoryId === String(repository.id) ? cachedSnapshot.data.milestones : [];
     failure = "IMAGE_ANALYSIS_FAILED";
     const assets = await analyzeRepositoryImages(repository, sha, discovered.images, cachedSnapshot.success ? cachedSnapshot.data.assets : []);
     const chunks = [...discovered.chunks, ...assets.map((asset) => {
       const content = `Visual observation, not proof of implementation.\nES: ${asset.caption.es}\nEN: ${asset.caption.en}`;
       return { path: asset.sourcePath, ordinal: 0, content, sourceHash: createHash("sha256").update(`${asset.blobSha}:${content}`).digest("hex"), sourceUrl: `https://github.com/${repository.full_name}/blob/${sha}/${asset.sourcePath.split("/").map(encodeURIComponent).join("/")}` };
     })];
-    if (chunks.length > MAX_CHUNKS) throw new Error("Corpus exceeds chunk budget");
+    if (chunks.length > MAX_CHUNKS || chunks.reduce((size, chunk) => size + Buffer.byteLength(chunk.content), 0) > MAX_SOURCE_BYTES) throw new Error("Corpus exceeds source budget");
     const cached = await getPrisma().$queryRaw<Array<{ path: string; ordinal: number; sourceHash: string; embedding: string }>>(Prisma.sql`
       SELECT c.path, c.ordinal, c."sourceHash", c.embedding::text AS embedding
       FROM "ProjectKnowledgeChunk" c JOIN "ProjectKnowledge" k ON k.id = c."knowledgeId"
@@ -125,15 +127,14 @@ export async function processProjectSync(projectId?: string) {
       missing.forEach(({ i }, index) => { vectors[i] = embedded[index]; });
     }
     const generated = await generateProjectNarrative(chunks, {
-      assets, milestones: discovered.milestones, repositoryName: repository.name || repository.full_name.split("/")[1],
+      assets, previousMilestones, repositoryName: repository.name || repository.full_name.split("/")[1],
     });
-    const titles = new Map(generated.content.milestoneTitles.map((item) => [item.id, item.title]));
-    if (titles.size !== discovered.milestones.length || discovered.milestones.some((item) => !titles.has(item.id))) throw new Error("Milestone identities changed during generation");
+    const milestones = resolveMilestones(generated.content.milestones, chunks, previousMilestones);
     const snapshot = projectSnapshotSchema.parse({
       ...generated.content.narrative, automatic: true, names: generated.content.names, assets,
-      milestones: discovered.milestones.map((item) => ({ ...item, title: titles.get(item.id)! })), metadata: discovered.metadata,
+      milestones, metadata: { ...discovered.metadata, milestonePolicy: "ai-v1" },
     });
-    // Check branch again after external calls, before saving the pending draft.
+    // Check branch again after external calls, before publishing the snapshot.
     failure = "SOURCE_UNAVAILABLE";
     if (await getBranchSha(await getRepository(config.repositoryId), repository.default_branch) !== sha) {
       await finishSuperseded(job.id, job.leaseToken);

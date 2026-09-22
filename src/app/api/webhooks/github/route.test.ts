@@ -19,6 +19,15 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 describe("GitHub webhook", () => {
+  it("queues ordinary issue changes without requiring a GitHub milestone", async () => {
+    const body = JSON.stringify({ action: "closed", issue: { number: 1, milestone: null }, repository: { id: 42, private: false } });
+    const req = new Request("https://example.test/api/webhooks/github", { method: "POST", body, headers: {
+      "x-github-event": "issues", "x-github-delivery": "2eb66473-aca8-4f1f-a312-9a697b75a2e3",
+      "x-hub-signature-256": `sha256=${createHmac("sha256", secret).update(body).digest("hex")}`,
+    } });
+    expect(await (await POST(req)).json()).toEqual({ status: "accepted" });
+    expect(enqueue).toHaveBeenCalledWith("project", expect.any(String), null);
+  });
   it("queues metadata changes without requiring a commit in the delivery", async () => {
     const body = JSON.stringify({ action: "edited", repository: { id: 42, private: false, default_branch: "main" } });
     const req = new Request("https://example.test/api/webhooks/github", { method: "POST", body, headers: {
