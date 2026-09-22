@@ -31,7 +31,6 @@ export async function POST(request: Request) {
   catch { return Response.json({ status: "invalid" }, { status: 400 }); }
   if (!delivery.success) return Response.json({ status: "invalid" }, { status: 400 });
   if (event === "push" && (!payload.ref || !payload.after)) return Response.json({ status: "invalid" }, { status: 400 });
-  if (event === "issues" && !payload.issue?.milestone && !payload.milestone) return Response.json({ status: "ignored" }, { status: 202 });
   if (payload.deleted || payload.repository.private) return Response.json({ status: "ignored" }, { status: 202 });
   try {
     const config = await getPrisma().projectIntegration.findUnique({ where: { repositoryId: String(payload.repository.id) } });

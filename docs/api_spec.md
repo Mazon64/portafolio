@@ -94,7 +94,7 @@ Un rechazo por validación, autorización, concurrencia o persistencia no invali
 
 ### 4.1 `POST /api/webhooks/github`
 
-Recibe `push` de la rama predeterminada, cambios de repositorio, milestones, releases e issues asociadas a hitos de repositorios públicos vinculados por ID estable. Verifica HMAC sobre el cuerpo original (máximo 1 MB), deduplica y persiste antes de responder. `after()` inicia descubrimiento y publicación automática; el trabajo y su lease permiten recuperación independiente del request.
+Recibe `push` de la rama predeterminada, cambios de repositorio, milestones, releases e issues, aunque no tengan milestone, de repositorios públicos vinculados por ID estable. Verifica HMAC sobre el cuerpo original (máximo 1 MB), deduplica y persiste antes de responder. `after()` inicia descubrimiento y publicación automática; el trabajo y su lease permiten recuperación independiente del request.
 
 Headers:
 
@@ -121,6 +121,13 @@ Retirado. Las consultas pertenecen a la burbuja global y se procesan mediante
 `projectIntegrationAction` autoriza y verifica flags para vincular un repositorio (`connect`), guardar conexión/habilitación (`save`), encolar (`sync`), procesar o reintentar. No acepta imágenes, captions, hitos, textos generados ni operaciones manuales `publish`/`discard`. La conexión inicial genera una ficha oculta hasta su primera publicación válida. Guardar usa `updatedAt` observado; cambios concurrentes producen `conflict`.
 
 El worker publica automáticamente nombres ES/EN, narrativa, imágenes analizadas, tecnologías, enlaces, estado, progreso y fuentes en una transacción protegida por lease y timestamps. Un fallo conserva la publicación anterior. Los fallos de encolado/refresco posteriores a un guardado ya confirmado se diferencian con `cache-error`; la reconciliación recupera el trabajo pendiente.
+
+Los hitos generados se guardan en `ProjectKnowledge.narrative.milestones`: ID estable
+asignado por el servicio, título ES/EN, peso 1, `completed`, enlace de evidencia y
+`assessment` con estado `completed`/`pending`/`unverified`, razón ES/EN y citas
+(`path`, `url`, `sourceHash`, `quote`). El modelo elige únicamente IDs de fuentes y
+extractos que el servidor valida. Los snapshots legacy sin `assessment` siguen
+siendo legibles y se reevalúan automáticamente en la siguiente sincronización.
 
 El contrato operativo, límites, modelo de embeddings y activación del piloto se describen en [project-integration.md](project-integration.md).
 

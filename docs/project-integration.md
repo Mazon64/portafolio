@@ -5,6 +5,8 @@
 Vincular un repositorio público basta para iniciar descubrimiento, generación ES/EN,
 análisis de imágenes, indexación y publicación. No se rellenan fichas, tecnologías,
 descripciones de imágenes o hitos en el CMS y no se aprueba cada actualización.
+La IA genera y reevalúa los hitos; el servicio conserva su identidad, estado y
+evidencia en PostgreSQL. No se exige un manifiesto ni un archivo de hitos en el repo.
 El CMS administra la conexión, pausa, estado, reintentos y eliminación del proyecto.
 Los documentos profesionales (CV, ATS y cartas) conservan su flujo independiente.
 
@@ -12,18 +14,34 @@ Los documentos profesionales (CV, ATS y cartas) conservan su flujo independiente
 
 - GitHub aporta ID estable, nombre, descripción, rama predeterminada, homepage,
   lenguajes y estado archivado. El slug se asigna una sola vez para conservar identidad.
-- Se detectan README y documentación de `docs/`, con prioridad para arquitectura,
-  SRS, API y la guía de integración. No se exige seleccionar rutas manualmente.
+- Se detectan Markdown de la raíz y de `docs/`, `doc/` o `documentation/`, con
+  prioridad para README, roadmap, changelog, arquitectura y SRS. Son opcionales.
 - Manifiestos como `package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`,
   `requirements.txt`, `pom.xml` y `composer.json` aportan tecnologías declaradas.
   Dockerfile y vercel.json aportan sus plataformas. Nunca se ejecuta código del repo.
 - Un árbol truncado o excesivo se rechaza. Se excluyen rutas ocultas, traversal,
   symlinks y árboles de dependencias. Los blobs se leen por SHA, no por una rama móvil.
-- La selección está limitada a doce Markdown, ocho manifiestos y 64 fragmentos;
-  reserva espacio para metadatos, hitos e imágenes dentro de 120 KB de texto.
-  Archivos opcionales que exceden el presupuesto no se importan parcialmente.
+- Se lee una muestra de hasta cinco archivos de implementación y tres de pruebas,
+  incluyendo esquemas cuando caben. No se ejecuta ni se audita todo el código.
+- GitHub Milestones, Issues y releases aportan contexto opcional: hasta cuatro
+  milestones, cuatro issues recientes (se excluyen PRs) y dos releases. Sus cuerpos
+  se acotan; cerrar un issue por sí solo no demuestra implementación ni aceptación.
+- La selección está limitada a doce Markdown, ocho manifiestos y 64 fragmentos.
+  Los archivos aportan hasta 60 KB de fragmentos, con topes de 12 KB para código y
+  manifiestos por separado; se reserva el resto para actividad, metadatos e imágenes
+  dentro de 120 KB totales. Los Markdown largos se muestrean en hasta tres fragmentos
+  literales (introducción, aceptación pendiente cuando se detecta y cierre), con sus
+  ordinales originales; no se presentan como una lectura exhaustiva. Los archivos
+  o muestras que no caben se omiten. Un fallo de
+  lectura/proveedor no se interpreta como desaparición de los objetivos anteriores.
 
 ## Imágenes Por Propósito
+
+Las imágenes son opcionales. Se descubren enlaces locales en los Markdown leídos,
+carpetas `screenshots/` o `captures/` (también anidadas) y, como convención adicional,
+las carpetas siguientes. No es necesario reorganizar un repositorio para vincularlo.
+No se descargan imágenes desde URLs externas arbitrarias; se resuelven a blobs
+regulares del mismo repositorio y commit. Logos, iconos y badges se excluyen.
 
 ```text
 docs/portfolio/images/
@@ -54,19 +72,40 @@ observaciones visuales, no prueba de implementación técnica.
 
 ## Hitos Y Estado
 
-La fuente prioritaria es `docs/portfolio/milestones.json`: ID, título ES/EN, peso,
-completado y ruta de evidencia dentro del mismo commit. Se verifica que esa ruta
-exista y no sea un symlink. El modelo puede traducir títulos, pero no añadir objetivos,
-cambiar pesos o inventar finalizaciones.
+La IA deriva hasta veinte objetivos significativos de las fuentes habituales:
+capacidades implementadas, requisitos, roadmap, trabajo pendiente y aceptación.
+Devuelve títulos y justificación ES/EN, estado y citas textuales. El servidor valida
+que cada ID de fuente y cita existan en el material leído, asigna URLs, hashes e IDs
+para objetivos nuevos y persiste el resultado en `ProjectKnowledge.narrative`.
+`metadata.milestonePolicy = "ai-v1"` identifica esta política. No se necesita DDL:
+la columna JSONB existente ya almacena los hitos junto a su publicación atómica.
 
-Sin ese archivo se importan Milestones de GitHub con pesos iguales y su estado
-abierto/cerrado. Sin objetivos medibles se oculta el porcentaje. Con ellos se calcula
-`round(peso completado / peso total * 100)`. El estado se deriva: archivado en GitHub
-→ `ARCHIVED`; en otros casos → `IN_PROGRESS`. Terminar una lista no declara terminado
-el portafolio. El alcance incluye ahora también chat, administración y retención.
-El porcentaje corresponde al alcance documentado, no al número de commits ni a
-una estimación del esfuerzo total. El piloto define sus metas en el repositorio,
-con evidencias y el estado que corresponde a su verificación.
+En cada sincronización se entrega el estado anterior como contexto, no como prueba.
+Cada ID existente debe reaparecer exactamente una vez. Si falta evidencia actual,
+queda `unverified`; si hay trabajo explícito pendiente, `pending`; solo se marca
+`completed` cuando el contenido respalda el objetivo completo. La IA no puede borrar
+objetivos para elevar el porcentaje. Se rechazan identidades desconocidas/duplicadas,
+títulos EN duplicados, citas inventadas y objetivos nuevos sin fuentes. Los objetivos
+de otro repositorio no se reutilizan al cambiar la conexión por un ID de GitHub distinto.
+
+Una captura, dependencia, nombre de archivo, conteo de commits o existencia de tests
+no certifica una funcionalidad. La clasificación semántica es una inferencia de IA,
+no una certificación externa: el CMS muestra la justificación y los extractos para
+inspeccionarla. Los documentos de aceptación pendiente prevalecen sobre la mera
+existencia del código. No se considera aceptado el panel de conversaciones del
+portafolio hasta la comprobación con la sesión real del propietario.
+
+Cada objetivo evaluado usa peso 1 y el porcentaje es
+`round(objetivos completados / objetivos totales * 100)`. Los no verificados cuentan
+en el denominador. Sin objetivos fundamentados se oculta el porcentaje. Representa
+el alcance identificado, no esfuerzo ni terminación total. Archivado en GitHub implica
+`ARCHIVED`; en otros casos se mantiene `IN_PROGRESS`, incluso con el 100% de hitos.
+
+Los snapshots anteriores siguen siendo legibles. En su siguiente sincronización,
+sus IDs se conservan y sus estados se reevalúan sin usar el antiguo archivo JSON;
+los pesos se normalizan a 1. Por tanto el porcentaje puede cambiar legítimamente.
+Los archivos del repo se citan por commit. Issues, milestones y releases tienen URLs
+mutables: sus extractos y hashes se conservan como evidencia de la lectura publicada.
 
 ## Publicación Atómica
 
@@ -85,8 +124,8 @@ Un fallo de caché después del commit no convierte el guardado en fallo de pers
 ## Cola Y Recuperación
 
 El webhook verifica HMAC y deduplica entregas antes de responder `202`. Escucha
-`push` de la rama predeterminada, `repository`, `milestone`, `release` e `issues`
-relacionadas con hitos. Solo acepta repositorios vinculados y públicos; no consume
+`push` de la rama predeterminada, `repository`, `milestone`, `release` e `issues`,
+aunque no estén asociadas a hitos. Solo acepta repositorios vinculados y públicos; no consume
 como instrucciones el contenido del webhook. `after()` inicia el procesamiento,
 pero la durabilidad está en PostgreSQL.
 
@@ -155,7 +194,47 @@ intervención, navegación del modal, captions visuales y citas al commit de ori
 ## Revisión Visual En Preview
 
 Preview muestra el modal y la burbuja de la versión candidata sin sincronizar ni
-escribir en la base compartida. Solo para `Mazon64/portafolio`, los hitos se leen
-del archivo versionado en ese deployment y las evidencias se fijan a su SHA; un
-aviso distingue esos hitos del relato y las capturas de la última publicación.
-Los demás proyectos y Production conservan los hitos de su corpus publicado.
+escribir en la base compartida. Todos los proyectos, incluido este portafolio,
+muestran los hitos de la última publicación guardada por el servicio. Ya no existe
+un override local para el piloto. La nueva generación ocurre solo en Production
+después de promover el código y ejecutar una sincronización automática.
+
+## Qué Debe Aportar Un Repositorio
+
+- **Obligatorio:** repositorio público accesible, con una rama predeterminada y un
+  commit legible. Solo se introduce `propietario/nombre` en el portafolio.
+- **Recomendado, no obligatorio:** README y documentación normal que expliquen
+  propósito, alcance, decisiones y pendientes. El código muestra implementación;
+  no puede revelar por sí solo objetivos de producto o una aceptación humana.
+- **Opcional:** manifiestos para identificar tecnologías, Issues/Milestones/releases
+  para trabajo y entregas, homepage de GitHub para la demo, capturas para ilustrar
+  la interfaz. Sin capturas la card funciona con texto; sin homepage no se inventa URL.
+- **No requerido:** JSON de hitos, traducciones ES/EN, porcentajes, fichas del
+  portafolio ni configuración propia en el repositorio.
+
+Las capturas reales deben existir como archivos del repo si se quieren mostrar:
+el servicio no ejecuta el proyecto ni navega una aplicación arbitraria para tomarlas.
+La organización por `docs/portfolio/images/` es una alternativa opcional a los
+enlaces Markdown y carpetas habituales, no una dependencia de la integración.
+
+El webhook es una optimización opcional para recibir cambios pronto, no un requisito
+por repositorio: el scheduler del servicio descubre y sincroniza conexiones también
+sin webhook, con reconciliación diaria por proyecto. Los proveedores, secretos y
+schedulers se configuran una vez en el servicio de portafolio.
+
+## Estado De La Entrega De Hitos IA
+
+Esta evolución está implementada como candidata; su publicación y aceptación con
+el proveedor real siguen pendientes. La comprobación de lectura del 22 de septiembre
+de 2026 sobre el repositorio existente descubrió documentación, código/pruebas y dos
+imágenes sin leer el JSON de hitos. Gemini devolvió `503 UNAVAILABLE` en los intentos
+de generación, por lo que no se certificó una generación real ni se escribió en la
+base durante esa comprobación. La suite automatizada comprueba identidad entre
+sincronizaciones, citas, estados no verificados y conservación de la publicación
+anterior ante respuestas inválidas.
+
+Antes de cerrar esta entrega: revisar Preview, obtener la aprobación de promoción,
+validar generación y reevaluación reales conservando IDs, y verificar el snapshot
+publicado y su evidencia. Preview permanece de solo lectura y no se vincula otro
+repositorio para esta entrega. La aceptación administrativa del chat continúa
+independiente y requiere la sesión GitHub real del propietario.

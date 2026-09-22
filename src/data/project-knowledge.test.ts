@@ -13,20 +13,10 @@ function row(repositoryFullName: string) {
   } }] };
 }
 afterEach(() => { vi.unstubAllEnvs(); findMany.mockReset(); });
-describe("candidate portfolio milestones", () => {
-  it("shows the candidate roadmap in Preview with commit-pinned evidence", async () => {
-    vi.stubEnv("VERCEL_ENV", "preview"); vi.stubEnv("VERCEL_GIT_COMMIT_SHA", "a".repeat(40));
-    findMany.mockResolvedValue([row("Mazon64/portafolio")]);
-    const { portfolio } = await getPublicProjectExtras(["portfolio"]);
-    expect(portfolio.milestonePreview).toBe(true);
-    expect(portfolio.progressPct).toBe(90);
-    expect(portfolio.milestones.filter((item) => !item.completed).map((item) => item.id)).toEqual(["conversation-administration"]);
-    expect(portfolio.milestones.every((item) => item.evidence.startsWith(`https://github.com/Mazon64/portafolio/blob/${"a".repeat(40)}/`))).toBe(true);
-  });
-  it.each([["production", "Mazon64/portafolio"], ["preview", "another/project"]])("keeps published milestones for %s / %s", async (environment, repository) => {
+describe("service-owned portfolio milestones", () => {
+  it.each([["production", "Mazon64/portafolio"], ["preview", "Mazon64/portafolio"], ["preview", "another/project"]])("uses only the persisted snapshot for %s / %s", async (environment, repository) => {
     vi.stubEnv("VERCEL_ENV", environment); findMany.mockResolvedValue([row(repository)]);
     const { portfolio } = await getPublicProjectExtras(["portfolio"]);
-    expect(portfolio.milestonePreview).toBe(false);
     expect(portfolio.milestones).toEqual(published);
     expect(portfolio.progressPct).toBe(100);
   });
