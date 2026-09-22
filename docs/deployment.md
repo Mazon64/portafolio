@@ -160,8 +160,12 @@ su secret de repositorio `PROJECT_SYNC_CRON_SECRET` debe coincidir con `CRON_SEC
 de Vercel. No accede a la base ni ejecuta migraciones. El webhook inicia trabajo
 con `after()` y debe escuchar `push`, `repository`, `milestone`, `issues` y `release`.
 Vincular un repositorio inicia publicación automática; no hay paso manual de
-publicación del corpus. Las imágenes se toman de carpetas por propósito bajo
-`docs/portfolio/images/` y se analizan sin guardar binarios en PostgreSQL.
+publicación del corpus. Los hitos se generan por IA y se guardan con evidencia en
+el snapshot JSONB existente, sin migración adicional ni manifiestos en el repo.
+Las imágenes se descubren en enlaces Markdown, carpetas de capturas o carpetas
+opcionales por propósito y se analizan sin guardar binarios en PostgreSQL.
+El webhook acelera los cambios, pero la reconciliación diaria también sincroniza
+repositorios sin webhook: el usuario solo necesita vincular `propietario/nombre`.
 
 En GitHub usa únicamente el environment protegido `production` para migraciones:
 
@@ -192,7 +196,7 @@ antiguos. Su inclusión en Git no equivale a su ejecución en la base compartida
 
 - `develop` es la rama de integración y `https://preview.davidaranda.dev` siempre apunta al último Preview de esa rama.
 - Las ramas `feature/*` y `fix/*` parten de `develop` y vuelven a ella mediante pull request.
-- Los pushes a `feature/*` se validan en GitHub Actions y crean un Preview efímero protegido para probar el trabajo antes de integrarlo. `ignoreCommand` continúa evitando deployments de `fix/*` y otros prefijos; `develop` conserva el Preview estable y `main` es el único origen de Production.
+- Los pushes a `feature/*` crean un Preview efímero protegido. GitHub Actions valida los PRs hacia `develop`/`main` y los pushes a esas dos ramas; un push de feature sin PR no dispara ese workflow. `ignoreCommand` continúa evitando deployments de `fix/*` y otros prefijos; `develop` conserva el Preview estable y `main` es el único origen de Production.
 - `main` está protegida contra pushes directos y solo recibe promociones revisadas desde `develop`.
 - El check `verify` debe aprobar pruebas, lint y build antes de fusionar en `main`.
 - Antes de promover, se revisan `/es`, `/en`, `/admin/es`, `/admin/en`, navegación responsive, autenticación y lectura administrativa sin mutaciones, y los endpoints de salud en Preview.

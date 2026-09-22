@@ -6,7 +6,5 @@ node_modules
 .env*
 !.env.example
 docs/**
-!docs/portfolio/
-!docs/portfolio/milestones.json
 *.md
 npm-debug.log*

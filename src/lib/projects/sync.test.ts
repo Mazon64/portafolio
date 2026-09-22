@@ -20,6 +20,8 @@ vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({
 import { enqueueProjectSync, processProjectSync } from "./sync";
 const date = new Date("2026-09-01T00:00:00Z");
 const config = { projectId: "project", repositoryId: "42", branch: "main", sourcePaths: ["README.md"], assets: [], milestones: [], enabled: true, updatedAt: date, project: { updatedAt: date } };
+const text = { summary: "A documented project summary.", problem: "Documented problem.", solution: "Documented solution.", architecture: "Documented architecture.", decisions: "Documented decisions.", results: "Documented results." };
+const metadata = { repositoryId: "42", repositoryFullName: "owner/repo", branch: "main", demoUrl: null, techStack: ["Next.js"], status: "IN_PROGRESS", sourcePaths: ["README.md"] };
 beforeEach(() => {
   vi.clearAllMocks(); vi.stubEnv("CMS_WRITES_ENABLED", "true"); vi.stubEnv("PROJECT_INTEGRATION_ENABLED", "true"); vi.stubEnv("VERCEL_ENV", "production"); vi.stubEnv("GEMINI_API_KEYS", "test-key");
   mocks.findJob.mockResolvedValue({ id: "job", projectId: "project", status: "QUEUED", attempts: 0, leaseToken: null, requestedSha: null, configurationUpdatedAt: date });
@@ -27,10 +29,9 @@ beforeEach(() => {
   mocks.findExisting.mockResolvedValue(null); mocks.countJobs.mockResolvedValue(0); mocks.createJob.mockResolvedValue({ id: "job" });
   mocks.getRepo.mockResolvedValue({ id: 42, full_name: "owner/repo", name: "repo", default_branch: "main" }); mocks.getSha.mockResolvedValue("a".repeat(40));
   mocks.getSources.mockResolvedValue([{ path: "README.md", ordinal: 0, content: "Source", sourceHash: "hash", sourceUrl: "https://github.com/owner/repo" }]);
-  mocks.discover.mockResolvedValue({ chunks: [{ path: "README.md", ordinal: 0, content: "Source", sourceHash: "hash", sourceUrl: "https://github.com/owner/repo" }], images: [], milestones: [], metadata: { repositoryId: "42", repositoryFullName: "owner/repo", branch: "main", demoUrl: null, techStack: ["Next.js"], status: "IN_PROGRESS", sourcePaths: ["README.md"] } });
+  mocks.discover.mockResolvedValue({ chunks: [{ path: "README.md", ordinal: 0, content: "Owner acceptance remains pending.", sourceHash: "a".repeat(64), sourceUrl: "https://github.com/owner/repo" }], images: [], metadata });
   mocks.images.mockResolvedValue([]); mocks.published.mockResolvedValue(null);
-  const text = { summary: "A documented project summary.", problem: "Documented problem.", solution: "Documented solution.", architecture: "Documented architecture.", decisions: "Documented decisions.", results: "Documented results." };
-  mocks.query.mockResolvedValue([]); mocks.embed.mockResolvedValue(["[1]"]); mocks.narrative.mockResolvedValue({ content: { names: { es: "Proyecto", en: "Project" }, narrative: { es: text, en: text }, milestoneTitles: [] }, model: "test" });
+  mocks.query.mockResolvedValue([]); mocks.embed.mockResolvedValue(["[1]"]); mocks.narrative.mockResolvedValue({ content: { names: { es: "Proyecto", en: "Project" }, narrative: { es: text, en: text }, milestones: [] }, model: "test" });
   mocks.createDraft.mockResolvedValue({ id: "draft" }); mocks.execute.mockResolvedValue(1);
   mocks.transaction.mockImplementation(async (fn) => fn({
     projectIntegration: { findUnique: mocks.findConfig },
@@ -41,6 +42,28 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 describe("durable project processing", () => {
+  it("reevaluates persisted legacy milestones and saves their evidence atomically", async () => {
+    const previous = [{ id: "admin", title: { es: "Aceptación", en: "Acceptance" }, completed: true, weight: 10, evidence: "https://example.com/old" }];
+    mocks.published.mockResolvedValue({ narrative: { automatic: true, names: { es: "Proyecto", en: "Project" }, es: text, en: text, assets: [], milestones: previous, metadata } });
+    mocks.narrative.mockResolvedValue({ content: { names: { es: "Proyecto", en: "Project" }, narrative: { es: text, en: text }, milestones: [{ previousId: "admin", title: previous[0].title, status: "pending", reason: { es: "Falta aceptación.", en: "Acceptance is pending." }, citations: [{ sourceId: "source-0", quote: "Owner acceptance remains pending." }] }] }, model: "test" });
+    expect(await processProjectSync()).toEqual({ status: "succeeded" });
+    expect(mocks.narrative).toHaveBeenCalledWith(expect.any(Array), expect.objectContaining({ previousMilestones: previous }));
+    const saved = mocks.createDraft.mock.calls[0][0].data.narrative;
+    expect(saved.metadata.milestonePolicy).toBe("ai-v1");
+    expect(saved.milestones[0]).toMatchObject({ id: "admin", weight: 1, completed: false, assessment: { status: "pending" } });
+    expect(mocks.updateProject).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ progressPct: 0 }) }));
+  });
+  it("preserves the previous publication when generated milestones omit an existing goal", async () => {
+    mocks.published.mockResolvedValue({ narrative: { automatic: true, names: { es: "Proyecto", en: "Project" }, es: text, en: text, assets: [], milestones: [{ id: "admin", title: { es: "Admin", en: "Admin" }, completed: false, weight: 1, evidence: "" }], metadata } });
+    expect(await processProjectSync()).toEqual({ status: "retrying" });
+    expect(mocks.deleteDraft).not.toHaveBeenCalled();
+    expect(mocks.updateProject).not.toHaveBeenCalled();
+  });
+  it("does not carry milestone identity across different repository IDs", async () => {
+    mocks.published.mockResolvedValue({ narrative: { automatic: true, names: { es: "Otro", en: "Other" }, es: text, en: text, assets: [], milestones: [{ id: "other", title: { es: "Otro", en: "Other" }, completed: true, weight: 1, evidence: "" }], metadata: { ...metadata, repositoryId: "99" } } });
+    expect(await processProjectSync()).toEqual({ status: "succeeded" });
+    expect(mocks.narrative).toHaveBeenCalledWith(expect.any(Array), expect.objectContaining({ previousMilestones: [] }));
+  });
   it("rejects Preview before claiming jobs or calling providers", async () => {
     vi.stubEnv("VERCEL_ENV", "preview");
     expect(await processProjectSync()).toEqual({ status: "disabled" }); expect(mocks.findJob).not.toHaveBeenCalled();

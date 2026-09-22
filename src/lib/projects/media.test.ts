@@ -2,7 +2,7 @@ import sharp from "sharp";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const { readBlob, generate } = vi.hoisted(() => ({ readBlob: vi.fn(), generate: vi.fn() }));
 vi.mock("server-only", () => ({}));
-vi.mock("./discovery", () => ({ readRepositoryBlob: readBlob }));
+vi.mock("./discovery", async (importOriginal) => ({ ...await importOriginal<typeof import("./discovery")>(), readRepositoryBlob: readBlob }));
 vi.mock("@/lib/documents/gemini", () => ({ generateStructuredDocument: generate, getDocumentGenerationModel: () => "vision-model" }));
 import { analyzeRepositoryImages } from "./media";
 const repo = { id: 42, name: "repo", full_name: "owner/repo", default_branch: "main", private: false, description: null, homepage: null, archived: false, topics: [] };

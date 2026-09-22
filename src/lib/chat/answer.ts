@@ -58,7 +58,7 @@ export async function generateChatAnswer(input: ChatInput, history: History) {
     return add({ id: `project:${project.slug}`, title: name, url: `${base}#project-${project.slug}`, projectSlug: project.slug, content: JSON.stringify({
       ...project.translations[0], techStack: project.techStack, status: snapshot.success && project.status === "COMPLETED" ? "IN_PROGRESS" : project.status,
       milestones: snapshot.success ? snapshot.data.milestones : [], milestoneProgress: snapshot.success ? milestoneProgress(snapshot.data.milestones) : null,
-      progressMeaning: "Milestone progress is not overall project completion.",
+      progressMeaning: "Milestones are inferred and reevaluated by the portfolio service from repository evidence. Unverified is not completed. Progress is the share of assessed goals supported as completed, not effort or overall project completion. A legacy snapshot may still contain repository-defined goals until its next synchronization.",
     }) });
   };
   async function execute(name: string, args: unknown) {

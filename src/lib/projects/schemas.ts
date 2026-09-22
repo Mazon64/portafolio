@@ -51,6 +51,16 @@ export const milestonesSchema = z.array(z.object({
     try { const u = new URL(value); return u.protocol === "https:" && !u.username && !u.password; }
     catch { return false; }
   }),
+  assessment: z.object({
+    status: z.enum(["completed", "pending", "unverified"]),
+    reason: localizedText,
+    citations: z.array(z.object({
+      path: z.string().max(240),
+      url: z.url().max(2_000),
+      sourceHash: z.string().regex(/^[a-f0-9]{64}$/),
+      quote: z.string().min(1).max(800),
+    })).max(3),
+  }).optional(),
 })).max(20).refine((items) => new Set(items.map((item) => item.id)).size === items.length);
 
 export const integrationSchema = z.object({
@@ -85,6 +95,7 @@ export const projectSnapshotSchema = narrativeSchema.extend({
     techStack: z.array(z.string().min(1).max(80)).max(20),
     status: z.enum(["IN_PROGRESS", "COMPLETED", "ARCHIVED"]),
     sourcePaths: z.array(z.string()),
+    milestonePolicy: z.literal("ai-v1").optional(),
   }),
 });
 export type ProjectSnapshot = z.infer<typeof projectSnapshotSchema>;
