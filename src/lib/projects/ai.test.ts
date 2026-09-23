@@ -10,6 +10,7 @@ describe("project embeddings and grounded answers", () => {
     generate.mockResolvedValue({ content: {}, model: "test" });
     await generateProjectNarrative([], { assets: [], previousMilestones: [], repositoryName: "Project" });
     const request = generate.mock.calls[0][0];
+    expect(request.projectOutputTokens).toBe(16_384);
     expect(request.responseSchema.properties.milestones.items.required).toContain("citations");
     expect(request.responseSchema.properties.milestones.items.properties.status.enum).toEqual(["completed", "pending", "unverified"]);
     expect(JSON.stringify(request.responseSchema)).not.toMatch(/maxItems|maxLength|minItems|minLength/);

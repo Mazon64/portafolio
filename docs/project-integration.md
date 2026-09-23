@@ -244,6 +244,9 @@ legible, sin delimitadores de código inline ni sintaxis de enlaces; se conserva
 palabras, puntuación y el hash del fragmento original. No se aceptan paráfrasis ni
 coincidencias aproximadas. Los errores `503` corresponden a demanda
 del modelo y siguen usando los reintentos acotados existentes.
+La respuesta conjunta de narrativa ES/EN e hitos dispone de hasta 16 384 tokens;
+el análisis de imágenes conserva su presupuesto de 8 192. Las respuestas truncadas
+o inválidas nunca reemplazan la publicación anterior.
 
 Antes de cerrar esta entrega: revisar Preview, obtener la aprobación de promoción,
 validar generación y reevaluación reales conservando IDs, y verificar el snapshot
