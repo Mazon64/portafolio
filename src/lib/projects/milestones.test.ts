@@ -7,6 +7,14 @@ const source = { path: "README.md", ordinal: 0, content: "The API is implemented
 const goal = { previousId: null, title: { es: "API", en: "API" }, status: "completed", reason: { es: "La documentación confirma la API.", en: "Documentation confirms the API." }, citations: [{ sourceId: "source-0", quote: "The API is implemented." }] };
 
 describe("AI milestones owned by the portfolio service", () => {
+  it("accepts readable Markdown quotations without accepting paraphrases or rewriting source code", () => {
+    const formatted = { ...source, content: "Activated with `CHAT_ENABLED=true`; see [release 61](https://github.com/owner/repo/pull/61). Owner acceptance remains pending." };
+    const citation = { sourceId: "source-0", quote: "Activated with CHAT_ENABLED=true; see release 61." };
+    const result = resolveMilestones([{ ...goal, citations: [citation] }], [formatted], []);
+    expect(result[0].assessment?.citations[0]).toMatchObject({ quote: citation.quote, sourceHash: formatted.sourceHash });
+    expect(() => resolveMilestones([{ ...goal, citations: [{ ...citation, quote: "Activated with CHAT_ENABLED=false; see release 61." }] }], [formatted], [])).toThrow("unsupported");
+    expect(() => resolveMilestones([{ ...goal, citations: [citation] }], [{ ...formatted, path: "src/config.ts" }], [])).toThrow("unsupported");
+  });
   it("assigns identity and evidence server-side and reevaluates the same goal across syncs", () => {
     const first = resolveMilestones([goal], [source], []);
     expect(first[0]).toMatchObject({ id: expect.stringMatching(/^goal-/), weight: 1, completed: true, evidence: source.sourceUrl });

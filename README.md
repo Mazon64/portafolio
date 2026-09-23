@@ -71,3 +71,4 @@ Toda la especificación e información operativa detallada se encuentra en el di
 - [Especificación de API](docs/api_spec.md)
 - [Integración Automática de Proyectos](docs/project-integration.md)
 - [Chat Contextual y Conversaciones](docs/chat.md)
+- [Plan de Propiedad, Participación y Privacidad](docs/project-ownership-privacy-plan.md) — propuesta para la siguiente etapa.

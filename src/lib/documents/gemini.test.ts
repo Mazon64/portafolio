@@ -15,6 +15,15 @@ afterEach(() => {
 });
 
 describe("Gemini document generation", () => {
+  it("allows the bounded larger project narrative budget and still rejects invalid output", async () => {
+    vi.stubEnv("GEMINI_API_KEYS", "project-budget-key");
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ candidates: [{ content: { parts: [{ text: '{"value":"invalid"}' }] } }] }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(generateStructuredDocument({ instruction: "Describe a project and its milestones.", source: {}, domain: "projects", projectOutputTokens: 16_384,
+      responseSchema: {}, validator: z.object({ value: z.literal("valid") }),
+    })).rejects.toBeInstanceOf(DocumentGenerationError);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).generationConfig.maxOutputTokens).toBe(16_384);
+  });
   it("tries another key for explicit key-invalid HTTP 400 responses", async () => {
     vi.stubEnv("GEMINI_API_KEYS", "key-400-a,key-400-b");
     const fetchMock = vi.fn().mockResolvedValueOnce(Response.json({ error: { details: [{ reason: "API_KEY_INVALID" }] } }, { status: 400 }))

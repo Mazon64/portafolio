@@ -12,11 +12,17 @@ export const generatedMilestonesSchema = z.array(z.object({
   citations: z.array(z.object({ sourceId: z.string(), quote: z.string().trim().min(20).max(800) })).max(3),
 })).max(20);
 
+function evidenceText(path: string, content: string) {
+  // Compare readable Markdown text rather than its inline code/link delimiters.
+  // Preserve words, punctuation and code-file syntax; never use fuzzy matching.
+  return /\.md$/i.test(path) ? content.replace(/\[([^\]\n]+)\]\([^\s)]+\)/g, "$1").replace(/`/g, "") : content;
+}
+
 // Images, dependency declarations and file names alone cannot establish a goal's completion.
 export function milestoneSources(chunks: SourceChunk[]) {
   return chunks.filter((chunk) => !/\.(png|jpe?g|webp)$/i.test(chunk.path) && chunk.path !== "GitHub metadata" &&
     !/(^|\/)(package\.json|pyproject\.toml|requirements\.txt|go\.mod|Cargo\.toml|pom\.xml|composer\.json)$/.test(chunk.path))
-    .map((chunk, index) => ({ id: `source-${index}`, ...chunk }));
+    .map((chunk, index) => ({ id: `source-${index}`, ...chunk, content: evidenceText(chunk.path, chunk.content) }));
 }
 
 const normalize = (text: string) => text.replace(/\s+/g, " ").trim();
@@ -37,8 +43,9 @@ export function resolveMilestones(value: unknown, chunks: SourceChunk[], previou
     titles.add(titleKey);
     const citations = milestone.citations.map(({ sourceId, quote }) => {
       const source = sources.get(sourceId);
-      if (!source || !normalize(source.content).includes(normalize(quote))) throw new Error("Milestone evidence is unsupported");
-      return { path: source.path, url: source.sourceUrl, sourceHash: source.sourceHash, quote };
+      const readableQuote = source ? evidenceText(source.path, quote) : quote;
+      if (!source || !normalize(source.content).includes(normalize(readableQuote))) throw new Error("Milestone evidence is unsupported");
+      return { path: source.path, url: source.sourceUrl, sourceHash: source.sourceHash, quote: readableQuote };
     });
     if (!citations.length && (milestone.previousId === null || milestone.status !== "unverified")) throw new Error("Milestone evidence is missing");
     return {

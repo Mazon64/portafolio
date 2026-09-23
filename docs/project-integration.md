@@ -224,14 +224,29 @@ schedulers se configuran una vez en el servicio de portafolio.
 
 ## Estado De La Entrega De Hitos IA
 
-Esta evolución está implementada como candidata; su publicación y aceptación con
-el proveedor real siguen pendientes. La comprobación de lectura del 22 de septiembre
+El código se promovió a Production mediante el PR #65 (`8926b5b`), con readiness,
+rutas ES/EN, CV y CI verificados. La primera reevaluación publicada por el proveedor
+real sigue pendiente. La comprobación de lectura del 22 de septiembre
 de 2026 sobre el repositorio existente descubrió documentación, código/pruebas y dos
 imágenes sin leer el JSON de hitos. Gemini devolvió `503 UNAVAILABLE` en los intentos
 de generación, por lo que no se certificó una generación real ni se escribió en la
 base durante esa comprobación. La suite automatizada comprueba identidad entre
 sincronizaciones, citas, estados no verificados y conservación de la publicación
 anterior ante respuestas inválidas.
+
+El diagnóstico posterior aisló además un `400 INVALID_ARGUMENT`: Gemini rechazaba
+el esquema combinado de narrativa e hitos con todos sus límites anidados. Un sondeo
+real obtuvo `200` al enviar el esquema estructural compacto. La aplicación conserva
+la validación Zod completa de longitudes, cardinalidades y estados en el servidor;
+solo omite esos límites del esquema enviado al proveedor. Una respuesta que exceda
+los límites sigue sin poder publicarse. Las citas Markdown se comparan como texto
+legible, sin delimitadores de código inline ni sintaxis de enlaces; se conservan
+palabras, puntuación y el hash del fragmento original. No se aceptan paráfrasis ni
+coincidencias aproximadas. Los errores `503` corresponden a demanda
+del modelo y siguen usando los reintentos acotados existentes.
+La respuesta conjunta de narrativa ES/EN e hitos dispone de hasta 16 384 tokens;
+el análisis de imágenes conserva su presupuesto de 8 192. Las respuestas truncadas
+o inválidas nunca reemplazan la publicación anterior.
 
 Antes de cerrar esta entrega: revisar Preview, obtener la aprobación de promoción,
 validar generación y reevaluación reales conservando IDs, y verificar el snapshot
