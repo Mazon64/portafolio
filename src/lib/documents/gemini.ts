@@ -75,6 +75,7 @@ export async function generateStructuredDocument<T>({
   validator,
   domain = "documents",
   images = [],
+  projectOutputTokens = 8_192,
 }: {
   instruction: string;
   source: unknown;
@@ -82,6 +83,7 @@ export async function generateStructuredDocument<T>({
   validator: ZodType<T>;
   domain?: "documents" | "projects";
   images?: Array<{ label: string; mimeType: "image/webp"; data: string }>;
+  projectOutputTokens?: 8_192 | 16_384;
 }): Promise<{ content: T; model: string }> {
   const model = getDocumentGenerationModel();
   if (images.length > 8 || images.some((image) => image.data.length > 1_400_000)) {
@@ -108,7 +110,7 @@ export async function generateStructuredDocument<T>({
       responseMimeType: "application/json",
       responseJsonSchema: responseSchema,
       temperature: 0.2,
-      ...(domain === "projects" ? { maxOutputTokens: 8_192 } : {}),
+      ...(domain === "projects" ? { maxOutputTokens: projectOutputTokens } : {}),
     },
   });
   const failures: string[] = [];
