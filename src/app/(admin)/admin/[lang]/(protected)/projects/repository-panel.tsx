@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { connectSourceAction, refreshSourceAction } from "./disclosure-actions";
 
 type Source = { id: string; fullName: string; visibility: string; enabled: boolean; analysis?: unknown; evidence: Array<{ path: string; content: string; commitSha: string }> };
-export function RepositoryPanel({ projectId, sources, enabled, locale }: { projectId: string; sources: Source[]; enabled: boolean; locale: "es" | "en" }) {
+export function RepositoryPanel({ projectId, sources, enabled, configured, locale }: { projectId: string; sources: Source[]; enabled: boolean; configured: boolean; locale: "es" | "en" }) {
   const es = locale === "es";
   const [state, action, pending] = useActionState(connectSourceAction, { status: "idle" });
-  const field = "mt-1 block w-full rounded-md border bg-background p-2";
-  return <section className="mt-8 space-y-4 rounded-xl border p-5"><h2 className="text-xl font-semibold">{es ? "Fuentes internas · GitHub App" : "Internal sources · GitHub App"}</h2>
+  const field = "mt-2 block w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20";
+  return <section className="mt-8 space-y-4 rounded-2xl border border-border bg-card p-6"><h2 className="text-xl font-semibold">{es ? "Fuentes internas · GitHub App" : "Internal sources · GitHub App"}</h2>
+    {!enabled && <p className="rounded-xl bg-muted/40 p-4 text-sm leading-6">{!configured ? (es ? "Conector pendiente de configuración. Conecta la GitHub App para habilitar la importación de fuentes privadas." : "Connector setup pending. Connect the GitHub App to enable private source imports.") : (es ? "Importación deshabilitada en este entorno de solo lectura." : "Imports are disabled in this read-only environment.")}</p>}
     <p className="text-sm text-muted-foreground">{es ? "Instala la GitHub App en los repositorios seleccionados. Guarda primero una política selectiva o interna. Estas fuentes no se publican ni se indexan en el chat." : "Install the GitHub App on selected repositories. Save a selective or internal policy first. These sources are not published or indexed in chat."}</p>
-    <form action={action}><input type="hidden" name="projectId" value={projectId} /><fieldset disabled={!enabled || pending} className="space-y-3">
+    <form action={action}><input type="hidden" name="projectId" value={projectId} /><fieldset disabled={!enabled || pending} className="space-y-4 text-sm font-medium disabled:opacity-60">
       <label className="block">Installation ID<input className={field} name="installationId" required pattern="[1-9][0-9]*" /></label>
       <label className="block">Repository ID<input className={field} name="repositoryId" required pattern="[1-9][0-9]*" /></label>
       <label className="block">{es ? "Archivos permitidos, uno por línea" : "Allowed files, one per line"}<textarea className={field} name="paths" required rows={4} maxLength={5000} placeholder="README.md" /></label>
