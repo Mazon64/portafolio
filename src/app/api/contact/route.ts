@@ -1,4 +1,6 @@
 import { Resend } from "resend";
+import { boundedBody } from "@/lib/projects/http";
+import { z } from "zod";
 
 import {
   ContactNotificationEmail,
@@ -53,7 +55,7 @@ export async function POST(request: Request) {
 
   let body: unknown;
   try {
-    body = await request.json();
+    body = JSON.parse((await boundedBody(request, MAX_BODY_BYTES)).toString("utf8"));
   } catch {
     return Response.json({ status: "invalid" }, { status: 400 });
   }
@@ -113,7 +115,7 @@ export async function POST(request: Request) {
         { name: "category", value: "contact" },
         { name: "locale", value: body.locale },
       ],
-    });
+    }, body.requestId ? { idempotencyKey: `contact:${body.requestId}` } : undefined);
     deliveryError = delivery.error;
   } catch (error) {
     console.error("Contact message delivery request failed.", error);
@@ -142,12 +144,14 @@ function isContactBody(
   message: string;
   website: string;
   turnstileToken?: unknown;
+  requestId?: string;
   locale: Locale;
 } {
   if (!value || typeof value !== "object") return false;
 
   const body = value as Record<string, unknown>;
   return (
+    (body.requestId === undefined || z.uuid().safeParse(body.requestId).success) &&
     typeof body.name === "string" &&
     body.name.trim().length >= 2 &&
     body.name.trim().length <= 100 &&
@@ -166,7 +170,7 @@ function isContactBody(
 }
 
 function getContactConfiguration() {
-  if (process.env.CONTACT_DELIVERY_ENABLED !== "true") return null;
+  if (process.env.VERCEL_ENV === "preview" || process.env.CONTACT_DELIVERY_ENABLED !== "true") return null;
 
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const from = process.env.CONTACT_FROM_EMAIL?.trim();

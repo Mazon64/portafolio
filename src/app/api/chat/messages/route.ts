@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     claim = started;
     const history = await recentChatHistory(conversation, started.turnId);
     const result = await generateChatAnswer(input, history);
-    await finishChatTurn(started, result.answer, result.sources, result.scope);
+    await finishChatTurn(started, result.answer, result.sources, result.scope, result.publicationVersion);
     const current = await findVisitorConversation(chatTokenHash(token));
     if (!current) throw new ChatStateError("expired");
     const response = NextResponse.json({ ...await visitorHistory(current), status: "complete" }, { headers });

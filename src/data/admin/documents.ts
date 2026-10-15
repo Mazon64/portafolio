@@ -9,6 +9,7 @@ import {
 import { requireAdmin } from "@/lib/auth/authorization";
 import { isDocumentSchemaUnavailable } from "@/data/generated-documents";
 import { getPrisma } from "@/lib/prisma";
+import { governanceEnabled, publicationVersion } from "@/data/project-disclosure";
 
 function isSerializationConflict(error: unknown) {
   const code = (error as { code?: string })?.code;
@@ -192,6 +193,7 @@ export async function saveAiContext(
 }
 
 export async function createPublicCvDraft(input: {
+  publicationVersion?: string;
   id: string;
   locale: Locale;
   title: string;
@@ -217,6 +219,7 @@ export async function createPublicCvDraft(input: {
     return await withSerializationRetry(() =>
       getPrisma().$transaction(
         async (tx) => {
+          if (governanceEnabled() && input.publicationVersion !== await publicationVersion(tx)) throw new Error("Publication changed");
           return tx.documentArtifact.create({
             data: {
               ...input,
@@ -246,6 +249,7 @@ export async function createPublicCvDraft(input: {
 }
 
 export async function createApplicationArtifacts(input: {
+  publicationVersion?: string;
   id: string;
   locale: Locale;
   company: string;
@@ -286,6 +290,7 @@ export async function createApplicationArtifacts(input: {
   }
   try {
     return await withSerializationRetry(() => getPrisma().$transaction(async (tx) => {
+    if (governanceEnabled() && input.publicationVersion !== await publicationVersion(tx)) throw new Error("Publication changed");
     const application = await tx.jobApplication.create({
       data: {
         id: input.id,
@@ -303,6 +308,7 @@ export async function createApplicationArtifacts(input: {
         {
           applicationId: application.id,
           kind: DocumentKind.ATS_CV,
+          publicationVersion: input.publicationVersion,
           locale: input.locale,
           title: input.atsTitle,
           content: input.atsContent,
@@ -312,6 +318,7 @@ export async function createApplicationArtifacts(input: {
         {
           applicationId: application.id,
           kind: DocumentKind.COVER_LETTER,
+          publicationVersion: input.publicationVersion,
           locale: input.locale,
           title: input.coverTitle,
           content: input.coverContent,
@@ -354,7 +361,7 @@ export async function publishPublicCvArtifact(id: string) {
   return getPrisma().$transaction(async (tx) => {
     const artifact = await tx.documentArtifact.findUnique({
       where: { id },
-      select: { kind: true, locale: true, status: true },
+      select: { kind: true, locale: true, status: true, ...(governanceEnabled() ? { publicationVersion: true } : {}) },
     });
     if (
       !artifact ||
@@ -362,6 +369,7 @@ export async function publishPublicCvArtifact(id: string) {
       artifact.status !== DocumentStatus.DRAFT
     ) return false;
 
+    if (governanceEnabled() && artifact.publicationVersion !== await publicationVersion(tx)) return false;
     await tx.documentArtifact.updateMany({
       where: {
         kind: DocumentKind.PUBLIC_CV,
@@ -392,7 +400,9 @@ export async function publishPublicCvArtifact(id: string) {
 export async function getAdminDocumentArtifact(id: string) {
   await requireAdmin();
   try {
-    return await getPrisma().documentArtifact.findUnique({ where: { id } });
+    const artifact = await getPrisma().documentArtifact.findUnique({ where: { id } });
+    if (artifact && governanceEnabled() && artifact.publicationVersion !== await publicationVersion()) return null;
+    return artifact;
   } catch (error) {
     if (isDocumentSchemaUnavailable(error)) return null;
     throw error;

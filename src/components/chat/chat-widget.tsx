@@ -2,6 +2,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useTheme } from "next-themes";
+import { ContactForm } from "@/components/portfolio/contact-form";
+import type { ContactDraft } from "@/lib/chat/actions";
 import { LoaderCircleIcon, MessageCircleIcon, PlusIcon, SendIcon, XIcon, RotateCcwIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { chatCopy } from "@/i18n/chat";
@@ -12,6 +15,8 @@ import { useSiteChat } from "./site-chat-context";
 export function ChatWidget({ locale }: { locale: Locale }) {
   const copy = chatCopy[locale];
   const chat = useSiteChat();
+  const { setTheme } = useTheme();
+  const [contact, setContact] = useState<{ id: string; draft: ContactDraft } | null>(null);
   const [session, setSession] = useState<ChatSessionDto | null>(null);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
@@ -119,8 +124,16 @@ export function ChatWidget({ locale }: { locale: Locale }) {
             <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wide opacity-60">{message.role === "USER" ? copy.visitor : copy.assistant}</p>
             <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.content}</p>
             {message.sources.some((source) => source.action) && <div className="mt-3 flex flex-wrap gap-2">{message.sources.filter((source) => source.action).map((source) => {
-              const internal = ["cv", "project", "contact"].includes(source.action!);
-              const href = internal ? `${new URL(source.url).pathname}${new URL(source.url).hash}` : source.url;
+              if (source.interaction?.kind === "chat") return <Button key={source.id} size="sm" variant="outline" disabled={pending || waiting} onClick={() => {
+                if (source.interaction?.kind !== "chat") return;
+                if (source.interaction.operation === "restart") { setRestart(true); setContact(null); }
+                if (source.interaction.operation === "close") chat.setOpen(false);
+                if (source.interaction.operation === "older" && session.nextCursor) void load(session.nextCursor);
+              }}>{source.title}</Button>;
+              if (source.interaction?.kind === "contact") return <Button key={source.id} size="sm" variant="outline" onClick={() => { if (source.interaction?.kind === "contact") setContact({ id: message.id, draft: source.interaction.draft }); }}>{source.title}</Button>;
+              if (source.interaction?.kind === "theme") return <Button key={source.id} size="sm" variant="outline" onClick={() => { if (source.interaction?.kind === "theme") setTheme(source.interaction.theme); }}>{source.title}</Button>;
+              const internal = ["cv", "project", "contact", "navigate", "language"].includes(source.action!);
+              const href = internal ? `${new URL(source.url).pathname}${new URL(source.url).search}${new URL(source.url).hash}` : source.url;
               return <Link key={source.id} href={href} target={internal ? undefined : "_blank"} rel={internal ? undefined : "noreferrer"} onClick={(event) => {
                 if (internal && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
                   chat.setOpen(false);
@@ -134,6 +147,7 @@ export function ChatWidget({ locale }: { locale: Locale }) {
           </div>)}
             {turn.status === "FAILED" && <Button variant="ghost" size="sm" disabled={pending || waiting} onClick={() => retry(turn)}><RotateCcwIcon />{copy.retry}</Button>}
           </div>)}</div>
+          {contact && <div className="mt-4 space-y-2"><Button size="sm" variant="ghost" onClick={() => setContact(null)}>{copy.closeContact}</Button><ContactForm key={contact.id} locale={locale} copy={copy.contactForm} initialValues={contact.draft} embedded /></div>}
           {retryInput && !session.turns.some((turn) => turn.requestId === retryInput.requestId) && (pending || error) && <div className="ml-7 mt-4 rounded-2xl rounded-br-sm bg-foreground p-3 text-background"><p className="text-sm leading-6">{retryInput.message}</p></div>}
           {(pending || waiting) && <p role="status" className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><LoaderCircleIcon className="size-4 animate-spin" />{copy.sending}</p>}
         </>}

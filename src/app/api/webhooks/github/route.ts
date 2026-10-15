@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getPrisma } from "@/lib/prisma";
 import { projectIntegrationEnabled } from "@/lib/projects/configuration";
 import { boundedBody, validGithubSignature } from "@/lib/projects/http";
-import { enqueueProjectSync, processProjectSync } from "@/lib/projects/sync";
+import { enqueueProjectSync, processProjectSync, withdrawPublicProject } from "@/lib/projects/sync";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -31,7 +31,14 @@ export async function POST(request: Request) {
   catch { return Response.json({ status: "invalid" }, { status: 400 }); }
   if (!delivery.success) return Response.json({ status: "invalid" }, { status: 400 });
   if (event === "push" && (!payload.ref || !payload.after)) return Response.json({ status: "invalid" }, { status: 400 });
-  if (payload.deleted || payload.repository.private) return Response.json({ status: "ignored" }, { status: 202 });
+  if (payload.repository.private) {
+    try {
+      const config = await getPrisma().projectIntegration.findUnique({ where: { repositoryId: String(payload.repository.id) } });
+      if (config) await withdrawPublicProject(config.projectId);
+      return Response.json({ status: "withdrawn" }, { status: 202 });
+    } catch { return Response.json({ status: "unavailable" }, { status: 503 }); }
+  }
+  if (payload.deleted) return Response.json({ status: "ignored" }, { status: 202 });
   try {
     const config = await getPrisma().projectIntegration.findUnique({ where: { repositoryId: String(payload.repository.id) } });
     if (!config?.enabled || (event === "push" && payload.ref !== `refs/heads/${payload.repository.default_branch ?? config.branch}`)) return Response.json({ status: "ignored" }, { status: 202 });

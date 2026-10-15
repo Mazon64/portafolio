@@ -13,11 +13,12 @@ const repositorySchema = z.object({
   description: z.string().nullable().default(null),
   homepage: z.string().nullable().default(null),
   archived: z.boolean().default(false),
+  fork: z.boolean().optional(),
   topics: z.array(z.string()).default([]),
   has_issues: z.boolean().optional(),
 });
 export type GithubRepository = z.infer<typeof repositorySchema>;
-export type SourceChunk = { path: string; ordinal: number; content: string; sourceHash: string; sourceUrl: string };
+export type SourceChunk = { path: string; ordinal: number; content: string; sourceHash: string; sourceUrl: string; contributorId?: string };
 
 export async function githubJson(path: string, maxBytes = 300_000): Promise<unknown> {
   const token = process.env.PROJECT_GITHUB_TOKEN?.trim();

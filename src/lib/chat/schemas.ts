@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { interfaceActionSchema } from "./actions";
 
 export const CHAT_RETENTION_MS = 3 * 24 * 60 * 60_000;
 export const CHAT_COOKIE_SECONDS = CHAT_RETENTION_MS / 1000;
@@ -21,8 +22,9 @@ export const chatScopeSchema = z.object({
 });
 export const chatSourceSchema = z.object({ id: z.string(), title: z.string(), url: z.url().refine((value) => {
   const url = new URL(value);
+  if (url.protocol === "mailto:") return z.email().safeParse(url.pathname).success && !url.search && !url.hash;
   return !url.username && !url.password && (url.protocol === "https:" || (url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname)));
-}), projectSlug: z.string().optional(), action: z.enum(["cv", "project", "repository", "social", "contact", "demo"]).optional() });
+}), projectSlug: z.string().optional(), action: z.enum(["cv", "project", "repository", "social", "contact", "demo", "navigate", "language", "theme", "email", "media", "chat"]).optional(), interaction: interfaceActionSchema.optional(), publicationVersion: z.string().regex(/^[a-f0-9]{64}$/).optional() });
 export type ChatContext = z.infer<typeof chatContextSchema>;
 export type ChatInput = z.infer<typeof chatInputSchema>;
 export type ChatScope = z.infer<typeof chatScopeSchema>;

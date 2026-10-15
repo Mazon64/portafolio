@@ -42,6 +42,7 @@ export const repositoryAssetSchema = z.object({
 });
 export const repositoryAssetsSchema = z.array(repositoryAssetSchema).max(8);
 export const milestonesSchema = z.array(z.object({
+  scope: z.enum(["PROJECT", "CONTRIBUTION"]).optional(),
   id: z.string().regex(/^[a-z0-9-]{1,80}$/),
   title: localizedText,
   weight: z.number().int().min(1).max(100),
@@ -102,6 +103,7 @@ export type ProjectSnapshot = z.infer<typeof projectSnapshotSchema>;
 export type RepositoryAsset = z.infer<typeof repositoryAssetSchema>;
 
 export function milestoneProgress(items: ProjectMilestones): number | null {
+  items = items.filter((item) => item.scope !== "CONTRIBUTION");
   if (!items.length) return null;
   const total = items.reduce((sum, item) => sum + item.weight, 0);
   return Math.round(items.reduce((sum, item) => sum + (item.completed ? item.weight : 0), 0) / total * 100);

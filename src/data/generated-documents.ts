@@ -7,6 +7,7 @@ import type { Locale as AppLocale } from "@/i18n/config";
 import { getPrisma } from "@/lib/prisma";
 import { publicCvArtifactSchema } from "@/lib/documents/schemas";
 import type { PortfolioDto } from "./portfolio.types";
+import { applyProjectDisclosure, governanceEnabled, publicationVersion } from "./project-disclosure";
 
 const databaseLocale: Record<AppLocale, Locale> = { es: Locale.ES, en: Locale.EN };
 
@@ -26,10 +27,11 @@ export async function getPublishedGeneratedCv(
         status: DocumentStatus.PUBLISHED,
       },
       orderBy: { publishedAt: "desc" },
-      select: { content: true },
+       select: { content: true, ...(governanceEnabled() ? { publicationVersion: true } : {}) },
     });
     if (!artifact) return null;
-    return publicCvArtifactSchema.parse(artifact.content).portfolio;
+    if (governanceEnabled() && artifact.publicationVersion !== await publicationVersion()) return null;
+    return applyProjectDisclosure(publicCvArtifactSchema.parse(artifact.content).portfolio, locale, "cv");
   } catch (error) {
     if (isDocumentSchemaUnavailable(error)) return null;
     throw error;
