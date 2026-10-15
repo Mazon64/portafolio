@@ -4,6 +4,7 @@ import type { PortfolioDto } from "../../data/portfolio.types";
 import { siteConfig } from "../../config/site";
 import { formatDateRange } from "../../lib/format-date-range";
 import { DocumentPaper, DocumentSection } from "../documents/document-paper";
+import { disclosureLabels } from "@/i18n/project-disclosure";
 
 type CvCopy = Dictionary["cv"];
 
@@ -117,6 +118,8 @@ export function CvDocument({
                     <p className="mt-2 text-[0.86rem] leading-5.5 text-neutral-800">
                       {project.summary}
                     </p>
+                    {project.participation && <p className="mt-2 text-sm font-semibold">{[project.participation.relationship !== "UNSPECIFIED" ? disclosureLabels[locale][project.participation.relationship] : "", project.participation.role, project.participation.period, project.participation.status !== "UNSPECIFIED" ? disclosureLabels[locale][project.participation.status] : ""].filter(Boolean).join(" · ")}</p>}
+                    {project.participation?.contribution && <p className="mt-2 whitespace-pre-line text-[0.86rem] leading-5.5 text-neutral-800">{project.participation.contribution}</p>}
                     {project.techStack.length > 0 && (
                       <p className="mt-2 font-mono text-[0.66rem] leading-5 tracking-[0.04em] text-neutral-600 uppercase">
                         {project.techStack.join(" · ")}

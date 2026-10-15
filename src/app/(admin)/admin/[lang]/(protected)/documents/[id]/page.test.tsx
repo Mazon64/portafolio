@@ -26,6 +26,7 @@ describe("DocumentPreviewPage", () => {
       locale: Locale.EN,
       status: DocumentStatus.DRAFT,
       title: "Backend Engineer CV",
+      publicationVersion: null,
       sourceHash: "source-hash",
       model: "test-model",
       applicationId: "00000000-0000-4000-8000-000000000002",
@@ -77,6 +78,7 @@ describe("DocumentPreviewPage", () => {
       locale: Locale.ES,
       status: DocumentStatus.DRAFT,
       title: "Carta para Example",
+      publicationVersion: null,
       sourceHash: "source-hash",
       model: "test-model",
       applicationId: "00000000-0000-4000-8000-000000000002",
@@ -119,6 +121,7 @@ describe("DocumentPreviewPage", () => {
       vi.mocked(getAdminDocumentArtifact).mockResolvedValue({
         id, kind: DocumentKind.PUBLIC_CV, locale: Locale.EN, status,
         title: "Public CV", sourceHash: "hash", model: "test-model", applicationId: null,
+        publicationVersion: null,
         createdAt: new Date("2026-09-01T00:00:00.000Z"),
         publishedAt: status === DocumentStatus.DRAFT ? null : new Date("2026-09-02T00:00:00.000Z"),
         content: {

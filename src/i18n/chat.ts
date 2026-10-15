@@ -1,6 +1,8 @@
 import type { Locale } from "./config";
 export const chatCopy = {
   es: {
+    closeContact: "Cerrar formulario de contacto",
+    contactForm: { name: "Nombre", email: "Correo electrónico", message: "Mensaje", send: "Enviar mensaje", sending: "Enviando…", success: "Mensaje enviado correctamente.", error: "No se pudo enviar el mensaje. Inténtalo de nuevo." },
     turnStates: { PENDING: "En curso", COMPLETE: "Respondida", FAILED: "Sin respuesta" }, newer: "Más recientes",
     open: "Abrir chat", close: "Cerrar chat", title: "Asistente del portafolio", subtitle: "Sobre David y sus proyectos",
     welcome: "Hola, soy el asistente virtual de David. Puedo ayudarte sobre su experiencia y sus proyectos.",
@@ -20,6 +22,8 @@ export const chatCopy = {
     scope: { person: "Perfil de David", projects: "Proyectos", site: "Sitio", clarify: "Aclaración", out_of_scope: "Fuera del alcance" }, schemaPending: "La migración del chat todavía no está aplicada.",
   },
   en: {
+    closeContact: "Close contact form",
+    contactForm: { name: "Name", email: "Email", message: "Message", send: "Send message", sending: "Sending…", success: "Message sent successfully.", error: "Unable to send the message. Please try again." },
     turnStates: { PENDING: "In progress", COMPLETE: "Answered", FAILED: "Unanswered" }, newer: "More recent",
     open: "Open chat", close: "Close chat", title: "Portfolio assistant", subtitle: "About David and his projects",
     welcome: "Hi, I'm David's virtual assistant. I can help with his background and projects.",

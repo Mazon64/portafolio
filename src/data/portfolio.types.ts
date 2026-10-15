@@ -8,6 +8,7 @@ export type ProjectStatusDto =
   | "archived";
 
 export interface PortfolioDto {
+  publicationVersion?: string;
   profile: ProfileDto;
   experience: ExperienceDto[];
   education: EducationDto[];
@@ -50,6 +51,9 @@ export interface EducationDto {
 }
 
 export interface ProjectDto {
+  participation?: { relationship: string; role: string; period: string; contribution: string; status: string };
+  organizations?: Array<{ kind: string; name: string; logoUrl: string | null }>;
+  statusVisible?: boolean;
   slug: string;
   demoUrl: string | null;
   repositoryUrl: string | null;

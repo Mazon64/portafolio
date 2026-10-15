@@ -28,6 +28,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  experimental: { serverActions: { bodySizeLimit: "4mb" } },
   images: {
     remotePatterns: [{ protocol: "https", hostname: "raw.githubusercontent.com", pathname: "/**", search: "" }],
   },

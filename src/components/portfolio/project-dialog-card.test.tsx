@@ -18,6 +18,14 @@ let container: HTMLDivElement;
 beforeEach(() => { Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true }); container = document.createElement("div"); document.body.append(container); root = createRoot(container); });
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); });
 describe("project detail modal", () => {
+  it("shows relationship and participation status even without a written role", async () => {
+    await act(async () => root.render(<ProjectDialogCard project={{ ...project, participation: { relationship: "EMPLOYEE", status: "FINISHED", role: "", period: "", contribution: "" } }} locale="en" copy={copy} />));
+    await act(async () => container.querySelector("button")!.click());
+    const modal = document.querySelector('[role="dialog"]')!;
+    expect(modal.textContent).toContain("My participation");
+    expect(modal.textContent).toContain("Employee");
+    expect(modal.textContent).toContain("Finished");
+  });
   it("distinguishes unverified AI milestones from completed work and shows the assessment", async () => {
     await act(async () => root.render(<ProjectDialogCard project={project} locale="en" copy={copy} extra={{ assets: [], progressPct: 0, indexed: true, narrative: null, sources: [], milestones: [{ id: "acceptance", title: { es: "Aceptación", en: "Acceptance" }, completed: false, weight: 1, evidence: "", assessment: { status: "unverified", reason: { es: "Sin evidencia actual.", en: "No current evidence." }, citations: [] } }] }} />));
     expect(container.querySelector('[role="progressbar"]')?.getAttribute("aria-valuenow")).toBe("0");
@@ -27,7 +35,7 @@ describe("project detail modal", () => {
     expect(modal.textContent).toContain("No current evidence.");
     expect(modal.textContent).toContain("AI-inferred milestones");
   });
-  it("integrates screenshots into the detail and keeps queries outside the project", async () => {
+  it("keeps screenshots in a secondary gallery and preserves modal focus and dismissal", async () => {
     await act(async () => root.render(<ProjectDialogCard project={project} locale="en" copy={copy} extra={{ assets: [asset("interface", "Home screen"), asset("features", "Feature output")], milestones: [], progressPct: null, indexed: false, narrative: null, sources: [] }} />));
     expect(container.querySelector('[role="progressbar"]')).toBeNull();
     const trigger = container.querySelector("button")!;
@@ -37,7 +45,8 @@ describe("project detail modal", () => {
     expect(modal.querySelector('img[alt="Feature output"]')).not.toBeNull();
     expect(modal.querySelector('img[alt="Home screen"]')).not.toBeNull();
     expect(modal.querySelector("textarea")).toBeNull();
-    expect(modal.querySelector('img[alt="Feature output"]')!.closest("section")!.textContent).toContain("Technical details");
+    expect(modal.querySelector('img[alt="Feature output"]')!.closest("section")!.textContent).toContain("Visual evidence");
+    expect(modal.textContent).not.toContain("Data administration");
     await act(async () => { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); });
     await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')).toBeNull());
     await vi.waitFor(() => expect(document.activeElement).toBe(trigger));
@@ -50,5 +59,16 @@ describe("project detail modal", () => {
     expect(close).not.toBeNull();
     await act(async () => close.click());
     await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')).toBeNull());
+  });
+  it("presents documented administration and operations alongside the public experience", async () => {
+    const text = { summary: project.summary, problem: "Scattered information.", solution: "A unified workspace.", architecture: "The API reads PostgreSQL.", decisions: "Server-side authorization.", results: "A documented release.", experience: "Visitors explore projects.", administration: "Editors manage bilingual content and permissions.", operations: "Approved releases deploy through CI." };
+    await act(async () => root.render(<ProjectDialogCard project={project} locale="en" copy={copy} extra={{ assets: [], milestones: [], progressPct: null, indexed: true, sources: [], narrative: { es: text, en: text } }} />));
+    await act(async () => container.querySelector("button")!.click());
+    const modal = document.querySelector<HTMLElement>('[role="dialog"]')!;
+    expect(modal.textContent).toContain("Editors manage bilingual content and permissions.");
+    expect(modal.textContent).toContain("Approved releases deploy through CI.");
+    const headings = [...modal.querySelectorAll("h3,h4")].map((node) => node.textContent);
+    expect(headings.indexOf("Technologies")).toBeLessThan(headings.indexOf("Inside the system"));
+    expect(headings).toEqual(expect.arrayContaining(["Public experience", "Data administration", "Operations"]));
   });
 });

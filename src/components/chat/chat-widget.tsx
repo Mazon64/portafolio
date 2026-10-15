@@ -2,6 +2,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useTheme } from "next-themes";
+import { ContactForm } from "@/components/portfolio/contact-form";
+import type { ContactDraft } from "@/lib/chat/actions";
 import { LoaderCircleIcon, MessageCircleIcon, PlusIcon, SendIcon, XIcon, RotateCcwIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { chatCopy } from "@/i18n/chat";
@@ -12,6 +15,8 @@ import { useSiteChat } from "./site-chat-context";
 export function ChatWidget({ locale }: { locale: Locale }) {
   const copy = chatCopy[locale];
   const chat = useSiteChat();
+  const { setTheme } = useTheme();
+  const [contact, setContact] = useState<{ id: string; draft: ContactDraft } | null>(null);
   const [session, setSession] = useState<ChatSessionDto | null>(null);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
@@ -96,7 +101,7 @@ export function ChatWidget({ locale }: { locale: Locale }) {
     void send({ conversationId: session.conversation.id, requestId: turn.requestId, message: user.content, locale: turn.locale, context: turn.context });
   }
   const content = <div data-print-hidden id="chat" onKeyDown={(event) => { if (event.key === "Escape" && chat.open) { event.stopPropagation(); chat.setOpen(false); } }} className="fixed right-4 bottom-4 z-[70] print:hidden sm:right-6 sm:bottom-6">
-    {chat.open && <section ref={panel} role="region" aria-label={copy.title} className={`absolute right-0 bottom-20 flex w-[min(26rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-background text-foreground shadow-2xl 2xl:w-[30rem] ${chat.dock ? "h-[min(36rem,calc(80dvh-7rem))]" : "h-[min(40rem,calc(100dvh-8rem))]"}`}>
+    {chat.open && <section ref={panel} role="region" aria-label={copy.title} className="absolute right-0 bottom-20 flex h-[min(40rem,calc(100dvh-8rem))] w-[min(26rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-background text-foreground shadow-2xl 2xl:w-[30rem]">
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-muted/30 px-4 py-3">
         <div><h2 className="text-sm font-semibold">{copy.title}</h2><p className="text-xs text-muted-foreground">{copy.subtitle}</p></div>
         <div className="flex gap-1">
@@ -119,8 +124,16 @@ export function ChatWidget({ locale }: { locale: Locale }) {
             <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wide opacity-60">{message.role === "USER" ? copy.visitor : copy.assistant}</p>
             <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.content}</p>
             {message.sources.some((source) => source.action) && <div className="mt-3 flex flex-wrap gap-2">{message.sources.filter((source) => source.action).map((source) => {
-              const internal = ["cv", "project", "contact"].includes(source.action!);
-              const href = internal ? `${new URL(source.url).pathname}${new URL(source.url).hash}` : source.url;
+              if (source.interaction?.kind === "chat") return <Button key={source.id} size="sm" variant="outline" disabled={pending || waiting} onClick={() => {
+                if (source.interaction?.kind !== "chat") return;
+                if (source.interaction.operation === "restart") { setRestart(true); setContact(null); }
+                if (source.interaction.operation === "close") chat.setOpen(false);
+                if (source.interaction.operation === "older" && session.nextCursor) void load(session.nextCursor);
+              }}>{source.title}</Button>;
+              if (source.interaction?.kind === "contact") return <Button key={source.id} size="sm" variant="outline" onClick={() => { if (source.interaction?.kind === "contact") setContact({ id: message.id, draft: source.interaction.draft }); }}>{source.title}</Button>;
+              if (source.interaction?.kind === "theme") return <Button key={source.id} size="sm" variant="outline" onClick={() => { if (source.interaction?.kind === "theme") setTheme(source.interaction.theme); }}>{source.title}</Button>;
+              const internal = ["cv", "project", "contact", "navigate", "language"].includes(source.action!);
+              const href = internal ? `${new URL(source.url).pathname}${new URL(source.url).search}${new URL(source.url).hash}` : source.url;
               return <Link key={source.id} href={href} target={internal ? undefined : "_blank"} rel={internal ? undefined : "noreferrer"} onClick={(event) => {
                 if (internal && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
                   chat.setOpen(false);
@@ -134,6 +147,7 @@ export function ChatWidget({ locale }: { locale: Locale }) {
           </div>)}
             {turn.status === "FAILED" && <Button variant="ghost" size="sm" disabled={pending || waiting} onClick={() => retry(turn)}><RotateCcwIcon />{copy.retry}</Button>}
           </div>)}</div>
+          {contact && <div className="mt-4 space-y-2"><Button size="sm" variant="ghost" onClick={() => setContact(null)}>{copy.closeContact}</Button><ContactForm key={contact.id} locale={locale} copy={copy.contactForm} initialValues={contact.draft} embedded /></div>}
           {retryInput && !session.turns.some((turn) => turn.requestId === retryInput.requestId) && (pending || error) && <div className="ml-7 mt-4 rounded-2xl rounded-br-sm bg-foreground p-3 text-background"><p className="text-sm leading-6">{retryInput.message}</p></div>}
           {(pending || waiting) && <p role="status" className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><LoaderCircleIcon className="size-4 animate-spin" />{copy.sending}</p>}
         </>}

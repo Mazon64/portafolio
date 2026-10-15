@@ -155,10 +155,72 @@ model Project {
   integration        ProjectIntegration?
   syncJobs           ProjectSyncJob[]
   knowledge          ProjectKnowledge[]
+  disclosure         ProjectDisclosurePolicy?
+  repositories       ProjectRepository[]
+  evidence           ProjectEvidence[]
+  media              ProjectMedia[]
 
   @@index([showOnPortfolio, order])
   @@index([showOnCv, order])
   @@index([status])
+}
+
+model ProjectDisclosurePolicy {
+  projectId String   @id @db.Uuid
+  revision  String   @default(uuid()) @db.Uuid
+  policy    Json     @db.JsonB
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model ProjectMedia {
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @db.Uuid
+  objectKey String   @unique
+  width     Int
+  height    Int
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@index([projectId])
+}
+
+model ProjectRepository {
+  id             String   @id @default(uuid()) @db.Uuid
+  projectId      String   @db.Uuid
+  repositoryId   String
+  installationId String?
+  fullName       String
+  visibility     String
+  enabled        Boolean  @default(false)
+  sourcePaths    String[]
+  analysis       Json?    @db.JsonB
+  lastSyncedAt   DateTime? @db.Timestamptz(3)
+  leaseToken     String? @db.Uuid
+  leaseUntil     DateTime? @db.Timestamptz(3)
+  nextAttemptAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  evidence       ProjectEvidence[]
+
+  @@unique([projectId, repositoryId])
+  @@index([installationId, enabled])
+}
+
+model ProjectEvidence {
+  id           String   @id @default(uuid()) @db.Uuid
+  projectId    String   @db.Uuid
+  repositoryId String   @db.Uuid
+  policyRevision String @db.Uuid
+  commitSha    String
+  path         String
+  content      String   @db.Text
+  sourceHash   String
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  repository   ProjectRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@unique([repositoryId, commitSha, path])
+  @@index([projectId, policyRevision])
 }
 
 model ProjectTranslation {
@@ -273,6 +335,7 @@ model ChatTurn {
   scope          Json?            @db.JsonB
   status         String           @default("PENDING")
   failureCode    String?
+  publicationVersion String?
   createdAt      DateTime         @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime         @default(now()) @updatedAt @db.Timestamptz(3)
   conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -388,6 +451,7 @@ model DocumentArtifact {
   title         String
   content       Json              @db.JsonB
   sourceHash    String
+  publicationVersion String?
   model         String
   createdAt     DateTime          @default(now()) @db.Timestamptz(3)
   publishedAt   DateTime?         @db.Timestamptz(3)

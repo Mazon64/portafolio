@@ -6,6 +6,7 @@ import Script from "next/script";
 
 import { Button } from "@/components/ui/button";
 import type { Locale } from "@/i18n/config";
+import type { ContactDraft } from "@/lib/chat/actions";
 
 type ContactFormCopy = {
   name: string;
@@ -45,9 +46,13 @@ declare global {
 export function ContactForm({
   copy,
   locale,
+  initialValues,
+  embedded = false,
 }: {
   copy: ContactFormCopy;
   locale: Locale;
+  initialValues?: ContactDraft;
+  embedded?: boolean;
 }) {
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">(
     "idle",
@@ -58,6 +63,8 @@ export function ContactForm({
   const [turnstileToken, setTurnstileToken] = useState("");
   const turnstileContainerRef = useRef<HTMLDivElement>(null);
   const turnstileWidgetIdRef = useRef<string>(null);
+  const submitting = useRef(false);
+  const deliveryAttempt = useRef<{ payload: string; id: string } | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -125,8 +132,13 @@ export function ContactForm({
 
   async function submitMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true;
     const form = event.currentTarget;
     const data = new FormData(form);
+    const payload = { name: data.get("name"), email: data.get("email"), message: data.get("message"), website: data.get("website"), locale };
+    const serialized = JSON.stringify(payload);
+    if (deliveryAttempt.current?.payload !== serialized) deliveryAttempt.current = { payload: serialized, id: crypto.randomUUID() };
 
     setStatus("sending");
     try {
@@ -134,10 +146,8 @@ export function ContactForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: data.get("name"),
-          email: data.get("email"),
-          message: data.get("message"),
-          website: data.get("website"),
+          ...payload,
+          requestId: deliveryAttempt.current.id,
           turnstileToken,
           locale,
         }),
@@ -145,10 +155,12 @@ export function ContactForm({
 
       if (!response.ok) throw new Error("Contact request failed.");
       form.reset();
+      deliveryAttempt.current = null;
       setStatus("success");
     } catch {
       setStatus("error");
     } finally {
+      submitting.current = false;
       resetTurnstile();
     }
   }
@@ -159,15 +171,16 @@ export function ContactForm({
   return (
     <form
       onSubmit={submitMessage}
-      className="mx-auto mt-10 w-full max-w-3xl text-left"
+      className={embedded ? "w-full rounded-xl bg-foreground p-4 text-left text-background" : "mx-auto mt-10 w-full max-w-3xl text-left"}
     >
       <fieldset disabled={status === "sending"}>
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className={embedded ? "grid gap-4" : "grid gap-5 sm:grid-cols-2"}>
           <label className="text-sm font-medium text-background/80">
             {copy.name}
             <input
               required
               name="name"
+              defaultValue={initialValues?.name}
               type="text"
               autoComplete="name"
               minLength={2}
@@ -180,6 +193,7 @@ export function ContactForm({
             <input
               required
               name="email"
+              defaultValue={initialValues?.email}
               type="email"
               autoComplete="email"
               maxLength={254}
@@ -193,7 +207,8 @@ export function ContactForm({
           <textarea
             required
             name="message"
-            rows={6}
+            defaultValue={initialValues?.message}
+            rows={embedded ? 4 : 6}
             minLength={10}
             maxLength={5000}
             className={`${fieldClassName} resize-y`}
@@ -222,7 +237,7 @@ export function ContactForm({
             type="submit"
             size="lg"
             disabled={
-              turnstileSiteKey === undefined ||
+              !turnstileSiteKey ||
               (Boolean(turnstileSiteKey) && !turnstileToken)
             }
             className="min-w-40 bg-background text-foreground hover:bg-background/85"
