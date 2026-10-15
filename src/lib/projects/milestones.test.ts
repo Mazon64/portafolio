@@ -7,6 +7,13 @@ const source = { path: "README.md", ordinal: 0, content: "The API is implemented
 const goal = { previousId: null, title: { es: "API", en: "API" }, status: "completed", reason: { es: "La documentación confirma la API.", en: "Documentation confirms the API." }, citations: [{ sourceId: "source-0", quote: "The API is implemented." }] };
 
 describe("AI milestones owned by the portfolio service", () => {
+  it("requires identity-attributed evidence for contribution goals and keeps global progress separate", () => {
+    expect(() => resolveMilestones([{ ...goal, scope: "CONTRIBUTION" }], [source], [])).toThrow("contribution evidence");
+    expect(() => resolveMilestones([{ ...goal, scope: "CONTRIBUTION" }], [{ ...source, path: "contributions/fake.md" }], [])).toThrow("contribution evidence");
+    const personal = resolveMilestones([{ ...goal, scope: "CONTRIBUTION" }], [{ ...source, path: "contributions/pull-42.md", contributorId: "42" }], []);
+    expect(milestoneProgress(personal)).toBeNull();
+    expect(() => resolveMilestones([{ ...goal, previousId: personal[0].id, scope: "PROJECT" }], [source], personal)).toThrow("scope changed");
+  });
   it("accepts readable Markdown quotations without accepting paraphrases or rewriting source code", () => {
     const formatted = { ...source, content: "Activated with `CHAT_ENABLED=true`; see [release 61](https://github.com/owner/repo/pull/61). Owner acceptance remains pending." };
     const citation = { sourceId: "source-0", quote: "Activated with CHAT_ENABLED=true; see release 61." };

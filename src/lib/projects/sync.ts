@@ -10,6 +10,9 @@ import { discoverProject } from "./discovery";
 import { analyzeRepositoryImages } from "./media";
 import { resolveMilestones } from "./milestones";
 import { EMBEDDING_MODEL, milestoneProgress, narrativeText, projectSnapshotSchema, MAX_CHUNKS, MAX_SOURCE_BYTES } from "./schemas";
+import { disclosurePolicies, governanceEnabled } from "@/data/project-disclosure";
+import { contributionSources } from "./contributions";
+import { defaultDisclosure, disclosureSchema } from "./disclosure";
 
 const LEASE_MS = 10 * 60_000;
 const MAX_ATTEMPTS = 5;
@@ -89,13 +92,26 @@ export async function processProjectSync(projectId?: string) {
   const job = await claimJob(projectId);
   if (!job) return { status: "idle" };
   let failure = "SOURCE_UNAVAILABLE";
+  let repositoryUnavailable = false;
+  const loadRepository = async (id: string) => {
+    try { return await getRepository(id); }
+    catch (error) {
+      repositoryUnavailable = error instanceof Error && (error.message === "Project sources must be public" || error.message === "GitHub HTTP 404");
+      throw error;
+    }
+  };
   try {
     const config = await getPrisma().projectIntegration.findUnique({ where: { projectId: job.projectId }, include: { project: true } });
+    const disclosure = (await disclosurePolicies()).find((row) => row.projectId === job.projectId);
+    if (disclosure && (disclosure.policy.mode !== "FULL" || disclosure.policy.externalAi === "NONE")) {
+      await finishSuperseded(job.id, job.leaseToken);
+      return { status: "superseded" };
+    }
     if (!config?.enabled || config.updatedAt.getTime() !== job.configurationUpdatedAt.getTime()) {
       await finishSuperseded(job.id, job.leaseToken);
       return { status: "superseded" };
     }
-    const repository = await getRepository(config.repositoryId);
+    const repository = await loadRepository(config.repositoryId);
     const sha = await getBranchSha(repository, repository.default_branch);
     // Out-of-order webhook deliveries never replace a newer branch snapshot.
     if (job.requestedSha && job.requestedSha !== sha) {
@@ -108,7 +124,8 @@ export async function processProjectSync(projectId?: string) {
     const previousMilestones = cachedSnapshot.success && cachedSnapshot.data.metadata.repositoryId === String(repository.id) ? cachedSnapshot.data.milestones : [];
     failure = "IMAGE_ANALYSIS_FAILED";
     const assets = await analyzeRepositoryImages(repository, sha, discovered.images, cachedSnapshot.success ? cachedSnapshot.data.assets : []);
-    const chunks = [...discovered.chunks, ...assets.map((asset) => {
+    const contributions = await contributionSources(repository, disclosure?.policy.participation.githubIds ?? []);
+    const chunks = [...discovered.chunks, ...contributions, ...assets.map((asset) => {
       const content = `Visual observation, not proof of implementation.\nES: ${asset.caption.es}\nEN: ${asset.caption.en}`;
       return { path: asset.sourcePath, ordinal: 0, content, sourceHash: createHash("sha256").update(`${asset.blobSha}:${content}`).digest("hex"), sourceUrl: `https://github.com/${repository.full_name}/blob/${sha}/${asset.sourcePath.split("/").map(encodeURIComponent).join("/")}` };
     })];
@@ -136,13 +153,17 @@ export async function processProjectSync(projectId?: string) {
     });
     // Check branch again after external calls, before publishing the snapshot.
     failure = "SOURCE_UNAVAILABLE";
-    if (await getBranchSha(await getRepository(config.repositoryId), repository.default_branch) !== sha) {
+    if (await getBranchSha(await loadRepository(config.repositoryId), repository.default_branch) !== sha) {
       await finishSuperseded(job.id, job.leaseToken);
       return { status: "superseded" };
     }
     failure = "PERSISTENCE_FAILED";
     const saved = await serializable(async (tx) => {
       const current = await tx.projectIntegration.findUnique({ where: { projectId: job.projectId }, include: { project: true } });
+      if (governanceEnabled()) {
+        const policy = await tx.projectDisclosurePolicy.findUnique({ where: { projectId: job.projectId } });
+        if ((policy?.revision ?? null) !== (disclosure?.revision ?? null)) return false;
+      }
       if (!current?.enabled || current.updatedAt.getTime() !== config.updatedAt.getTime() || current.project.updatedAt.getTime() !== config.project.updatedAt.getTime()) return false;
       const owned = await tx.projectSyncJob.updateMany({
         where: { id: job.id, leaseToken: job.leaseToken, status: "PROCESSING", leaseUntil: { gt: new Date() } },
@@ -183,6 +204,11 @@ export async function processProjectSync(projectId?: string) {
     }
     return { status: saved ? "succeeded" : "superseded" };
   } catch (error) {
+    if (repositoryUnavailable) {
+      await withdrawPublicProject(job.projectId);
+      await finishSuperseded(job.id, job.leaseToken);
+      return { status: "withdrawn" };
+    }
     const exhausted = job.attempts >= MAX_ATTEMPTS;
     await getPrisma().projectSyncJob.updateMany({
       where: { id: job.id, leaseToken: job.leaseToken, status: "PROCESSING" },
@@ -199,4 +225,20 @@ async function finishSuperseded(id: string, leaseToken: string) {
     where: { id, leaseToken, status: "PROCESSING" },
     data: { status: "SUPERSEDED", finishedAt: new Date(), leaseToken: null, leaseUntil: null },
   });
+}
+
+export async function withdrawPublicProject(projectId: string) {
+  if (!projectIntegrationEnabled()) throw new Error("Integration disabled");
+  await serializable(async (tx) => {
+    await tx.projectIntegration.updateMany({ where: { projectId }, data: { enabled: false } });
+    await tx.project.updateMany({ where: { id: projectId }, data: { showOnPortfolio: false, showOnCv: false } });
+    await tx.projectKnowledge.updateMany({ where: { projectId }, data: { status: "RETIRED" } });
+    await tx.documentArtifact.updateMany({ where: { status: "PUBLISHED" }, data: { status: "ARCHIVED", publishedAt: null } });
+    if (governanceEnabled()) {
+      const current = await tx.projectDisclosurePolicy.findUnique({ where: { projectId } });
+      const policy = { ...(current ? disclosureSchema.parse(current.policy) : defaultDisclosure), mode: "INTERNAL" as const };
+      await tx.projectDisclosurePolicy.upsert({ where: { projectId }, create: { projectId, revision: randomUUID(), policy }, update: { revision: randomUUID(), policy } });
+    }
+  });
+  revalidateTag("portfolio", { expire: 0 });
 }

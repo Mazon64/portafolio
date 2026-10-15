@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   transaction: vi.fn(), getRepo: vi.fn(), getSha: vi.fn(), getSources: vi.fn(), embed: vi.fn(), narrative: vi.fn(),
   query: vi.fn(), execute: vi.fn(), deleteDraft: vi.fn(), createDraft: vi.fn(),
   discover: vi.fn(), images: vi.fn(), published: vi.fn(), translation: vi.fn(), updateProject: vi.fn(), cache: vi.fn(),
+  disableConfig: vi.fn(), retireKnowledge: vi.fn(), hideProject: vi.fn(), archiveDocuments: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidateTag: mocks.cache }));
@@ -34,14 +35,26 @@ beforeEach(() => {
   mocks.query.mockResolvedValue([]); mocks.embed.mockResolvedValue(["[1]"]); mocks.narrative.mockResolvedValue({ content: { names: { es: "Proyecto", en: "Project" }, narrative: { es: text, en: text }, milestones: [] }, model: "test" });
   mocks.createDraft.mockResolvedValue({ id: "draft" }); mocks.execute.mockResolvedValue(1);
   mocks.transaction.mockImplementation(async (fn) => fn({
-    projectIntegration: { findUnique: mocks.findConfig },
+    projectIntegration: { findUnique: mocks.findConfig, updateMany: mocks.disableConfig },
     projectSyncJob: { findUnique: mocks.findExisting, count: mocks.countJobs, create: mocks.createJob, updateMany: mocks.updateJob },
-    projectKnowledge: { deleteMany: mocks.deleteDraft, create: mocks.createDraft }, $executeRaw: mocks.execute,
-    project: { update: mocks.updateProject }, projectTranslation: { upsert: mocks.translation },
+    projectKnowledge: { deleteMany: mocks.deleteDraft, create: mocks.createDraft, updateMany: mocks.retireKnowledge }, $executeRaw: mocks.execute,
+    project: { update: mocks.updateProject, updateMany: mocks.hideProject }, projectTranslation: { upsert: mocks.translation },
+    documentArtifact: { updateMany: mocks.archiveDocuments },
   }));
 });
 afterEach(() => vi.unstubAllEnvs());
 describe("durable project processing", () => {
+  it("withdraws the published project when repository access becomes private", async () => {
+    mocks.getRepo.mockRejectedValue(new Error("Project sources must be public"));
+    expect(await processProjectSync()).toEqual({ status: "withdrawn" });
+    expect(mocks.hideProject).toHaveBeenCalledWith({ where: { id: "project" }, data: { showOnPortfolio: false, showOnCv: false } });
+    expect(mocks.retireKnowledge).toHaveBeenCalled(); expect(mocks.archiveDocuments).toHaveBeenCalled(); expect(mocks.narrative).not.toHaveBeenCalled();
+  });
+  it("does not withdraw a public project just because one source file is missing", async () => {
+    mocks.discover.mockRejectedValue(new Error("GitHub HTTP 404"));
+    expect(await processProjectSync()).toEqual({ status: "retrying" });
+    expect(mocks.hideProject).not.toHaveBeenCalled();
+  });
   it("reevaluates persisted legacy milestones and saves their evidence atomically", async () => {
     const previous = [{ id: "admin", title: { es: "Aceptación", en: "Acceptance" }, completed: true, weight: 10, evidence: "https://example.com/old" }];
     mocks.published.mockResolvedValue({ narrative: { automatic: true, names: { es: "Proyecto", en: "Project" }, es: text, en: text, assets: [], milestones: previous, metadata } });

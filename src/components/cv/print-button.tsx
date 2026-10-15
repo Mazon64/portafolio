@@ -1,6 +1,7 @@
 "use client";
 
 import { PrinterIcon } from "lucide-react";
+import { useEffect } from "react";
 
 export function PrintButton({
   label,
@@ -9,6 +10,18 @@ export function PrintButton({
   label: string;
   documentTitle?: string;
 }) {
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("print") !== "1") return;
+    let active = true;
+    void document.fonts.ready.then(() => {
+      if (!active) return;
+      url.searchParams.delete("print");
+      window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+      window.print();
+    });
+    return () => { active = false; };
+  }, []);
   function printDocument() {
     if (!documentTitle) {
       window.print();

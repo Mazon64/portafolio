@@ -18,6 +18,10 @@ describe("project embeddings and grounded answers", () => {
     const goal = { previousId: null, title: { es: "Hito", en: "Goal" }, status: "pending", reason: { es: "Pendiente", en: "Pending" }, citations: [] };
     const valid = { names: { es: "Proyecto", en: "Project" }, narrative: { es: text, en: text }, milestones: [goal] };
     expect(request.validator.safeParse(valid).success).toBe(true);
+    const extended = { ...text, experience: "Public project browsing.", administration: "Administrators edit bilingual records.", operations: "Reviewed releases deploy through CI." };
+    const atlas = request.validator.parse({ ...valid, narrative: { es: extended, en: extended } });
+    expect(atlas.narrative.en.administration).toBe(extended.administration);
+    expect(request.responseSchema.properties.narrative.properties.en.properties).toHaveProperty("operations");
     expect(request.validator.safeParse({ ...valid, milestones: Array(21).fill(goal) }).success).toBe(false);
     expect(request.validator.safeParse({ ...valid, milestones: [{ ...goal, title: { es: "x".repeat(2001), en: "Goal" } }] }).success).toBe(false);
     expect(request.validator.safeParse({ ...valid, milestones: [{ ...goal, status: "invented" }] }).success).toBe(false);

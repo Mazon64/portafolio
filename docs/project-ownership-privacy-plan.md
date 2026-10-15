@@ -1,7 +1,9 @@
 # Plan De Propiedad, Participación Y Privacidad De Proyectos
 
-**Estado: propuesta de diseño; no implementada.** No habilita repositorios privados
-ni cambia permisos o datos publicados. La integración actual sigue siendo pública.
+**Estado: implementación candidata en rama de desarrollo; no activada en producción.**
+El orden de migración, configuración externa, capacidades entregadas y verificación
+se describe en [project-disclosure-rollout.md](project-disclosure-rollout.md).
+Este documento conserva el diseño objetivo; no certifica la aceptación operativa.
 
 ## 1. Objetivo
 

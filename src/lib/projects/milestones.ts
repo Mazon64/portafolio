@@ -5,6 +5,7 @@ import type { SourceChunk } from "./github";
 import { localizedText, milestonesSchema, type ProjectMilestones } from "./schemas";
 
 export const generatedMilestonesSchema = z.array(z.object({
+  scope: z.enum(["PROJECT", "CONTRIBUTION"]).optional(),
   previousId: z.string().nullable(),
   title: localizedText,
   status: z.enum(["completed", "pending", "unverified"]),
@@ -48,7 +49,12 @@ export function resolveMilestones(value: unknown, chunks: SourceChunk[], previou
       return { path: source.path, url: source.sourceUrl, sourceHash: source.sourceHash, quote: readableQuote };
     });
     if (!citations.length && (milestone.previousId === null || milestone.status !== "unverified")) throw new Error("Milestone evidence is missing");
+    const scope = milestone.scope ?? "PROJECT";
+    const previousScope = milestone.previousId ? previousById.get(milestone.previousId)?.scope ?? "PROJECT" : null;
+    if (previousScope && previousScope !== scope) throw new Error("Milestone scope changed");
+    if (scope === "CONTRIBUTION" && milestone.status !== "unverified" && !milestone.citations.some((citation) => sources.get(citation.sourceId)?.contributorId)) throw new Error("Personal contribution evidence is missing");
     return {
+      scope,
       id: milestone.previousId ?? `goal-${randomUUID()}`, title: milestone.title,
       weight: 1, completed: milestone.status === "completed", evidence: citations[0]?.url ?? "",
       assessment: { status: milestone.status, reason: milestone.reason, citations },

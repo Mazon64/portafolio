@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-const m = vi.hoisted(() => ({ generate: vi.fn(), portfolio: vi.fn(), catalog: vi.fn(), embed: vi.fn(), query: vi.fn(), countProjects: vi.fn(), countKnowledge: vi.fn() }));
+const m = vi.hoisted(() => ({ generate: vi.fn(), portfolio: vi.fn(), catalog: vi.fn(), embed: vi.fn(), query: vi.fn(), countProjects: vi.fn(), countKnowledge: vi.fn(), policies: vi.fn() }));
 vi.mock("server-only", () => ({}));
 vi.mock("./provider", () => ({ requestChatFunctions: m.generate }));
 vi.mock("@/lib/projects/ai", () => ({ embedTexts: m.embed }));
 vi.mock("@/data/portfolio", () => ({ getPortfolioContent: m.portfolio }));
-vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({ project: { findMany: m.catalog, count: m.countProjects }, projectKnowledge: { count: m.countKnowledge }, $queryRaw: m.query }) }));
+vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({ project: { findMany: m.catalog, count: m.countProjects }, projectDisclosurePolicy: { findMany: m.policies }, projectKnowledge: { count: m.countKnowledge }, $queryRaw: m.query }) }));
 import { generateChatAnswer } from "./answer";
+import { defaultDisclosure } from "@/lib/projects/disclosure";
 const catalog = ["alpha", "beta"].map((slug) => ({ slug, status: "IN_PROGRESS", techStack: ["Next.js"], repositoryUrl: `https://github.com/owner/${slug}`, demoUrl: null, knowledge: [], translations: [{ name: slug, summary: `${slug} project`, detailedInfo: `${slug} details` }] }));
 const input = { conversationId: "00000000-0000-4000-8000-000000000001", requestId: "00000000-0000-4000-8000-000000000001", message: "What is David's experience?", locale: "en" as const, context: { path: "/en" as const, section: "projects" as const, projectSlug: "alpha" } };
 const calls = (...functions: Array<[string, unknown]>) => ({ role: "model", parts: functions.map(([name, args]) => ({ functionCall: { name, args } })) });
@@ -13,11 +14,37 @@ const final = (sourceIds: string[], actionIds: string[] = [], kind = "person", p
 beforeEach(() => {
   vi.resetAllMocks(); vi.stubEnv("PROJECT_RAG_ENABLED", "true");
   m.catalog.mockResolvedValue(catalog);
+  m.policies.mockResolvedValue([]);
   m.portfolio.mockResolvedValue({ profile: { fullName: "David", title: "Engineer", longBio: "Public biography", email: "public@example.test", contactText: "Contact me", socialLinks: [{ slug: "github", label: "GitHub", url: "https://github.com/owner" }, { slug: "linkedin", label: "LinkedIn", url: "https://www.linkedin.com/in/owner" }] }, experience: [{ company: "Public employer" }], education: [], skillCategories: [], projects: [] });
   m.embed.mockResolvedValue(["[1]"]); m.query.mockResolvedValue([]); m.countProjects.mockResolvedValue(1); m.countKnowledge.mockResolvedValue(1);
 });
 afterEach(() => vi.unstubAllEnvs());
 describe("automatic public chat functions", () => {
+  it("excludes withdrawn project data and previous-policy history before calling the model", async () => {
+    vi.stubEnv("PROJECT_GOVERNANCE_ENABLED", "true");
+    m.policies.mockResolvedValue([{ projectId: "private-id", revision: "new-policy", project: { slug: "beta" }, policy: { ...defaultDisclosure, mode: "INTERNAL" } }]);
+    m.generate.mockResolvedValueOnce(calls(["get_project", { slug: "beta" }])).mockResolvedValueOnce(final([], [], "out_of_scope"));
+    await generateChatAnswer(input, [{ role: "ASSISTANT", content: "WITHDRAWN_SECRET", publicationVersion: "old-policy" }]);
+    expect(JSON.stringify(m.generate.mock.calls[0][1])).not.toContain("WITHDRAWN_SECRET");
+    expect(JSON.stringify(m.generate.mock.calls[0][1])).not.toContain('"name":"beta"');
+    expect(JSON.stringify(m.generate.mock.calls[1][1])).not.toContain("beta details");
+  });
+  it("prepares editable contact data without sending an email and resolves interface actions", async () => {
+    vi.stubEnv("CONTACT_DELIVERY_ENABLED", "true");
+    m.generate.mockResolvedValueOnce(calls(["prepare_contact", { name: "Visitor", email: "visitor@example.com", message: "I would like to discuss a project." }], ["change_theme", { theme: "dark" }], ["get_cv", { mode: "print" }], ["navigate_portfolio", { section: "experience" }]))
+      .mockResolvedValueOnce(final([], ["action:contact", "theme:dark", "action:cv", "navigate:experience"], "site"));
+    const result = await generateChatAnswer(input, []);
+    expect(result.sources[0].interaction).toMatchObject({ kind: "contact", draft: { email: "visitor@example.com" } });
+    expect(result.sources[1].interaction).toEqual({ kind: "theme", theme: "dark" });
+    expect(result.sources[2].url).toContain("/en/cv?print=1");
+    expect(result.sources[3].url).toContain("/en#experience");
+  });
+  it("does not offer contact delivery in Preview even if the flag is enabled", async () => {
+    vi.stubEnv("CONTACT_DELIVERY_ENABLED", "true"); vi.stubEnv("VERCEL_ENV", "preview");
+    m.generate.mockResolvedValueOnce(calls(["prepare_contact", { name: "", email: "", message: "" }])).mockResolvedValueOnce(final([], [], "site"));
+    const result = await generateChatAnswer(input, []);
+    expect(result.sources).toHaveLength(0); expect(JSON.stringify(m.generate.mock.calls[1][1])).toContain("unavailable");
+  });
   it("retrieves specific personal data despite an open project and answers without a topic-selection round", async () => {
     m.generate.mockResolvedValueOnce(calls(["get_public_profile", { section: "experience" }])).mockResolvedValueOnce(final(["person:experience"]));
     const answer = await generateChatAnswer(input, []);

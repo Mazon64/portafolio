@@ -2,7 +2,8 @@ import "server-only";
 
 import { DocumentKind, Locale, Prisma } from "@/generated/prisma/client";
 import type { Locale as AppLocale } from "@/i18n/config";
-import { getCvContent } from "@/data/portfolio";
+import { getCvContent, getDocumentSourceContent } from "@/data/portfolio";
+import { governanceEnabled } from "@/data/project-disclosure";
 import {
   createApplicationArtifacts,
   createPublicCvDraft,
@@ -156,6 +157,12 @@ export class DocumentSourceConflictError extends Error {
   }
 }
 
+function documentSource(locale: AppLocale, surface: "cv" | "documents") {
+  return governanceEnabled() ? getDocumentSourceContent(locale, surface) : getCvContent(locale);
+}
+
+const projectAttributionInstruction = " Project capabilities describe the overall product, not necessarily the candidate's work. Attribute personal achievements only to explicit participation facts or individual contribution evidence. If ownership or participation is unspecified, describe the project neutrally without claiming sole authorship, leadership or responsibility for all features. Never turn a fork's imported history into personal accomplishments.";
+
 export class InvalidDocumentDraftError extends Error {
   constructor() {
     super("Document draft proof is invalid");
@@ -164,7 +171,7 @@ export class InvalidDocumentDraftError extends Error {
 }
 
 export async function generatePublicCvDraft(locale: AppLocale): Promise<PublicCvDraft> {
-  const [portfolio, context] = await Promise.all([getCvContent(locale), getLatestAiContext()]);
+  const [portfolio, context] = await Promise.all([documentSource(locale, "cv"), getLatestAiContext()]);
   const source = {
     locale,
     professionalContext: context?.professionalContext ?? "",
@@ -172,9 +179,9 @@ export async function generatePublicCvDraft(locale: AppLocale): Promise<PublicCv
   };
   const generated = await generateStructuredDocument({
     instruction:
-      locale === "es"
+      (locale === "es"
         ? "Redacta un CV público profesional en español, con lenguaje natural, directo y conciso. Usa la primera persona con moderación y varía la estructura para no repetir «yo». Conserva exactamente cada slug y sintetiza únicamente hechos verificables del portafolio. Evita elogios genéricos, clichés, grandilocuencia y descripciones mecánicas."
-        : "Write a professional public CV in natural, direct, concise English. Use the first person sparingly and vary sentence structure instead of repeatedly starting with “I.” Preserve every slug exactly and summarize only verifiable portfolio facts. Avoid generic praise, clichés, inflated language, and mechanical narration.",
+        : "Write a professional public CV in natural, direct, concise English. Use the first person sparingly and vary sentence structure instead of repeatedly starting with “I.” Preserve every slug exactly and summarize only verifiable portfolio facts. Avoid generic praise, clichés, inflated language, and mechanical narration.") + projectAttributionInstruction,
     source,
     responseSchema: publicCvResponseSchema,
     validator: publicCvGenerationSchema,
@@ -220,7 +227,7 @@ export async function savePublicCvDraft(
     throw new InvalidDocumentDraftError();
   }
   const [portfolio, context] = await Promise.all([
-    getCvContent(input.locale),
+    documentSource(input.locale, "cv"),
     getLatestAiContext(),
   ]);
   const sourceHash = createSourceHash({
@@ -259,6 +266,7 @@ export async function savePublicCvDraft(
     },
   });
   return createPublicCvDraft({
+    publicationVersion: portfolio.publicationVersion,
     id: input.draftId,
     locale: databaseLocale[input.locale],
     title: input.locale === "es" ? "CV público" : "Public CV",
@@ -272,7 +280,7 @@ export async function generateApplicationDocuments(
   input: ApplicationDocumentInput,
 ): Promise<ApplicationDocumentsDraft> {
   const [portfolio, context] = await Promise.all([
-    getCvContent(input.locale),
+    documentSource(input.locale, "documents"),
     getLatestAiContext(),
   ]);
   const sharedSource = {
@@ -289,13 +297,13 @@ export async function generateApplicationDocuments(
   const language = input.locale === "es" ? "Spanish" : "English";
   const [atsGenerated, coverGenerated] = await Promise.all([
     generateStructuredDocument({
-      instruction: `Create a one-column ATS CV tailored to the supplied vacancy in ${language}. Use natural, concise, professional language and prioritize relevant documented facts without embellishment. Keep the headline direct. Write the summary in restrained first person without repeated first-person openings. Start bullets with precise action verbs and omit first-person pronouns. Preserve every experience and project slug exactly. Return skills only as slugs present in the portfolio.`,
+      instruction: `Create a one-column ATS CV tailored to the supplied vacancy in ${language}. Use natural, concise, professional language and prioritize relevant documented facts without embellishment. Keep the headline direct. Write the summary in restrained first person without repeated first-person openings. Start bullets with precise action verbs and omit first-person pronouns. Preserve every experience and project slug exactly. Return skills only as slugs present in the portfolio.${projectAttributionInstruction}`,
       source: sharedSource,
       responseSchema: atsResponseSchema,
       validator: atsGenerationSchema,
     }),
     generateStructuredDocument({
-      instruction: `Write a concise, natural cover letter for the supplied vacancy in ${language}. Use a restrained first-person voice with varied sentence openings. Connect only documented experience to specific role needs. Avoid generic enthusiasm, clichés, flattery, inflated claims, and formulaic narration. Do not claim knowledge of the company beyond the supplied vacancy.`,
+      instruction: `Write a concise, natural cover letter for the supplied vacancy in ${language}. Use a restrained first-person voice with varied sentence openings. Connect only documented experience to specific role needs. Avoid generic enthusiasm, clichés, flattery, inflated claims, and formulaic narration. Do not claim knowledge of the company beyond the supplied vacancy.${projectAttributionInstruction}`,
       source: {
         ...sharedSource,
         personalContext: context?.personalContext ?? "",
@@ -363,7 +371,7 @@ export async function saveApplicationDocuments(
     throw new InvalidDocumentDraftError();
   }
   const [portfolio, context] = await Promise.all([
-    getCvContent(input.application.locale),
+    documentSource(input.application.locale, "documents"),
     getLatestAiContext(),
   ]);
   const sharedSource = {
@@ -447,6 +455,7 @@ export async function saveApplicationDocuments(
     name: portfolio.profile.fullName,
   });
   return createApplicationArtifacts({
+    publicationVersion: portfolio.publicationVersion,
     id: input.draftId,
     ...input.application,
     locale: databaseLocale[input.application.locale],

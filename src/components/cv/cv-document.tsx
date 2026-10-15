@@ -117,6 +117,8 @@ export function CvDocument({
                     <p className="mt-2 text-[0.86rem] leading-5.5 text-neutral-800">
                       {project.summary}
                     </p>
+                    {project.participation?.role && <p className="mt-2 text-sm font-semibold">{project.participation.role}{project.participation.period ? ` · ${project.participation.period}` : ""}</p>}
+                    {project.participation?.contribution && <p className="mt-2 whitespace-pre-line text-[0.86rem] leading-5.5 text-neutral-800">{project.participation.contribution}</p>}
                     {project.techStack.length > 0 && (
                       <p className="mt-2 font-mono text-[0.66rem] leading-5 tracking-[0.04em] text-neutral-600 uppercase">
                         {project.techStack.join(" · ")}

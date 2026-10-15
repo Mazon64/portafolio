@@ -4,6 +4,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { serializable } from "@/lib/projects/sync";
 import { chatEnabled } from "@/lib/chat/configuration";
+import { governanceEnabled, publicationVersion } from "./project-disclosure";
 import { CHAT_LEASE_MS, CHAT_RETENTION_MS, chatContextSchema, chatScopeSchema, chatSourceSchema, type ChatInput, type ChatScope, type ChatSessionDto, type ChatSource } from "@/lib/chat/schemas";
 
 export class ChatStateError extends Error {
@@ -33,11 +34,12 @@ export function visibleMessageFilter(conversationPinned: boolean, now = new Date
 }
 
 export async function visitorHistory(conversation: VisitorConversation, before?: string): Promise<ChatSessionDto> {
+  const version = governanceEnabled() ? await publicationVersion() : undefined;
   const visible = visibleMessageFilter(conversation.pinned);
   const cursor = before ? await getPrisma().chatTurn.findFirst({ where: { id: before, conversationId: conversation.id }, select: { updatedAt: true, id: true } }) : null;
   if (before && !cursor) throw new ChatStateError("invalid");
   const rows = await getPrisma().chatTurn.findMany({
-    where: { conversationId: conversation.id, messages: { some: visible }, ...(cursor ? { OR: [
+    where: { conversationId: conversation.id, ...(version ? { publicationVersion: version } : {}), messages: { some: visible }, ...(cursor ? { OR: [
       { updatedAt: { lt: cursor.updatedAt } }, { updatedAt: cursor.updatedAt, id: { lt: cursor.id } },
     ] } : {}) },
     orderBy: [{ updatedAt: "desc" }, { id: "desc" }], take: 21,
@@ -67,6 +69,7 @@ export async function inspectChatRequest(conversation: VisitorConversation, inpu
   if (input.conversationId !== conversation.id) throw new ChatStateError("conflict");
   const turn = await getPrisma().chatTurn.findUnique({ where: { conversationId_requestId: { conversationId: conversation.id, requestId: input.requestId } }, include: { messages: { where: visibleMessageFilter(conversation.pinned) } } });
   if (!turn) return null;
+  if (governanceEnabled() && turn.publicationVersion !== await publicationVersion()) throw new ChatStateError("conflict");
   if (!sameInput(turn, input)) throw new ChatStateError("conflict");
   if (turn.status === "COMPLETE") return "complete";
   if (turn.status === "PENDING" && conversation.lockUntil && conversation.lockUntil.getTime() > Date.now()) return "pending";
@@ -83,6 +86,7 @@ export async function beginChatTurn(conversation: VisitorConversation, input: Ch
     const current = await tx.chatConversation.findUniqueOrThrow({ where: { id: conversation.id } });
     const existing = await tx.chatTurn.findUnique({ where: { conversationId_requestId: { conversationId: conversation.id, requestId: input.requestId } }, include: { messages: { where: visibleMessageFilter(current.pinned) } } });
     if (existing && !sameInput(existing, input)) throw new ChatStateError("conflict");
+    if (existing && governanceEnabled() && existing.publicationVersion !== await publicationVersion(tx)) throw new ChatStateError("conflict");
     if (existing?.status === "COMPLETE") return { kind: "complete" as const };
     if (current.lockUntil && current.lockUntil.getTime() > Date.now()) {
       if (existing?.status === "PENDING") return { kind: "pending" as const };
@@ -97,6 +101,7 @@ export async function beginChatTurn(conversation: VisitorConversation, input: Ch
     const turn = existing ? await tx.chatTurn.update({ where: { id: existing.id }, data: { status: "PENDING", failureCode: null } })
       : await tx.chatTurn.create({ data: {
         conversationId: current.id, requestId: input.requestId, locale: input.locale === "es" ? "ES" : "EN", context: input.context,
+        ...(governanceEnabled() ? { publicationVersion: await publicationVersion(tx) } : {}),
         messages: { create: { role: "USER", content: input.message } },
       } });
     return { kind: "claimed" as const, turnId: turn.id, conversationId: current.id, lockToken };
@@ -104,20 +109,22 @@ export async function beginChatTurn(conversation: VisitorConversation, input: Ch
 }
 
 export async function recentChatHistory(conversation: VisitorConversation, excludeTurnId: string) {
-  const turns = await getPrisma().chatTurn.findMany({ where: { conversationId: conversation.id, id: { not: excludeTurnId }, status: "COMPLETE" }, orderBy: { updatedAt: "desc" }, take: 6,
+  const version = governanceEnabled() ? await publicationVersion() : undefined;
+  const turns = await getPrisma().chatTurn.findMany({ where: { conversationId: conversation.id, ...(version ? { publicationVersion: version } : {}), id: { not: excludeTurnId }, status: "COMPLETE" }, orderBy: { updatedAt: "desc" }, take: 6,
     include: { messages: { where: visibleMessageFilter(conversation.pinned), orderBy: [{ createdAt: "asc" }, { role: "desc" }] } },
   });
   return turns.reverse().flatMap((turn) => {
     const scope = chatScopeSchema.safeParse(turn.scope);
-    return turn.messages.map((message) => ({ role: message.role, content: message.content.slice(0, 2000),
+    return turn.messages.map((message) => ({ role: message.role, content: message.content.slice(0, 2000), publicationVersion: turn.publicationVersion ?? undefined,
       topic: scope.success ? { kind: scope.data.kind, projectSlugs: scope.data.projectSlugs } : undefined,
     }));
   });
 }
 
-export async function finishChatTurn(claim: { turnId: string; conversationId: string; lockToken: string }, answer: string, sources: ChatSource[], scope: ChatScope) {
+export async function finishChatTurn(claim: { turnId: string; conversationId: string; lockToken: string }, answer: string, sources: ChatSource[], scope: ChatScope, observedPublicationVersion?: string) {
   if (!chatEnabled()) throw new ChatStateError("expired");
   return serializable(async (tx) => {
+    if (governanceEnabled() && observedPublicationVersion !== await publicationVersion(tx)) throw new ChatStateError("conflict");
     const owned = await tx.chatConversation.updateMany({ where: { id: claim.conversationId, lockToken: claim.lockToken, lockUntil: { gt: new Date() }, expiresAt: { gt: new Date() } },
       data: { lockToken: null, lockUntil: null, lastActivityAt: new Date(), expiresAt: new Date(Date.now() + CHAT_RETENTION_MS) } });
     if (!owned.count) throw new ChatStateError("conflict");

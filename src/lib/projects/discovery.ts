@@ -7,7 +7,7 @@ import { MAX_CHUNKS, MAX_SOURCE_BYTES, MEDIA_ROOT, MEDIA_CATEGORIES, type Reposi
 
 export type TreeFile = { path: string; sha: string; size: number; mode: string; type: string };
 const fileSchema = z.object({ path: z.string(), sha: z.string().regex(/^[a-f0-9]{40}$/), size: z.number().default(0), mode: z.string(), type: z.string() });
-const sourcePriority = ["README.md", "ROADMAP.md", "CHANGELOG.md", "docs/README.md", "docs/roadmap.md", "docs/architecture.md", "docs/srs.md"];
+const sourcePriority = ["README.md", "ROADMAP.md", "CHANGELOG.md", "docs/README.md", "docs/roadmap.md", "docs/architecture.md", "docs/srs.md", "docs/deployment.md", "docs/administration.md", "docs/data-model.md", "docs/operations.md"];
 
 export function safeRepositoryPath(path: string) {
   return /^[A-Za-z0-9_./ ()\[\]@+-]+$/.test(path) && !path.split("/").some((part) => !part || part.startsWith(".")) &&
