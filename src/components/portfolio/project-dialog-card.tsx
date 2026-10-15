@@ -9,6 +9,7 @@ import type { ProjectDto } from "@/data/portfolio.types";
 import type { Locale } from "@/i18n/config";
 import { projectIntegrationCopy } from "@/i18n/project-integration";
 import { projectAtlasCopy } from "@/i18n/project-atlas";
+import { disclosureLabels } from "@/i18n/project-disclosure";
 import { type RepositoryAsset, type ProjectMilestones, type ProjectNarrative } from "@/lib/projects/schemas";
 import type { ProjectCopy } from "./projects-section";
 import { useSiteChat } from "@/components/chat/site-chat-context";
@@ -69,7 +70,7 @@ export function ProjectDialogCard({ project, extra, copy, locale }: { project: P
             {project.techStack.length > 0 && <section className="mt-7 border-b border-border pb-7"><h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{copy.technologies}</h3><ul className="mt-3 flex flex-wrap gap-2">{project.techStack.map((technology) => <li key={technology} className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">{technology}</li>)}</ul></section>}
             <div className="mt-8 space-y-8">
               <div className="space-y-7">
-                {project.participation && (project.participation.role || project.participation.contribution) && <section className="rounded-xl border p-5"><h3 className="text-xl font-semibold">{locale === "es" ? "Mi participación" : "My participation"}</h3><p className="mt-2 font-medium">{project.participation.role}</p><p className="mt-1 text-sm text-muted-foreground">{project.participation.period}</p><p className="mt-3 whitespace-pre-line leading-7">{project.participation.contribution}</p></section>}
+                {project.participation && (project.participation.role || project.participation.period || project.participation.contribution || project.participation.relationship !== "UNSPECIFIED" || project.participation.status !== "UNSPECIFIED") && <section className="rounded-2xl border border-border p-5"><h3 className="text-xl font-semibold">{atlas.participation}</h3><div className="mt-3 flex flex-wrap gap-2">{[project.participation.relationship, project.participation.status].filter((value) => value !== "UNSPECIFIED").map((value) => <span key={value} className="rounded-full bg-muted px-3 py-1 text-xs">{disclosureLabels[locale][value]}</span>)}</div><p className="mt-2 font-medium">{project.participation.role}</p><p className="mt-1 text-sm text-muted-foreground">{project.participation.period}</p><p className="mt-3 whitespace-pre-line leading-7">{project.participation.contribution}</p></section>}
                 {project.organizations?.length ? <section className="flex flex-wrap gap-4">{project.organizations.map((org, index) => <div key={index} className="flex items-center gap-3">{org.logoUrl && <Image src={org.logoUrl} alt="" width={48} height={48} unoptimized className="size-12 object-contain" />}<span>{org.name}</span></div>)}</section> : null}
                 {narrative ? <section><h3 className="font-heading text-2xl font-semibold tracking-tight">{atlas.overview}</h3>
                   <div className="mt-5 grid gap-6 md:grid-cols-2">{(["problem", "solution"] as const).map((key) => <TextBlock key={key} title={labels[key]} text={narrative[key]} />)}</div>

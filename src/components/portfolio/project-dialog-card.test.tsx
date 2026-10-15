@@ -18,6 +18,14 @@ let container: HTMLDivElement;
 beforeEach(() => { Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true }); container = document.createElement("div"); document.body.append(container); root = createRoot(container); });
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); });
 describe("project detail modal", () => {
+  it("shows relationship and participation status even without a written role", async () => {
+    await act(async () => root.render(<ProjectDialogCard project={{ ...project, participation: { relationship: "EMPLOYEE", status: "FINISHED", role: "", period: "", contribution: "" } }} locale="en" copy={copy} />));
+    await act(async () => container.querySelector("button")!.click());
+    const modal = document.querySelector('[role="dialog"]')!;
+    expect(modal.textContent).toContain("My participation");
+    expect(modal.textContent).toContain("Employee");
+    expect(modal.textContent).toContain("Finished");
+  });
   it("distinguishes unverified AI milestones from completed work and shows the assessment", async () => {
     await act(async () => root.render(<ProjectDialogCard project={project} locale="en" copy={copy} extra={{ assets: [], progressPct: 0, indexed: true, narrative: null, sources: [], milestones: [{ id: "acceptance", title: { es: "Aceptación", en: "Acceptance" }, completed: false, weight: 1, evidence: "", assessment: { status: "unverified", reason: { es: "Sin evidencia actual.", en: "No current evidence." }, citations: [] } }] }} />));
     expect(container.querySelector('[role="progressbar"]')?.getAttribute("aria-valuenow")).toBe("0");

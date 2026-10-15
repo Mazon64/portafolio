@@ -13,6 +13,7 @@ import { DisclosurePanel } from "../disclosure-panel";
 import { getPrivateSources } from "@/data/admin/project-repositories";
 import { githubAppConfigured } from "@/lib/projects/github-app";
 import { RepositoryPanel } from "../repository-panel";
+import { mediaStorageConfigured } from "@/lib/projects/storage";
 
 export const maxDuration = 300;
 export default async function ProjectIntegrationPage({ params }: { params: Promise<{ lang: string; id: string }> }) {
@@ -34,7 +35,7 @@ export default async function ProjectIntegrationPage({ params }: { params: Promi
     <h1 className="mt-6 text-4xl font-semibold tracking-tight">{workspace.project.name}</h1>
     <p className="mt-3 text-muted-foreground">{copy.title}</p>
     <ProjectIntegrationPanel workspace={workspace} copy={copy} enabled={projectIntegrationEnabled()} />
-    {disclosure && project && <DisclosurePanel projectId={id} slug={project.slug} {...disclosure} enabled={isCmsWriteEnabled()} locale={lang} />}
-    {disclosure && <RepositoryPanel projectId={id} sources={sources} enabled={isCmsWriteEnabled() && githubAppConfigured()} locale={lang} />}
+    {disclosure && project && <DisclosurePanel projectId={id} slug={project.slug} {...disclosure} enabled={isCmsWriteEnabled()} mediaEnabled={mediaStorageConfigured()} locale={lang} />}
+    {disclosure && <RepositoryPanel projectId={id} sources={sources} configured={githubAppConfigured()} enabled={isCmsWriteEnabled() && githubAppConfigured()} locale={lang} />}
   </div>;
 }

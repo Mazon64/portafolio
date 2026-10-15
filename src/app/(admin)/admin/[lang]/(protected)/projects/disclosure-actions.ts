@@ -4,6 +4,7 @@ import { saveProjectDisclosure } from "@/data/admin/project-disclosure";
 import { connectPrivateSource, importPrivateEvidence } from "@/data/admin/project-repositories";
 import { revalidatePath } from "next/cache";
 import { storeProjectMedia } from "@/data/admin/project-media";
+import { ZodError } from "zod";
 
 export async function uploadProjectMediaAction(_previous: { status: string; id?: string }, form: FormData) {
   try {
@@ -36,7 +37,7 @@ export async function saveDisclosureAction(_previous: { status: string; revision
     if (raw.length > 100_000) return { ..._previous, status: "invalid" };
     saved = await saveProjectDisclosure({ projectId: form.get("projectId"), revision: form.get("revision"), publicSlug: form.get("publicSlug"), policy: JSON.parse(raw) });
     if (!saved) return { ..._previous, status: "conflict" };
-  } catch { return { ..._previous, status: "error" }; }
-  try { updateTag("portfolio"); } catch { return { ...saved, status: "cache-error" }; }
+  } catch (error) { return { ..._previous, status: error instanceof ZodError || error instanceof SyntaxError ? "invalid" : "error" }; }
+  try { updateTag("portfolio"); revalidatePath("/admin/[lang]/projects/[id]", "page"); } catch { return { ...saved, status: "cache-error" }; }
   return { ...saved, status: "success" };
 }
