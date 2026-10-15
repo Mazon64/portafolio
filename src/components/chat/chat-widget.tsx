@@ -101,7 +101,7 @@ export function ChatWidget({ locale }: { locale: Locale }) {
     void send({ conversationId: session.conversation.id, requestId: turn.requestId, message: user.content, locale: turn.locale, context: turn.context });
   }
   const content = <div data-print-hidden id="chat" onKeyDown={(event) => { if (event.key === "Escape" && chat.open) { event.stopPropagation(); chat.setOpen(false); } }} className="fixed right-4 bottom-4 z-[70] print:hidden sm:right-6 sm:bottom-6">
-    {chat.open && <section ref={panel} role="region" aria-label={copy.title} className={`absolute right-0 bottom-20 flex w-[min(26rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-background text-foreground shadow-2xl 2xl:w-[30rem] ${chat.dock ? "h-[min(36rem,calc(80dvh-7rem))]" : "h-[min(40rem,calc(100dvh-8rem))]"}`}>
+    {chat.open && <section ref={panel} role="region" aria-label={copy.title} className="absolute right-0 bottom-20 flex h-[min(40rem,calc(100dvh-8rem))] w-[min(26rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-background text-foreground shadow-2xl 2xl:w-[30rem]">
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-muted/30 px-4 py-3">
         <div><h2 className="text-sm font-semibold">{copy.title}</h2><p className="text-xs text-muted-foreground">{copy.subtitle}</p></div>
         <div className="flex gap-1">

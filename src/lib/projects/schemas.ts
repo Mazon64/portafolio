@@ -78,6 +78,9 @@ const narrativeLocaleSchema = z.object({
   architecture: z.string().trim().min(10).max(2_000),
   decisions: z.string().trim().min(10).max(2_000),
   results: z.string().trim().min(10).max(2_000),
+  experience: z.string().trim().min(10).max(2_000).optional(),
+  administration: z.string().trim().min(10).max(2_000).optional(),
+  operations: z.string().trim().min(10).max(2_000).optional(),
 });
 export const narrativeSchema = z.object({ es: narrativeLocaleSchema, en: narrativeLocaleSchema });
 export type ProjectNarrative = z.infer<typeof narrativeSchema>;
@@ -111,8 +114,8 @@ export function milestoneProgress(items: ProjectMilestones): number | null {
 
 export function narrativeText(content: ProjectNarrative, locale: "es" | "en") {
   const labels = locale === "es"
-    ? ["Problema", "Solución", "Arquitectura", "Decisiones técnicas", "Resultados y alcance"]
-    : ["Problem", "Solution", "Architecture", "Technical decisions", "Results and scope"];
-  return (["problem", "solution", "architecture", "decisions", "results"] as const)
-    .map((key, i) => `${labels[i]}: ${content[locale][key]}`).join("\n\n");
+    ? ["Problema", "Solución", "Arquitectura", "Decisiones técnicas", "Resultados y alcance", "Experiencia pública", "Administración de datos", "Operación"]
+    : ["Problem", "Solution", "Architecture", "Technical decisions", "Results and scope", "Public experience", "Data administration", "Operations"];
+  return (["problem", "solution", "architecture", "decisions", "results", "experience", "administration", "operations"] as const)
+    .flatMap((key, i) => content[locale][key] ? [`${labels[i]}: ${content[locale][key]}`] : []).join("\n\n");
 }

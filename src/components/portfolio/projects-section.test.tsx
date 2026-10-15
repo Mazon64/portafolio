@@ -17,7 +17,7 @@ describe("project presentation", () => {
       slug: "portfolio", demoUrl: null, repositoryUrl: null, techStack: ["Next.js"], status: "inProgress", progressPct: 10,
       lastTelemetryAt: null, name: "Portfolio", summary: "Summary", detailedInfo: "Details",
     }] }));
-    expect(html).toContain('alt="Interface"'); expect(html).toContain('aria-valuenow="75"');
+    expect(html).toContain("Project atlas"); expect(html).not.toContain("<img"); expect(html).toContain('aria-valuenow="75"');
     expect(html).toContain('aria-haspopup="dialog"');
     expect(html).not.toContain("<details");
     expect(html).toContain("View details of Portfolio");
