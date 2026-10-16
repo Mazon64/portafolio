@@ -1,12 +1,13 @@
 # David Aranda — identidad visual
 
 Marca monocromática coherente con el portafolio: carbón `#171717`, blanco
-`#fafafa`, nombre en Geist y dominio en monoespaciada. La firma abreviada
+`#fafafa` y nombre en Geist de peso medio, sin dominio ni descriptor. La firma abreviada
 «David Aranda.» conserva el nombre completo en la etiqueta accesible.
 
-El isotipo combina la curva de la D con la diagonal y el travesaño de la A.
-Ambas letras se entrelazan sobre una cuadrícula de 64 unidades; su trazo de
-6 unidades permite reconocer la silueta a tamaños pequeños.
+El isotipo combina la curva de la D con una A de vértice elevado. Los cortes
+en la curva superior y el travesaño dejan respirar los cruces: las letras
+se entrelazan sin formar una mancha sólida. La cuadrícula es de 64 unidades
+y el trazo de 4,5 unidades. El imagotipo reúne este símbolo con el nombre.
 
 ## Aplicaciones
 

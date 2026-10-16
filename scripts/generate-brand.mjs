@@ -23,6 +23,6 @@ images.forEach((image, index) => {
 });
 await writeFile("src/app/favicon.ico", Buffer.concat([header, ...images]));
 for (const [variant, color] of [["light", "#171717"], ["dark", "#fafafa"]]) {
-  const logo = svg(`<g transform="translate(0 4)">${paths.replaceAll("#171717", color)}</g><g fill="${color}"><text x="82" y="34" font-family="Geist, Arial, sans-serif" font-size="30" font-weight="600" letter-spacing="-1.5">David Aranda.</text><text x="83" y="55" font-family="monospace" font-size="10" letter-spacing="2">DAVIDARANDA.DEV</text></g>`, "0 0 280 72");
+  const logo = svg(`<g transform="translate(0 4)">${paths.replaceAll("#171717", color)}</g><text x="82" y="46" fill="${color}" font-family="Geist, Arial, sans-serif" font-size="30" font-weight="500" letter-spacing="-1.35">David Aranda.</text>`, "0 0 280 72");
   await writeFile(`public/brand/logotype-${variant}.svg`, logo);
 }
