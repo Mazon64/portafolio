@@ -39,6 +39,28 @@ beforeEach(() => {
 });
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.unstubAllGlobals(); });
 describe("site-wide chat experience", () => {
+  it("sends with Enter while preserving Shift+Enter and IME composition", async () => {
+    started = true;
+    await act(async () => root.render(<SiteChatProvider locale="en"><section id="about">About</section></SiteChatProvider>));
+    await click("Open chat");
+    const input = document.querySelector("textarea")!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(input, "Tell me about your experience.");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    for (const options of [{ shiftKey: true }, { isComposing: true }]) {
+      const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true, ...options });
+      await act(async () => input.dispatchEvent(event));
+      expect(event.defaultPrevented).toBe(false);
+    }
+    expect(fetchMock.mock.calls.some(([url]) => url.endsWith("/messages"))).toBe(false);
+    const enter = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    await act(async () => input.dispatchEvent(enter));
+    await settle();
+    expect(enter.defaultPrevented).toBe(true);
+    expect(fetchMock.mock.calls.filter(([url]) => url.endsWith("/messages"))).toHaveLength(1);
+    expect(document.body.textContent).toContain("David's public experience.");
+  });
   it("shows the consent and navigation context in read-only Preview without starting a session", async () => {
     fetchMock.mockResolvedValue(Response.json({ enabled: false, preview: true, conversation: null, turns: [], nextCursor: null }));
     await act(async () => root.render(<SiteChatProvider locale="en"><section id="projects"><ProjectDialogCard project={project} locale="en" copy={copy} /></section></SiteChatProvider>));

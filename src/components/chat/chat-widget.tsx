@@ -158,8 +158,12 @@ export function ChatWidget({ locale }: { locale: Locale }) {
       </div>
       {session?.conversation && !restart && <footer className="shrink-0 border-t border-border p-3">
         <p className="mb-2 truncate text-[0.65rem] text-muted-foreground" title={copy.contextHint}>{copy.context}: {copy.sections[chat.location.section]}{chat.location.projectSlug && ` · ${chat.location.projectSlug}`}</p>
-        <form onSubmit={(event) => { event.preventDefault(); if (draft.trim()) void send({ conversationId: session.conversation!.id, requestId: crypto.randomUUID(), message: draft.trim(), locale, context: chat.location }); }} className="flex items-end gap-2">
-          <label className="min-w-0 flex-1"><span className="sr-only">{copy.message}</span><textarea value={draft} onChange={(event) => setDraft(event.target.value)} rows={2} maxLength={1200} required disabled={pending || waiting} placeholder={copy.placeholder} className="block max-h-32 w-full resize-none rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" /></label>
+        <form onSubmit={(event) => { event.preventDefault(); if (draft.trim() && !pending && !waiting) void send({ conversationId: session.conversation!.id, requestId: crypto.randomUUID(), message: draft.trim(), locale, context: chat.location }); }} className="flex items-end gap-2">
+          <label className="min-w-0 flex-1"><span className="sr-only">{copy.message}</span><textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => {
+            if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
+            event.preventDefault();
+            if (!event.repeat && draft.trim() && !pending && !waiting) event.currentTarget.form?.requestSubmit();
+          }} rows={2} maxLength={1200} required disabled={pending || waiting} placeholder={copy.placeholder} className="block max-h-32 w-full resize-none rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" /></label>
           <Button type="submit" size="icon" aria-label={copy.send} disabled={pending || waiting || !draft.trim()}><SendIcon /></Button>
         </form>
       </footer>}
