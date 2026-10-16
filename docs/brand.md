@@ -9,6 +9,12 @@ en la curva superior y el travesaño dejan respirar los cruces: las letras
 se entrelazan sin formar una mancha sólida. La cuadrícula es de 64 unidades
 y el trazo de 4,5 unidades. El imagotipo reúne este símbolo con el nombre.
 
+Los remates junto a las diagonales se recortan en paralelo a la A: el corte
+superior de la D sigue la pierna izquierda (19/42), y los de la curva y el
+travesaño siguen la derecha (20/42). Las esquinas y extremos se suavizan con
+curvas pequeñas; los cortes son contornos rellenos, no extremos de trazo
+perpendiculares que alteren el ángulo. El maestro conserva transparencia real.
+
 ## Aplicaciones
 
 - Logotipo: cabecera de escritorio, menú móvil y pie de página.
