@@ -17,7 +17,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { siteConfig } from "@/config/site";
+import { BrandMark } from "@/components/brand";
 import type { AdminCopy } from "@/i18n/admin";
 import type { Locale } from "@/i18n/config";
 import { cn } from "@/lib/utils";
@@ -53,9 +53,7 @@ export function AdminHeader({
           href={`/admin/${locale}`}
           className="flex shrink-0 items-center gap-3 font-mono"
         >
-          <span className="grid size-9 place-items-center rounded-full bg-foreground text-xs font-bold tracking-tight text-background">
-            {siteConfig.initials}
-          </span>
+          <BrandMark />
           <span className="hidden text-sm font-semibold tracking-tight sm:block">
             {copy.brand}
           </span>

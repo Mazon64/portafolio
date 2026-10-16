@@ -1,5 +1,6 @@
 import { ArrowDownIcon, FileTextIcon } from "lucide-react";
 import Link from "next/link";
+import { BrandLogo } from "@/components/brand";
 
 import { getPortfolioContent } from "@/data/portfolio";
 import type { Dictionary } from "@/i18n/dictionaries";
@@ -115,8 +116,8 @@ export async function PortfolioContent({
       <ContactSection profile={profile} copy={dictionary.contact} locale={locale} />
 
       <footer className="border-t border-border">
-        <div className="mx-auto flex w-full max-w-[96rem] items-center justify-between gap-4 px-5 py-8 text-xs text-muted-foreground sm:px-8 lg:px-12">
-          <span>{profile.fullName}</span>
+        <div className="mx-auto flex w-full max-w-[96rem] flex-wrap items-center justify-between gap-4 px-5 py-8 text-xs text-muted-foreground sm:px-8 lg:px-12">
+          <Link href={`/${locale}#hero`} aria-label={profile.fullName}><BrandLogo /></Link>
           <div className="flex items-center gap-4">
             <Link
               href={`/${locale}/cv`}
