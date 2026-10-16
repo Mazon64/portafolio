@@ -15,6 +15,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { siteConfig } from "@/config/site";
+import { BrandLogo } from "@/components/brand";
 import type { Locale } from "@/i18n/config";
 
 type SiteHeaderProps = {
@@ -108,12 +109,7 @@ export function SiteHeader({
           aria-label={siteConfig.name}
           className="hidden shrink-0 items-center gap-3 font-mono xl:flex"
         >
-          <span className="grid size-9 place-items-center rounded-full bg-foreground text-xs font-bold tracking-tight text-background">
-            {siteConfig.initials}
-          </span>
-          <span className="hidden text-sm font-semibold tracking-tight sm:block">
-            {siteConfig.name}
-          </span>
+          <BrandLogo />
         </a>
 
         <nav className="ml-auto hidden items-center gap-1 xl:flex">
@@ -175,6 +171,7 @@ export function SiteHeader({
               closeLabel={labels.close}
             >
               <SheetHeader className="shrink-0 border-b border-border px-6 py-5">
+                <a href={`${portfolioPath}#hero`} onClick={() => setMenuOpen(false)} className="mb-4 w-fit" aria-label={siteConfig.name}><BrandLogo /></a>
                 <SheetTitle>{labels.menu}</SheetTitle>
                 <SheetDescription>{labels.menuDescription}</SheetDescription>
               </SheetHeader>
