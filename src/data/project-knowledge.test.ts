@@ -7,7 +7,7 @@ import { getPublicProjectExtras } from "./project-knowledge";
 const text = { summary: "A published project summary.", problem: "A published problem.", solution: "A published solution.", architecture: "A published architecture.", decisions: "Published decisions.", results: "Published results." };
 const published = [{ id: "published", title: { es: "Publicado", en: "Published" }, weight: 1, completed: true, evidence: "" }];
 function row(repositoryFullName: string) {
-  return { slug: "portfolio", integration: { enabled: true }, knowledge: [{ id: "corpus", chunks: [], narrative: {
+  return { slug: "portfolio", integration: { enabled: true }, knowledge: [{ id: "corpus", publishedAt: new Date("2026-10-15T22:00:00Z"), chunks: [], narrative: {
     automatic: true, names: { es: "Proyecto", en: "Project" }, es: text, en: text, assets: [], milestones: published,
     metadata: { repositoryId: "1", repositoryFullName, branch: "main", demoUrl: null, techStack: [], status: "COMPLETED", sourcePaths: [] },
   } }] };
@@ -19,5 +19,6 @@ describe("service-owned portfolio milestones", () => {
     const { portfolio } = await getPublicProjectExtras(["portfolio"]);
     expect(portfolio.milestones).toEqual(published);
     expect(portfolio.progressPct).toBe(100);
+    expect(portfolio.publishedAt).toBe("2026-10-15T22:00:00.000Z");
   });
 });
