@@ -10,13 +10,12 @@ import type { Locale } from "@/i18n/config";
 import { projectIntegrationCopy } from "@/i18n/project-integration";
 import { projectAtlasCopy } from "@/i18n/project-atlas";
 import { disclosureLabels } from "@/i18n/project-disclosure";
-import { type RepositoryAsset, type ProjectMilestones, type ProjectNarrative } from "@/lib/projects/schemas";
+import { type RepositoryAsset } from "@/lib/projects/schemas";
+import type { PublicProjectExtras } from "@/data/project-knowledge";
 import type { ProjectCopy } from "./projects-section";
 import { useSiteChat } from "@/components/chat/site-chat-context";
 
-type Extras = { assets: RepositoryAsset[]; milestones: ProjectMilestones; progressPct: number | null; sources: Array<{ path: string; sourceUrl: string }>; indexed: boolean; narrative: ProjectNarrative | null; managed?: boolean };
-
-export function ProjectDialogCard({ project, extra, copy, locale }: { project: ProjectDto; extra?: Extras; copy: ProjectCopy; locale: Locale }) {
+export function ProjectDialogCard({ project, extra, copy, locale }: { project: ProjectDto; extra?: PublicProjectExtras; copy: ProjectCopy; locale: Locale }) {
   const labels = projectIntegrationCopy[locale];
   const atlas = projectAtlasCopy[locale];
   const narrative = extra?.narrative?.[locale];
@@ -66,6 +65,7 @@ export function ProjectDialogCard({ project, extra, copy, locale }: { project: P
           </div>
           <div data-project-scroll className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 pb-24 sm:p-8 sm:pb-24">
             <Dialog.Description className="max-w-4xl font-heading text-2xl leading-relaxed tracking-tight sm:text-3xl">{project.summary}</Dialog.Description>
+            {extra?.publishedAt && <p className="mt-3 text-xs text-muted-foreground">{locale === "es" ? "Contenido sincronizado" : "Content synchronized"} · <time dateTime={extra.publishedAt}>{new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" }).format(new Date(extra.publishedAt))}</time></p>}
             <div className="mt-6 flex flex-wrap gap-3">{project.demoUrl && <a href={project.demoUrl} target="_blank" rel="noreferrer" className={buttonVariants()}>{copy.prototype}<ArrowUpRightIcon aria-hidden="true" /><span className="sr-only">{copy.newTab}</span></a>}{project.repositoryUrl && <a href={project.repositoryUrl} target="_blank" rel="noreferrer" className={buttonVariants({ variant: "outline" })}>{copy.repository}<ArrowUpRightIcon aria-hidden="true" /><span className="sr-only">{copy.newTab}</span></a>}</div>
             {project.techStack.length > 0 && <section className="mt-7 border-b border-border pb-7"><h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{copy.technologies}</h3><ul className="mt-3 flex flex-wrap gap-2">{project.techStack.map((technology) => <li key={technology} className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">{technology}</li>)}</ul></section>}
             <div className="mt-8 space-y-8">

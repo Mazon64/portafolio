@@ -34,11 +34,12 @@ plantilla no se usan como portada. El diagrama local obsoleto y su directorio se
 Sin imágenes válidas, la card muestra el texto y las tecnologías sin una imagen
 inventada. Diagramas vectoriales pueden exportarse como PNG/WebP en `diagrams/`.
 
-Las capturas iniciales `interface/cover.webp` y `features/project-detail.webp` se
-obtuvieron de la aplicación local en modo de solo lectura, con su contenido público
-real, durante la validación del modal. No son ilustraciones generadas ni capturas
-del CMS privado. Reflejan el contenido visible en ese momento; sincronizaciones
-posteriores pueden actualizar los textos del proyecto.
+Las capturas `interface/cover.webp` (1440×1000) y `features/project-detail.webp`
+(1440×1100) se actualizaron el 15 de octubre de 2026 desde Production, versión
+`17f173a`, mediante Chromium headless. Muestran la portada y el atlas con las áreas
+de experiencia pública, administración de datos y operación. No son ilustraciones
+generadas ni capturas del CMS privado. Reflejan el contenido visible en ese momento;
+sincronizaciones posteriores pueden actualizar los textos del proyecto.
 
 No se requieren descripciones manuales. Gemini analiza los píxeles y devuelve
 texto alternativo y descripción visual ES/EN. El archivo sigue en GitHub; solo se

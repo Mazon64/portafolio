@@ -11,6 +11,7 @@ import { chatCopy } from "@/i18n/chat";
 import type { Locale } from "@/i18n/config";
 import type { ChatInput, ChatSessionDto, ChatTurnDto } from "@/lib/chat/schemas";
 import { useSiteChat } from "./site-chat-context";
+import { chatCitations } from "@/lib/chat/citations";
 
 export function ChatWidget({ locale }: { locale: Locale }) {
   const copy = chatCopy[locale];
@@ -143,7 +144,7 @@ export function ChatWidget({ locale }: { locale: Locale }) {
                 }
               }} className="rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{source.title}</Link>;
             })}</div>}
-            {message.sources.some((source) => !source.action) && <ul aria-label={copy.sources} className="mt-2 flex flex-wrap gap-2 text-xs">{message.sources.filter((source, index, sources) => !source.action && sources.findIndex((s) => !s.action && s.url === source.url) === index).map((source) => <li key={source.id}><a href={source.url} target="_blank" rel="noreferrer" className="break-all underline underline-offset-4">{source.title}</a></li>)}</ul>}
+            {chatCitations(message.sources).length > 0 && <ul aria-label={copy.sources} className="mt-2 flex flex-wrap gap-2 text-xs">{chatCitations(message.sources).map((source) => <li key={source.id}><a href={source.url} target="_blank" rel="noreferrer" className="break-all underline underline-offset-4">{source.title}</a></li>)}</ul>}
           </div>)}
             {turn.status === "FAILED" && <Button variant="ghost" size="sm" disabled={pending || waiting} onClick={() => retry(turn)}><RotateCcwIcon />{copy.retry}</Button>}
           </div>)}</div>
