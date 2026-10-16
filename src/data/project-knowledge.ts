@@ -4,9 +4,20 @@ import { getPrisma } from "@/lib/prisma";
 import { projectSnapshotSchema, milestoneProgress, EMBEDDING_MODEL } from "@/lib/projects/schemas";
 import { disclosurePolicies } from "./project-disclosure";
 import { canPublish, canUsePublicSources } from "@/lib/projects/disclosure";
-import type { RepositoryAsset } from "@/lib/projects/schemas";
+import type { RepositoryAsset, ProjectMilestones, ProjectNarrative } from "@/lib/projects/schemas";
 
-export async function getPublicProjectExtras(slugs: string[]) {
+export type PublicProjectExtras = {
+  assets: RepositoryAsset[];
+  milestones: ProjectMilestones;
+  managed?: boolean;
+  narrative: ProjectNarrative | null;
+  progressPct: number | null;
+  sources: Array<{ path: string; sourceUrl: string }>;
+  indexed: boolean;
+  publishedAt?: string | null;
+};
+
+export async function getPublicProjectExtras(slugs: string[]): Promise<Record<string, PublicProjectExtras>> {
   const policies = new Map((await disclosurePolicies()).map((row) => [row.slug, row.policy]));
   try {
     const projects = await getPrisma().project.findMany({
@@ -23,6 +34,7 @@ export async function getPublicProjectExtras(slugs: string[]) {
       const milestones = snapshot.success && (!policy || policy.fields.milestones) ? snapshot.data.milestones.map((milestone) => !policy || policy.fields.sources ? milestone : { ...milestone, evidence: "", assessment: milestone.assessment ? { ...milestone.assessment, citations: [] } : undefined }) : [];
       return [project.slug, { assets: [...approvedAssets, ...(snapshot.success && (!policy || policy.fields.media) ? snapshot.data.assets : [])], milestones,
         managed: Boolean(project.integration),
+        publishedAt: project.knowledge[0]?.publishedAt?.toISOString() ?? null,
         narrative: snapshot.success ? { es: snapshot.data.es, en: snapshot.data.en } : null,
         progressPct: milestoneProgress(milestones), sources: !policy || policy.fields.sources ? project.knowledge[0]?.chunks ?? [] : [],
         indexed: project.knowledge.length > 0 && Boolean(project.integration?.enabled) }];
