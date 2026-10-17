@@ -10,8 +10,11 @@ se entrelazan sin formar una mancha sólida. La cuadrícula es de 64 unidades
 y el trazo de 4,5 unidades. El imagotipo reúne este símbolo con el nombre.
 
 Los remates junto a las diagonales se recortan en paralelo a la A: el corte
-superior de la D sigue la pierna izquierda (19/42), y los de la curva y el
-travesaño siguen la derecha (20/42). Las esquinas y extremos se suavizan con
+superior de la D sigue la pierna izquierda (19/40,25), y los de la curva y el
+travesaño siguen la derecha (20/40,25). Estos dos últimos cortes comparten
+la misma recta, con un espacio entre sus extremos para que no se toquen.
+La parte superior de ambas letras coincide en `y=9,75` dentro del SVG.
+Las esquinas y extremos se suavizan con
 curvas pequeñas; los cortes son contornos rellenos, no extremos de trazo
 perpendiculares que alteren el ángulo. El maestro conserva transparencia real.
 
