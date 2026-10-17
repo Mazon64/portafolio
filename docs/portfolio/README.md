@@ -35,9 +35,10 @@ Sin imágenes válidas, la card muestra el texto y las tecnologías sin una imag
 inventada. Diagramas vectoriales pueden exportarse como PNG/WebP en `diagrams/`.
 
 Las capturas `interface/cover.webp` (1440×1000) y `features/project-detail.webp`
-(1440×1100) se actualizaron el 15 de octubre de 2026 desde Production, versión
-`17f173a`, mediante Chromium headless. Muestran la portada y el atlas con las áreas
-de experiencia pública, administración de datos y operación. No son ilustraciones
+(1440×1100) se actualizaron el 17 de octubre de 2026 desde el build local de
+producción `ea5b51f`, mediante Chromium headless y lectura del contenido público.
+Muestran la identidad DA aprobada, la portada y el atlas con fecha de sincronización
+y áreas de experiencia pública, administración de datos y operación. No son ilustraciones
 generadas ni capturas del CMS privado. Reflejan el contenido visible en ese momento;
 sincronizaciones posteriores pueden actualizar los textos del proyecto.
 
