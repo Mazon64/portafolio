@@ -2,16 +2,21 @@ import {
   Body,
   Button,
   Container,
+  Column,
   Head,
   Heading,
   Hr,
   Html,
+  Img,
+  Link,
   Preview,
   Section,
+  Row,
   Text,
 } from "react-email";
 
 import type { Locale } from "@/i18n/config";
+import { siteConfig } from "@/config/site";
 
 type ContactNotificationProps = {
   locale: Locale;
@@ -25,6 +30,7 @@ const copy = {
     preview: (name: string) => `Nuevo mensaje de ${name} desde tu portafolio`,
     subject: (name: string) => `Nuevo mensaje del portafolio: ${name}`,
     marker: "/CONTACTO",
+    brandDetail: "PORTAFOLIO / CONTACTO",
     title: "Nuevo mensaje",
     intro: "Recibiste un mensaje desde tu portafolio. Puedes responder directamente a este correo.",
     name: "Nombre",
@@ -37,6 +43,7 @@ const copy = {
     preview: (name: string) => `New message from ${name} through your portfolio`,
     subject: (name: string) => `New portfolio message: ${name}`,
     marker: "/CONTACT",
+    brandDetail: "PORTFOLIO / CONTACT",
     title: "New message",
     intro: "You received a message through your portfolio. You can reply directly to this email.",
     name: "Name",
@@ -77,8 +84,15 @@ export function ContactNotificationEmail({
       <Body style={body}>
         <Container style={shell}>
           <Section style={wordmarkSection}>
-            <Text style={wordmark}>DAVID ARANDA</Text>
-            <Text style={wordmarkDetail}>PORTFOLIO / MESSAGE</Text>
+            <Row>
+              <Column style={{ width: "72px", verticalAlign: "middle" }}>
+                <Link href={siteConfig.url}><Img src={`${siteConfig.url}/brand/avatar.png`} width="56" height="56" alt="Isotipo DA" style={{ display: "block", border: "0" }} /></Link>
+              </Column>
+              <Column style={{ verticalAlign: "middle" }}>
+                <Text style={wordmark}>David Aranda.</Text>
+                <Text style={wordmarkDetail}>{labels.brandDetail}</Text>
+              </Column>
+            </Row>
           </Section>
 
           <Section style={card}>
@@ -107,7 +121,7 @@ export function ContactNotificationEmail({
 
           <Section style={footer}>
             <Text style={footerText}>{labels.source}</Text>
-            <Text style={footerLink}>davidaranda.dev</Text>
+            <Text style={footerLink}><Link href={siteConfig.url} style={{ color: "#fafafa", textDecoration: "none" }}>davidaranda.dev</Link></Text>
           </Section>
         </Container>
       </Body>
@@ -153,7 +167,7 @@ const card = {
   backgroundColor: "#fafafa",
   border: "1px solid #e5e5e5",
   borderRadius: "18px",
-  padding: "40px",
+  padding: "28px 24px",
 };
 
 const marker = {
@@ -166,7 +180,7 @@ const marker = {
 
 const heading = {
   color: "#171717",
-  fontSize: "42px",
+  fontSize: "32px",
   fontWeight: "700",
   letterSpacing: "-2px",
   lineHeight: "1",

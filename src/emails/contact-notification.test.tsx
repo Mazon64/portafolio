@@ -19,10 +19,19 @@ describe("contact notification email", () => {
     const html = await render(ContactNotificationEmail(message));
 
     expect(html).toContain("Nuevo mensaje");
-    expect(html).toContain("DAVID ARANDA");
+    expect(html).toContain("David Aranda.");
+    expect(html).toContain("https://davidaranda.dev/brand/avatar.png");
+    expect(html).toContain("PORTAFOLIO / CONTACTO");
     expect(html).toContain("Ada &lt;Lovelace&gt;");
     expect(html).toContain("&lt;script&gt;alert");
     expect(html).not.toContain('<script>alert("test")</script>');
+  });
+
+  it("keeps English branding and the visitor reply destination", async () => {
+    const html = await render(ContactNotificationEmail({ ...message, locale: "en" }));
+    expect(html).toContain("PORTFOLIO / CONTACT");
+    expect(html).toContain('href="mailto:ada@example.com"');
+    expect(html).not.toContain("<svg");
   });
 
   it("provides localized subjects and plain text", () => {
