@@ -168,6 +168,6 @@ describe("contact route", () => {
       subject: "New portfolio message: Ada Lovelace",
       text: expect.stringContaining("Sent from the English version"),
     });
-    expect(payload.html).toEqual(expect.stringContaining("DAVID ARANDA"));
+    expect(payload.html).toEqual(expect.stringContaining("David Aranda."));
   });
 });
