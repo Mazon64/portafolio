@@ -63,6 +63,22 @@ fuentes opcionales; las limitaciones y requisitos se explican en
 
 ## Documentación Técnica
 
+### Identidad visual y correo
+
+La interfaz incorpora un imagotipo «David Aranda.» y un isotipo DA entrelazado,
+monocromático, con cortes alineados, alturas comunes y esquinas suaves. Se aplica
+en cabecera, menú móvil, pie y administración; el isotipo también genera los
+favicons y el icono de acceso directo móvil. Los recursos SVG y PNG se regeneran
+desde un maestro vectorial mediante `scripts/generate-brand.mjs`.
+
+La notificación de contacto ES/EN usa esa misma identidad con PNG y texto legible
+en clientes de correo. Los iconos de LinkedIn y GitHub del portafolio tienen
+exportaciones PNG para firmas de Gmail. El chat envía con Enter, conserva el salto
+de línea con Shift+Enter y muestra citas documentales sin enlaces de contexto
+interno redundantes. La ficha del proyecto indica su fecha de sincronización.
+
+Consulta [Identidad visual](docs/brand.md) e [Identidad de correo](docs/email-brand.md).
+
 Toda la especificación e información operativa detallada se encuentra en el directorio `docs/`:
 
 - [Arquitectura](docs/architecture.md)
