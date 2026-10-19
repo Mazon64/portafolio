@@ -4,7 +4,7 @@ import { z } from "zod";
 import { boundedBody } from "./http";
 import { MAX_CHUNKS, MAX_SOURCE_BYTES, sourcePathSchema } from "./schemas";
 
-const repositorySchema = z.object({
+export const repositorySchema = z.object({
   id: z.number().int().positive(),
   full_name: z.string().regex(/^[\w.-]+\/[\w.-]+$/),
   private: z.boolean(),
@@ -18,6 +18,24 @@ const repositorySchema = z.object({
   has_issues: z.boolean().optional(),
 });
 export type GithubRepository = z.infer<typeof repositorySchema>;
+// A repository-scoped reader. Public repositories use the shared token; private and
+// organization repositories use a GitHub App installation token that never leaves it.
+export type RepositorySource = {
+  repository: GithubRepository;
+  access: "public" | "installation";
+  // Issues, pull requests and releases need permissions an older App install may lack.
+  activity: boolean;
+  json(suffix: string, maxBytes?: number): Promise<unknown>;
+};
+export function assertRepositorySuffix(suffix: string) {
+  if (!suffix.startsWith("/") || suffix.includes("..") || suffix.includes("\\")) throw new Error("Invalid repository path");
+}
+export function publicSource(repository: GithubRepository): RepositorySource {
+  return { repository, access: "public", activity: true, json(suffix, maxBytes) {
+    assertRepositorySuffix(suffix);
+    return githubJson(`/repos/${repository.full_name}${suffix}`, maxBytes);
+  } };
+}
 export type SourceChunk = { path: string; ordinal: number; content: string; sourceHash: string; sourceUrl: string; contributorId?: string };
 
 export async function githubJson(path: string, maxBytes = 300_000): Promise<unknown> {
@@ -47,9 +65,9 @@ export async function getRepository(fullNameOrId: string): Promise<GithubReposit
   return repository;
 }
 
-export async function getBranchSha(repository: GithubRepository, branch: string) {
+export async function getBranchSha(source: RepositorySource, branch: string) {
   const result = z.object({ commit: z.object({ sha: z.string().regex(/^[a-f0-9]{40}$/) }) }).parse(
-    await githubJson(`/repos/${repository.full_name}/branches/${encodeURIComponent(branch)}`),
+    await source.json(`/branches/${encodeURIComponent(branch)}`),
   );
   return result.commit.sha;
 }

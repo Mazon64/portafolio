@@ -2,7 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { posix } from "node:path";
 import { z } from "zod";
-import { chunkSource, githubJson, type GithubRepository, type SourceChunk } from "./github";
+import { chunkSource, type RepositorySource, type SourceChunk } from "./github";
 import { MAX_CHUNKS, MAX_SOURCE_BYTES, MEDIA_ROOT, MEDIA_CATEGORIES, type RepositoryAsset } from "./schemas";
 
 export type TreeFile = { path: string; sha: string; size: number; mode: string; type: string };
@@ -67,9 +67,9 @@ export function discoverFiles(files: TreeFile[]) {
   return { documents, manifests, images: discoverImages(regular), code: sample };
 }
 
-export async function readRepositoryBlob(repository: GithubRepository, file: TreeFile, limit: number) {
+export async function readRepositoryBlob(source: RepositorySource, file: TreeFile, limit: number) {
   const response = z.object({ encoding: z.literal("base64"), content: z.string(), size: z.number().max(limit) }).parse(
-    await githubJson(`/repos/${repository.full_name}/git/blobs/${file.sha}`, Math.ceil(limit * 1.5) + 4_096),
+    await source.json(`/git/blobs/${file.sha}`, Math.ceil(limit * 1.5) + 4_096),
   );
   const bytes = Buffer.from(response.content.replace(/\s/g, ""), "base64");
   if (bytes.length > limit) throw new Error("Repository blob budget exceeded");
@@ -106,9 +106,10 @@ export function repositoryDemoUrl(homepage: string | null) {
   } catch { return null; }
 }
 
-export async function discoverProject(repository: GithubRepository, sha: string) {
+export async function discoverProject(source: RepositorySource, sha: string) {
+  const { repository } = source;
   const tree = z.object({ truncated: z.boolean(), tree: z.array(fileSchema) }).parse(
-    await githubJson(`/repos/${repository.full_name}/git/trees/${sha}?recursive=1`, 4_000_000),
+    await source.json(`/git/trees/${sha}?recursive=1`, 4_000_000),
   );
   if (tree.truncated || tree.tree.length > 30_000) throw new Error("Repository tree exceeds discovery budget");
   const selection = discoverFiles(tree.tree);
@@ -123,7 +124,7 @@ export async function discoverProject(repository: GithubRepository, sha: string)
     const code = selection.code.includes(file);
     const manifest = selection.manifests.includes(file);
     if ((code && codeBytes + file.size > 12_000) || (manifest && manifestBytes + file.size > 12_000)) continue;
-    const content = (await readRepositoryBlob(repository, file, 40_000)).toString("utf8");
+    const content = (await readRepositoryBlob(source, file, 40_000)).toString("utf8");
     const fullParts = chunkSource(file.path, content, repository.full_name, sha);
     // A long README must not crowd out a smaller guide with explicit pending acceptance.
     // Keep original ordinals and verbatim excerpts, never pretend the sample is the full file.
@@ -141,9 +142,8 @@ export async function discoverProject(repository: GithubRepository, sha: string)
     if (selection.manifests.includes(file)) manifests.push({ path: file.path, content });
     if (selection.documents.includes(file)) documents.push({ path: file.path, content });
   }
-  const activity = await discoverActivity(repository);
-  chunks.push(...activity);
-  const languageMap = z.record(z.string(), z.number()).parse(await githubJson(`/repos/${repository.full_name}/languages`));
+  if (source.activity) chunks.push(...await discoverActivity(source));
+  const languageMap = z.record(z.string(), z.number()).parse(await source.json("/languages"));
   const techStack = detectTechnologies(manifests, [...paths], Object.keys(languageMap));
   const metadata = {
     repositoryId: String(repository.id), repositoryFullName: repository.full_name, branch: repository.default_branch,
@@ -156,23 +156,23 @@ export async function discoverProject(repository: GithubRepository, sha: string)
   return { chunks, images: discoverImages(tree.tree, documents), metadata };
 }
 
-async function discoverActivity(repository: GithubRepository): Promise<SourceChunk[]> {
+async function discoverActivity(source: RepositorySource): Promise<SourceChunk[]> {
+  const { repository } = source;
   const chunks: SourceChunk[] = [];
   const add = (path: string, sourceUrl: string, data: Record<string, unknown>) => {
     const content = Object.entries(data).filter(([, value]) => value != null).map(([key, value]) => `${key}: ${value}`).join("\n");
     chunks.push({ path, ordinal: 0, content, sourceHash: createHash("sha256").update(content).digest("hex"), sourceUrl });
   };
-  const base = `/repos/${repository.full_name}`;
   if (repository.has_issues !== false) {
     const milestones = z.array(z.object({ number: z.number().int().positive(), title: z.string(), description: z.string().nullable().optional(), state: z.enum(["open", "closed"]) })).max(4)
-      .parse(await githubJson(`${base}/milestones?state=all&sort=due_on&direction=asc&per_page=4`));
+      .parse(await source.json(`/milestones?state=all&sort=due_on&direction=asc&per_page=4`));
     for (const item of milestones) add(`GitHub milestone #${item.number}`, `https://github.com/${repository.full_name}/milestone/${item.number}`, { ...item, title: item.title.slice(0, 200), description: item.description?.slice(0, 1_200) });
     const issues = z.array(z.object({ number: z.number().int().positive(), title: z.string(), body: z.string().nullable(), state: z.enum(["open", "closed"]), state_reason: z.string().nullable().optional(), pull_request: z.unknown().optional() })).max(4)
-      .parse(await githubJson(`${base}/issues?state=all&sort=updated&direction=desc&per_page=4`));
+      .parse(await source.json(`/issues?state=all&sort=updated&direction=desc&per_page=4`));
     for (const item of issues.filter((item) => !item.pull_request)) add(`GitHub issue #${item.number}`, `https://github.com/${repository.full_name}/issues/${item.number}`, { title: item.title.slice(0, 200), body: item.body?.slice(0, 1_200), state: item.state, stateReason: item.state_reason });
   }
   const releases = z.array(z.object({ id: z.number().int(), name: z.string().nullable(), tag_name: z.string(), body: z.string().nullable(), draft: z.boolean(), prerelease: z.boolean() })).max(2)
-    .parse(await githubJson(`${base}/releases?per_page=2`));
+    .parse(await source.json(`/releases?per_page=2`));
   for (const item of releases.filter((item) => !item.draft)) add(`GitHub release #${item.id}`, `https://github.com/${repository.full_name}/releases/tag/${encodeURIComponent(item.tag_name)}`, { name: item.name?.slice(0, 200), body: item.body?.slice(0, 1_200), prerelease: item.prerelease });
   return chunks;
 }

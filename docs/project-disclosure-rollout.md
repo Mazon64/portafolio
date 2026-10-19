@@ -26,20 +26,45 @@ La proyección se lee sin caché cuando la gobernanza está activa.
 
 ## GitHub App
 
-Crear una App distinta del OAuth del CMS. Instalarla solo en repositorios elegidos.
-Permisos mínimos del conector privado: Metadata y Contents de lectura. La atribución
-de repositorios públicos utiliza el conector público existente y sus permisos.
+Crear una App distinta del OAuth del CMS. Instalarla en la cuenta personal y en las
+organizaciones necesarias, eligiendo los repositorios. Permisos de solo lectura:
+Metadata, Contents, Issues y Pull requests. Una instalación aprobada solo con
+Metadata y Contents sigue funcionando: se leen documentación y código, y se omiten
+issues, releases y contribuciones hasta aceptar los permisos nuevos en GitHub.
 
-Variables: `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY` (PEM, acepta `\\n`) y
-`GITHUB_APP_WEBHOOK_SECRET`. Webhook:
-`https://davidaranda.dev/api/webhooks/github-app`, eventos `installation` e
-`installation_repositories`. El webhook público existente conserva los eventos de
-repositorio y retira una publicación cuando recibe un cambio a privado.
+Variables: `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY` (PEM, acepta `\\n`),
+`GITHUB_APP_WEBHOOK_SECRET` y, opcional, `GITHUB_APP_SLUG` para el enlace de
+instalación del CMS. Webhook: `https://davidaranda.dev/api/webhooks/github-app`,
+eventos `installation`, `installation_repositories`, `push`, `repository`, `issues`,
+`milestone` y `release`. Los pushes se agrupan por commit, por lo que el webhook de
+repositorio y el de la App pueden coexistir sin sincronizar dos veces.
 
 El servidor firma JWT RS256 de menos de diez minutos y solicita tokens de instalación
 limitados a un repositorio. Ningún token se guarda en PostgreSQL ni llega al cliente.
-En el CMS se indican installation ID, repository ID estable y archivos seleccionados.
-Un proyecto puede tener varias fuentes públicas/privadas en esta colección.
+La instalación se resuelve por el ID estable del repositorio; el nombre es solo una
+pista, de modo que un renombrado o transferencia no rompe la vinculación. Un fallo de
+la App distinto de "no instalada" reintenta la sincronización en lugar de retirar.
+
+### Vinculación Unificada
+
+El CMS lista los repositorios con la App instalada y, con `PROJECT_GITHUB_TOKEN`,
+los propios, los de organizaciones y aquellos en los que el propietario contribuyó
+(commits, PRs, issues y revisiones). Los privados sin la App instalada se muestran
+como pendientes de instalación. Se vincula por ID estable, nombre o URL.
+
+Un repositorio privado necesita una decisión explícita al vincularlo:
+
+- **Interno (predeterminado):** política `INTERNAL` sin procesamiento de IA.
+- **Publicar descripción derivada:** `privateSources: PUBLISH_DERIVED` exige modo
+  `FULL`, `externalAi: PRIVATE_SELECTED` y oculta repositorio, fuentes e imágenes.
+  La ficha, los hitos (sin citas) y los hechos para chat y CV se publican; el código,
+  las rutas, los enlaces y las imágenes del repositorio no. El chat no indexa sus
+  fragmentos.
+
+Sin esa política, un repositorio que pasa a privado se retira como antes. La
+vinculación nunca amplía una política ya guardada.
+
+### Fuentes Internas Seleccionadas
 
 La evidencia se guarda en `ProjectEvidence`, nunca en `ProjectKnowledgeChunk`.
 PRIVATE_SELECTED permite producir propuestas internas mediante Gemini; NONE y

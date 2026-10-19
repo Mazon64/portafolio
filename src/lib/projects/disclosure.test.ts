@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canPublish, canUsePublicSources, defaultDisclosure, disclosureSchema, projectProjection } from "./disclosure";
+import { canPublish, canPublishPrivateRepository, canUsePublicSources, defaultDisclosure, disclosureSchema, privateDerivedDisclosure, projectProjection } from "./disclosure";
 const source = { slug: "neutral-case", name: "Secret product", summary: "Secret customer", detailedInfo: "Internal implementation", techStack: ["Secret tool"], repositoryUrl: "https://github.com/company/secret", demoUrl: "https://secret.test", status: "completed" as const, progressPct: 100, lastTelemetryAt: "2026-10-03" };
 describe("project disclosure boundary", () => {
   it("replaces restricted source data instead of falling back to internal facts", () => {
@@ -23,5 +23,19 @@ describe("project disclosure boundary", () => {
     const result = projectProjection(source, { ...defaultDisclosure, owner: "Confidential owner", participation: { ...defaultDisclosure.participation, githubIds: ["123"] } }, "en", "portfolio");
     expect(result?.participation?.relationship).toBe("UNSPECIFIED");
     expect(JSON.stringify(result)).not.toContain("Confidential owner"); expect(JSON.stringify(result)).not.toContain("githubIds");
+  });
+  it("admits a private repository only through a complete, explicit opt-in", () => {
+    const derived = privateDerivedDisclosure(["7"]);
+    expect(disclosureSchema.parse(derived)).toMatchObject({ privateSources: "PUBLISH_DERIVED" });
+    expect(canPublishPrivateRepository(derived)).toBe(true);
+    expect(canPublishPrivateRepository(undefined)).toBe(false);
+    expect(canPublishPrivateRepository(defaultDisclosure)).toBe(false);
+    expect(canPublishPrivateRepository({ ...derived, fields: { ...derived.fields, sources: true } })).toBe(false);
+    expect(canPublishPrivateRepository({ ...derived, externalAi: "PUBLIC_ONLY" })).toBe(false);
+    // A revocation that only flips the mode stays parseable and inert.
+    expect(canPublishPrivateRepository(disclosureSchema.parse({ ...derived, mode: "INTERNAL" }))).toBe(false);
+    const legacy: Record<string, unknown> = { ...defaultDisclosure };
+    delete legacy.privateSources;
+    expect(disclosureSchema.parse(legacy).privateSources).toBe("INTERNAL");
   });
 });

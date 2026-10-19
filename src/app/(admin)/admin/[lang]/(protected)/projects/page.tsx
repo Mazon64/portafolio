@@ -7,7 +7,18 @@ import { deleteProjectAction } from "./actions";
 import Link from "next/link";
 import { projectIntegrationCopy } from "@/i18n/project-integration";
 import { projectIntegrationEnabled } from "@/lib/projects/configuration";
-import { PortfolioPilot } from "./integration-panel";
+import { Suspense } from "react";
+import { listRepositoryCandidates } from "@/data/admin/project-integration";
+import { PortfolioPilot, RepositoryCandidateList } from "./integration-panel";
+import type { Locale } from "@/i18n/config";
+
+async function Candidates({ locale }: { locale: Locale }) {
+  let data;
+  try { data = await listRepositoryCandidates(); } catch { data = { candidates: [], warnings: ["UNAVAILABLE"] }; }
+  const slug = process.env.GITHUB_APP_SLUG?.trim();
+  const installUrl = slug && /^[a-z0-9-]{1,100}$/.test(slug) ? `https://github.com/apps/${slug}/installations/new` : null;
+  return <RepositoryCandidateList locale={locale} copy={projectIntegrationCopy[locale]} enabled={projectIntegrationEnabled()} data={data} installUrl={installUrl} />;
+}
 
 export default async function ProjectsPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
@@ -19,6 +30,7 @@ export default async function ProjectsPage({ params }: { params: Promise<{ lang:
     <h1 className="mt-4 text-5xl font-semibold tracking-[-0.05em] sm:text-7xl">{copy.title}</h1>
     <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">{copy.description}</p>
     <PortfolioPilot locale={lang} copy={projectIntegrationCopy[lang]} enabled={projectIntegrationEnabled()} />
+    <Suspense fallback={<p className="my-6 text-sm text-muted-foreground">{projectIntegrationCopy[lang].working}</p>}><Candidates locale={lang} /></Suspense>
     <div className="mt-12 space-y-6">
       {projects.map((project) => <details key={project.id}>
         <summary className="cursor-pointer py-3 text-lg font-medium">{project.en.name} · {copy.statuses[project.status]}</summary>

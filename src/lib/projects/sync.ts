@@ -5,14 +5,16 @@ import { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { projectAiEnabled, projectIntegrationEnabled } from "./configuration";
 import { embedTexts, generateProjectNarrative, projectAiFailureCode } from "./ai";
-import { getBranchSha, getRepository } from "./github";
+import { getBranchSha, type RepositorySource } from "./github";
+import { openRepository } from "./source";
+import { GithubAppError } from "./github-app";
 import { discoverProject } from "./discovery";
 import { analyzeRepositoryImages } from "./media";
 import { resolveMilestones } from "./milestones";
 import { EMBEDDING_MODEL, milestoneProgress, narrativeText, projectSnapshotSchema, MAX_CHUNKS, MAX_SOURCE_BYTES } from "./schemas";
 import { disclosurePolicies, governanceEnabled } from "@/data/project-disclosure";
 import { contributionSources } from "./contributions";
-import { defaultDisclosure, disclosureSchema } from "./disclosure";
+import { canPublishPrivateRepository, defaultDisclosure, disclosureSchema } from "./disclosure";
 
 const LEASE_MS = 10 * 60_000;
 const MAX_ATTEMPTS = 5;
@@ -93,12 +95,16 @@ export async function processProjectSync(projectId?: string) {
   if (!job) return { status: "idle" };
   let failure = "SOURCE_UNAVAILABLE";
   let repositoryUnavailable = false;
-  const loadRepository = async (id: string) => {
-    try { return await getRepository(id); }
+  let allowPrivate = false;
+  const loadRepository = async (id: string, hint: string | null): Promise<RepositorySource> => {
+    let source;
+    try { source = await openRepository(id, hint); }
     catch (error) {
-      repositoryUnavailable = error instanceof Error && (error.message === "Project sources must be public" || error.message === "GitHub HTTP 404");
+      repositoryUnavailable = error instanceof Error && (error.message === "Project sources must be public" || error.message === "GitHub HTTP 404" || (error instanceof GithubAppError && error.status === 404));
       throw error;
     }
+    if (source.repository.private && !allowPrivate) { repositoryUnavailable = true; throw new Error("Private repository without publication consent"); }
+    return source;
   };
   try {
     const config = await getPrisma().projectIntegration.findUnique({ where: { projectId: job.projectId }, include: { project: true } });
@@ -111,20 +117,23 @@ export async function processProjectSync(projectId?: string) {
       await finishSuperseded(job.id, job.leaseToken);
       return { status: "superseded" };
     }
-    const repository = await loadRepository(config.repositoryId);
-    const sha = await getBranchSha(repository, repository.default_branch);
+    allowPrivate = canPublishPrivateRepository(disclosure?.policy);
+    const source = await loadRepository(config.repositoryId, config.project.repositoryFullName);
+    const { repository } = source;
+    const sha = await getBranchSha(source, repository.default_branch);
     // Out-of-order webhook deliveries never replace a newer branch snapshot.
     if (job.requestedSha && job.requestedSha !== sha) {
       await finishSuperseded(job.id, job.leaseToken);
       return { status: "superseded" };
     }
-    const discovered = await discoverProject(repository, sha);
+    const discovered = await discoverProject(source, sha);
     const previous = await getPrisma().projectKnowledge.findFirst({ where: { projectId: job.projectId, status: "PUBLISHED" }, select: { narrative: true } });
     const cachedSnapshot = projectSnapshotSchema.safeParse(previous?.narrative);
     const previousMilestones = cachedSnapshot.success && cachedSnapshot.data.metadata.repositoryId === String(repository.id) ? cachedSnapshot.data.milestones : [];
     failure = "IMAGE_ANALYSIS_FAILED";
-    const assets = await analyzeRepositoryImages(repository, sha, discovered.images, cachedSnapshot.success ? cachedSnapshot.data.assets : []);
-    const contributions = await contributionSources(repository, disclosure?.policy.participation.githubIds ?? []);
+    // Private images would need raw GitHub URLs that only an installation token can read.
+    const assets = repository.private ? [] : await analyzeRepositoryImages(source, sha, discovered.images, cachedSnapshot.success ? cachedSnapshot.data.assets : []);
+    const contributions = await contributionSources(source, disclosure?.policy.participation.githubIds ?? []);
     const chunks = [...discovered.chunks, ...contributions, ...assets.map((asset) => {
       const content = `Visual observation, not proof of implementation.\nES: ${asset.caption.es}\nEN: ${asset.caption.en}`;
       return { path: asset.sourcePath, ordinal: 0, content, sourceHash: createHash("sha256").update(`${asset.blobSha}:${content}`).digest("hex"), sourceUrl: `https://github.com/${repository.full_name}/blob/${sha}/${asset.sourcePath.split("/").map(encodeURIComponent).join("/")}` };
@@ -153,7 +162,7 @@ export async function processProjectSync(projectId?: string) {
     });
     // Check branch again after external calls, before publishing the snapshot.
     failure = "SOURCE_UNAVAILABLE";
-    if (await getBranchSha(await loadRepository(config.repositoryId), repository.default_branch) !== sha) {
+    if (await getBranchSha(await loadRepository(config.repositoryId, repository.full_name), repository.default_branch) !== sha) {
       await finishSuperseded(job.id, job.leaseToken);
       return { status: "superseded" };
     }
@@ -192,7 +201,7 @@ export async function processProjectSync(projectId?: string) {
         });
       }
       await tx.project.update({ where: { id: job.projectId }, data: {
-        repositoryFullName: repository.full_name, repositoryUrl: `https://github.com/${repository.full_name}`,
+        repositoryFullName: repository.full_name, repositoryUrl: repository.private ? null : `https://github.com/${repository.full_name}`,
         demoUrl: snapshot.metadata.demoUrl, techStack: snapshot.metadata.techStack, status: snapshot.metadata.status,
         progressPct: milestoneProgress(snapshot.milestones) ?? 0, lastTelemetryAt: new Date(), showOnPortfolio: true,
       } });

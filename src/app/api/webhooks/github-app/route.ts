@@ -6,8 +6,10 @@ import { governanceEnabled } from "@/data/project-disclosure";
 import { validGithubSignature, boundedBody } from "@/lib/projects/http";
 import { serializable } from "@/lib/projects/sync";
 import { disclosureSchema } from "@/lib/projects/disclosure";
+import { handleRepositoryEvent, REPOSITORY_EVENTS } from "@/lib/projects/webhook";
 
 export const runtime = "nodejs";
+export const maxDuration = 300;
 export async function POST(request: Request) {
   const secret = process.env.GITHUB_APP_WEBHOOK_SECRET;
   if (!secret || !governanceEnabled() || !projectIntegrationEnabled()) return Response.json({ status: "disabled" }, { status: 503 });
@@ -16,6 +18,8 @@ export async function POST(request: Request) {
   if (!validGithubSignature(body, request.headers.get("x-hub-signature-256"), secret)) return Response.json({ status: "forbidden" }, { status: 403 });
   const event = request.headers.get("x-github-event");
   if (event === "ping") return Response.json({ status: "pong" });
+  // Installed repositories, private ones included, report changes through the App.
+  if (REPOSITORY_EVENTS.includes(event ?? "")) return handleRepositoryEvent(event!, body, request.headers.get("x-github-delivery"), "github-app");
   if (!["installation", "installation_repositories"].includes(event ?? "")) return Response.json({ status: "ignored" }, { status: 202 });
   let input;
   try { input = z.object({ action: z.string(), installation: z.object({ id: z.number().int().positive() }), repositories_removed: z.array(z.object({ id: z.number().int().positive() })).optional() }).parse(JSON.parse(body.toString("utf8"))); }

@@ -3,10 +3,11 @@ import sharp from "sharp";
 import { z } from "zod";
 import { generateStructuredDocument, getDocumentGenerationModel } from "@/lib/documents/gemini";
 import { imageCategory, readRepositoryBlob, type TreeFile } from "./discovery";
-import type { GithubRepository } from "./github";
+import type { RepositorySource } from "./github";
 import { localizedText, repositoryAssetsSchema, VISION_POLICY_VERSION, type RepositoryAsset } from "./schemas";
 
-export async function analyzeRepositoryImages(repository: GithubRepository, sha: string, files: TreeFile[], cache: RepositoryAsset[]) {
+export async function analyzeRepositoryImages(source: RepositorySource, sha: string, files: TreeFile[], cache: RepositoryAsset[]) {
+  const { repository } = source;
   const model = getDocumentGenerationModel();
   const assets: RepositoryAsset[] = [];
   const pending: Array<{ file: TreeFile; data: string; width: number; height: number }> = [];
@@ -14,7 +15,7 @@ export async function analyzeRepositoryImages(repository: GithubRepository, sha:
     const previous = cache.find((item) => item.sourcePath === file.path && item.blobSha === file.sha && item.analysisModel === model && item.analysisPolicy === VISION_POLICY_VERSION);
     const url = `https://raw.githubusercontent.com/${repository.full_name}/${sha}/${file.path.split("/").map(encodeURIComponent).join("/")}`;
     if (previous) { assets.push({ ...previous, url }); continue; }
-    const bytes = await readRepositoryBlob(repository, file, 4_000_000);
+    const bytes = await readRepositoryBlob(source, file, 4_000_000);
     const image = sharp(bytes, { limitInputPixels: 20_000_000, animated: false });
     const metadata = await image.metadata();
     if (!["png", "jpeg", "webp"].includes(metadata.format ?? "") || (metadata.width ?? 0) < 240 || (metadata.height ?? 0) < 120) continue;
