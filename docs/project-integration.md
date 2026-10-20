@@ -146,6 +146,25 @@ o la reconciliación diaria no consumen tokens. Cambiar `GEMINI_MODEL` o la vers
 del prompt regenera cada proyecto una vez. Los snapshots sin huella se regeneran en
 su próxima sincronización.
 
+### Generación En Dos Etapas
+
+1. **Resúmenes por fuente.** Cada fragmento de más de 700 caracteres se resume una
+   sola vez (resumen, hasta ocho hechos y hasta cinco citas literales) y se guarda en
+   `narrative.digests` del snapshot, indexado por hash de contenido, modelo y versión.
+   Las citas se verifican literalmente contra el fragmento antes de guardarse; las que
+   no coinciden se descartan. Solo los fragmentos nuevos o modificados se envían, en
+   lotes de hasta doce fragmentos o 40 000 caracteres. `GEMINI_DIGEST_MODEL` permite
+   un modelo más ligero para esta etapa.
+2. **Síntesis.** La ficha ES/EN y los hitos se generan a partir de esos resúmenes,
+   los fragmentos cortos tal cual y la lista determinista de tecnologías. Cada fuente
+   aparece una sola vez (antes se enviaba dos veces, como documentación y como
+   evidencia) y los manifiestos no se envían. Las citas de hitos se copian de los
+   fragmentos o de sus citas verificadas y `resolveMilestones` las vuelve a validar
+   contra el texto original.
+
+Un resumen ausente no es un error: ese fragmento se envía completo. Cambiar el
+modelo de resúmenes o su versión invalida la caché y la huella del corpus.
+
 Las contribuciones se consultan filtradas por autor: PRs e issues propios mediante
 `issues?creator=`, priorizando PRs fusionados (hasta ocho), commits propios (hasta
 cuatro, salvo forks) y revisiones en PRs ajenos recientes (hasta dos). El login solo

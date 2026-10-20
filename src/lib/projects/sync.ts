@@ -4,7 +4,7 @@ import { revalidateTag } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { projectAiEnabled, projectIntegrationEnabled } from "./configuration";
-import { embedTexts, generateProjectNarrative, projectAiFailureCode } from "./ai";
+import { digestModel, digestSources, DIGEST_POLICY, embedTexts, generateProjectNarrative, projectAiFailureCode } from "./ai";
 import { getBranchSha, type RepositorySource } from "./github";
 import { openRepository } from "./source";
 import { GithubAppError } from "./github-app";
@@ -19,13 +19,13 @@ import { canPublishPrivateRepository, defaultDisclosure, disclosureSchema } from
 
 const LEASE_MS = 10 * 60_000;
 // Bump when the prompt or output contract changes so every project regenerates once.
-const GENERATION_POLICY = "narrative-v1";
+const GENERATION_POLICY = "narrative-v2";
 
 // Depends only on content hashes, never on the commit, so a push that leaves the
 // sampled sources unchanged (or a daily reconcile) reuses the published snapshot.
 export function corpusFingerprint(chunks: Array<{ path: string; ordinal: number; sourceHash: string }>, model: string) {
   const parts = chunks.map((chunk) => `${chunk.path}\u0000${chunk.ordinal}\u0000${chunk.sourceHash}`).sort();
-  return createHash("sha256").update(JSON.stringify([GENERATION_POLICY, model, EMBEDDING_MODEL, parts])).digest("hex");
+  return createHash("sha256").update(JSON.stringify([GENERATION_POLICY, DIGEST_POLICY, model, digestModel(), EMBEDDING_MODEL, parts])).digest("hex");
 }
 const MAX_ATTEMPTS = 5;
 
@@ -172,12 +172,14 @@ export async function processProjectSync(projectId?: string) {
       const embedded = await embedTexts(missing.map(({ c }) => c.content), "RETRIEVAL_DOCUMENT");
       missing.forEach(({ i }, index) => { vectors[i] = embedded[index]; });
     }
+    const digests = await digestSources(chunks, cachedSnapshot.success ? cachedSnapshot.data.digests : []);
     const generated = await generateProjectNarrative(chunks, {
       assets, previousMilestones, repositoryName: repository.name || repository.full_name.split("/")[1],
+      digests, technologies: discovered.metadata.techStack,
     });
     const milestones = resolveMilestones(generated.content.milestones, chunks, previousMilestones);
     const snapshot = projectSnapshotSchema.parse({
-      ...generated.content.narrative, automatic: true, names: generated.content.names, assets,
+      ...generated.content.narrative, automatic: true, names: generated.content.names, assets, digests,
       milestones, metadata: { ...discovered.metadata, milestonePolicy: "ai-v1", corpusHash },
     });
     // Check branch again after external calls, before publishing the snapshot.

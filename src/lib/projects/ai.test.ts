@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const { generate, attempts } = vi.hoisted(() => ({ generate: vi.fn(), attempts: vi.fn(() => ["test-key-a", "test-key-b"]) }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/documents/gemini", async (importOriginal) => ({ ...await importOriginal<typeof import("@/lib/documents/gemini")>(), generateStructuredDocument: generate, getApiKeyAttempts: attempts }));
-import { answerProjectQuestion, embedTexts, generateProjectNarrative, vectorLiteral } from "./ai";
+import { answerProjectQuestion, digestSources, embedTexts, generateProjectNarrative, synthesisSources, vectorLiteral } from "./ai";
+import { resolveMilestones } from "./milestones";
 afterEach(() => { vi.unstubAllGlobals(); generate.mockReset(); });
 
 describe("project embeddings and grounded answers", () => {
@@ -64,5 +65,38 @@ describe("project embeddings and grounded answers", () => {
     const answer = await answerProjectQuestion("What database?", "en", [{ id: "actual", content: "Uses PostgreSQL." }]);
     expect(answer.sourceIds).toEqual(["actual"]);
     expect(generate).toHaveBeenCalledWith(expect.objectContaining({ domain: "projects" }));
+  });
+});
+
+const long = (path: string, body: string) => ({ path, ordinal: 0, content: `${body} ${"Context sentence about the system. ".repeat(30)}`, sourceHash: (path.length.toString(16) + body.length.toString(16)).padEnd(64, "0").slice(0, 64), sourceUrl: `https://github.com/o/r/blob/x/${path}` });
+describe("two-stage project generation", () => {
+  it("digests only long, uncached sources and keeps verbatim quotes only", async () => {
+    const readme = long("README.md", "The CMS stores bilingual project records in PostgreSQL.");
+    const cachedDoc = long("docs/srs.md", "Owner acceptance remains pending for the chat.");
+    const short = { path: "GitHub issue #1", ordinal: 0, content: "title: Fix login", sourceHash: "c".repeat(64), sourceUrl: "https://github.com/o/r/issues/1" };
+    const manifest = { ...long("package.json", "{}"), sourceHash: "d".repeat(64) };
+    const cache = [{ sourceHash: cachedDoc.sourceHash, model: "gemini-3-flash-preview", policy: "digest-v1", summary: "Cached.", facts: [], quotes: [] }];
+    generate.mockResolvedValue({ model: "gemini-3-flash-preview", content: { sources: [{ id: "e0", summary: "Stores projects.", facts: ["PostgreSQL storage"], quotes: ["The CMS stores bilingual project records in PostgreSQL.", "An invented sentence that is not in the source."] }] } });
+    const digests = await digestSources([readme, cachedDoc, short, manifest], cache);
+    expect(generate).toHaveBeenCalledOnce();
+    expect(generate.mock.calls[0][0].source.excerpts.map((e: { path: string }) => e.path)).toEqual(["README.md"]);
+    expect(digests.find((d) => d.sourceHash === readme.sourceHash)?.quotes).toEqual(["The CMS stores bilingual project records in PostgreSQL."]);
+    expect(digests.find((d) => d.sourceHash === cachedDoc.sourceHash)?.summary).toBe("Cached.");
+  });
+  it("sends each source once and lets digest quotes pass citation verification", async () => {
+    const readme = long("README.md", "The CMS stores bilingual project records in PostgreSQL.");
+    const manifest = { ...long("package.json", "{}"), sourceHash: "d".repeat(64) };
+    const issue = { path: "GitHub issue #1", ordinal: 0, content: "title: Fix login", sourceHash: "c".repeat(64), sourceUrl: "https://github.com/o/r/issues/1" };
+    const quote = "The CMS stores bilingual project records in PostgreSQL.";
+    const digests = [{ sourceHash: readme.sourceHash, model: "m", policy: "digest-v1", summary: "Stores projects.", facts: [], quotes: [quote] }];
+    const sources = synthesisSources([readme, manifest, issue], digests);
+    expect(sources).toEqual([{ id: "source-0", path: "README.md", summary: "Stores projects.", facts: [], quotes: [quote] }, { id: "source-1", path: "GitHub issue #1", content: "title: Fix login" }]);
+    generate.mockResolvedValue({ content: {}, model: "test" });
+    await generateProjectNarrative([readme, manifest, issue], { assets: [], previousMilestones: [], digests, technologies: ["Next.js"] });
+    const request = generate.mock.calls[0][0];
+    expect(request.source).not.toHaveProperty("milestoneEvidence");
+    expect(JSON.stringify(request.source)).not.toContain("Context sentence");
+    const goal = { previousId: null, title: { es: "Datos", en: "Data" }, status: "completed", reason: { es: "Hecho", en: "Done" }, citations: [{ sourceId: "source-0", quote }] };
+    expect(resolveMilestones([goal], [readme, manifest, issue], [])[0].assessment?.citations[0].path).toBe("README.md");
   });
 });

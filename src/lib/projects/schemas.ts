@@ -86,11 +86,23 @@ export const narrativeSchema = z.object({ es: narrativeLocaleSchema, en: narrati
 export type ProjectNarrative = z.infer<typeof narrativeSchema>;
 export type ProjectAssets = z.infer<typeof assetsSchema>;
 export type ProjectMilestones = z.infer<typeof milestonesSchema>;
+// Stage-one extraction cached by content hash. Quotes are verified verbatim against
+// their source before being stored, so citations can be copied from them.
+export const sourceDigestSchema = z.object({
+  sourceHash: z.string().regex(/^[a-f0-9]{64}$/),
+  model: z.string().min(1).max(100),
+  policy: z.string().min(1).max(40),
+  summary: z.string().trim().min(1).max(800),
+  facts: z.array(z.string().trim().min(1).max(300)).max(8),
+  quotes: z.array(z.string().min(20).max(500)).max(5),
+});
+export type SourceDigest = z.infer<typeof sourceDigestSchema>;
 export const projectSnapshotSchema = narrativeSchema.extend({
   automatic: z.literal(true),
   names: localizedText,
   assets: repositoryAssetsSchema,
   milestones: milestonesSchema,
+  digests: z.array(sourceDigestSchema).max(120).default([]),
   metadata: z.object({
     repositoryId: z.string(),
     repositoryFullName: z.string(),

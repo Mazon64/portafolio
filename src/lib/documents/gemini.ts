@@ -76,6 +76,7 @@ export async function generateStructuredDocument<T>({
   domain = "documents",
   images = [],
   projectOutputTokens = 8_192,
+  model: modelOverride,
 }: {
   instruction: string;
   source: unknown;
@@ -84,8 +85,11 @@ export async function generateStructuredDocument<T>({
   domain?: "documents" | "projects";
   images?: Array<{ label: string; mimeType: "image/webp"; data: string }>;
   projectOutputTokens?: 8_192 | 16_384;
+  // A lighter model for bounded extraction work; defaults to the configured model.
+  model?: string;
 }): Promise<{ content: T; model: string }> {
-  const model = getDocumentGenerationModel();
+  const model = modelOverride?.trim() || getDocumentGenerationModel();
+  if (!/^[\w.-]{1,100}$/.test(model)) throw new DocumentGenerationError("Invalid model");
   if (images.length > 8 || images.some((image) => image.data.length > 1_400_000)) {
     throw new DocumentGenerationError("Image budget exceeded");
   }
