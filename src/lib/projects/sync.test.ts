@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   query: vi.fn(), execute: vi.fn(), deleteDraft: vi.fn(), createDraft: vi.fn(),
   discover: vi.fn(), images: vi.fn(), published: vi.fn(), translation: vi.fn(), updateProject: vi.fn(), cache: vi.fn(),
   disableConfig: vi.fn(), retireKnowledge: vi.fn(), hideProject: vi.fn(), archiveDocuments: vi.fn(),
-  policies: vi.fn(), governance: vi.fn(), findPolicy: vi.fn(), touchProject: vi.fn(),
+  policies: vi.fn(), governance: vi.fn(), findPolicy: vi.fn(), touchProject: vi.fn(), digest: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidateTag: mocks.cache }));
@@ -14,7 +14,7 @@ vi.mock("./media", () => ({ analyzeRepositoryImages: mocks.images }));
 vi.mock("@/lib/projects/github", () => ({ getRepository: mocks.getRepo, getBranchSha: mocks.getSha, getProjectSources: mocks.getSources }));
 vi.mock("./source", () => ({ openRepository: async (id: string, hint: string | null) => ({ repository: await mocks.getRepo(id, hint), access: "public", activity: true, json: vi.fn().mockResolvedValue([]) }) }));
 vi.mock("@/data/project-disclosure", () => ({ disclosurePolicies: mocks.policies, governanceEnabled: mocks.governance }));
-vi.mock("@/lib/projects/ai", () => ({ embedTexts: mocks.embed, generateProjectNarrative: mocks.narrative, projectAiFailureCode: () => "TEST_FAILURE" }));
+vi.mock("@/lib/projects/ai", () => ({ digestSources: mocks.digest, digestModel: () => "digest-model", DIGEST_POLICY: "digest-test", embedTexts: mocks.embed, generateProjectNarrative: mocks.narrative, projectAiFailureCode: () => "TEST_FAILURE" }));
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({
   $transaction: mocks.transaction, $queryRaw: mocks.query,
   projectSyncJob: { findFirst: mocks.findJob, updateMany: mocks.updateJob },
@@ -36,7 +36,7 @@ beforeEach(() => {
   mocks.getSources.mockResolvedValue([{ path: "README.md", ordinal: 0, content: "Source", sourceHash: "hash", sourceUrl: "https://github.com/owner/repo" }]);
   mocks.discover.mockResolvedValue({ chunks: [{ path: "README.md", ordinal: 0, content: "Owner acceptance remains pending.", sourceHash: "a".repeat(64), sourceUrl: "https://github.com/owner/repo" }], images: [], metadata });
   mocks.images.mockResolvedValue([]); mocks.published.mockResolvedValue(null);
-  mocks.policies.mockResolvedValue([]); mocks.governance.mockReturnValue(false);
+  mocks.policies.mockResolvedValue([]); mocks.governance.mockReturnValue(false); mocks.digest.mockResolvedValue([]);
   mocks.query.mockResolvedValue([]); mocks.embed.mockResolvedValue(["[1]"]); mocks.narrative.mockResolvedValue({ content: { names: { es: "Proyecto", en: "Project" }, narrative: { es: text, en: text }, milestones: [] }, model: "test" });
   mocks.createDraft.mockResolvedValue({ id: "draft" }); mocks.execute.mockResolvedValue(1);
   mocks.transaction.mockImplementation(async (fn) => fn({

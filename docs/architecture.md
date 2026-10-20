@@ -148,6 +148,7 @@ Los secretos estarán disponibles solo en el servidor. El prefijo `NEXT_PUBLIC_`
 | `GITHUB_APP_SLUG` | Opcional: enlace de instalación de la App en el CMS. |
 | `GEMINI_API_KEYS` | Pool server-only de claves de Google Gemini, separadas por comas o saltos de línea. |
 | `GEMINI_MODEL` | Modelo Gemini usado para generación; por defecto `gemini-3-flash-preview`. |
+| `GEMINI_DIGEST_MODEL` | Opcional: modelo más ligero para los resúmenes por fuente de proyectos; por defecto `GEMINI_MODEL`. |
 | `MONGODB_URI` | Reservada para integraciones futuras; el chat actual utiliza PostgreSQL. |
 | `CRON_SECRET` | Autorización de tareas programadas. |
 

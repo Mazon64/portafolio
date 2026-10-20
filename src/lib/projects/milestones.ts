@@ -28,6 +28,12 @@ export function milestoneSources(chunks: SourceChunk[]) {
 
 const normalize = (text: string) => text.replace(/\s+/g, " ").trim();
 
+// The same verbatim test resolveMilestones applies to citations.
+export function quoteSupported(path: string, content: string, quote: string) {
+  const readable = normalize(evidenceText(path, quote));
+  return readable.length >= 20 && normalize(evidenceText(path, content)).includes(readable);
+}
+
 export function resolveMilestones(value: unknown, chunks: SourceChunk[], previous: ProjectMilestones): ProjectMilestones {
   const generated = generatedMilestonesSchema.parse(value);
   const sources = new Map(milestoneSources(chunks).map((source) => [source.id, source]));
