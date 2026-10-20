@@ -2,7 +2,11 @@ import "server-only";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/authorization";
 import { getPrisma } from "@/lib/prisma";
-import { getRepository } from "@/lib/projects/github";
+import { randomUUID } from "node:crypto";
+import { resolveRepository } from "@/lib/projects/source";
+import { repositoryCandidates } from "@/lib/projects/candidates";
+import { privateDerivedDisclosure, defaultDisclosure } from "@/lib/projects/disclosure";
+import { governanceEnabled } from "@/data/project-disclosure";
 import { projectIntegrationEnabled } from "@/lib/projects/configuration";
 import { integrationSchema, projectSnapshotSchema } from "@/lib/projects/schemas";
 import { serializable } from "@/lib/projects/sync";
@@ -34,9 +38,25 @@ export async function getAdminProjectIntegration(projectId: string) {
 }
 export type ProjectIntegrationWorkspace = NonNullable<Awaited<ReturnType<typeof getAdminProjectIntegration>>>;
 
-export async function connectProjectRepository(fullName: string) {
+export async function listRepositoryCandidates() {
+  await requireAdmin();
+  const [result, linked] = await Promise.all([
+    repositoryCandidates(process.env.ADMIN_GITHUB_ID?.trim()),
+    getPrisma().projectIntegration.findMany({ select: { repositoryId: true, projectId: true } }),
+  ]);
+  const projects = new Map(linked.map((row) => [row.repositoryId, row.projectId]));
+  return { ...result, candidates: result.candidates.map((candidate) => ({ ...candidate, projectId: projects.get(candidate.id) ?? null })) };
+}
+export type RepositoryCandidates = Awaited<ReturnType<typeof listRepositoryCandidates>>;
+
+// Links any repository the connector can read. A private one also needs the
+// owner's explicit choice: publish an AI-derived description, or keep it internal.
+export async function connectProjectRepository(identifier: string, options: { publishPrivate?: boolean } = {}) {
   await requireWrite();
-  const repository = await getRepository(fullName);
+  const { repository } = await resolveRepository(identifier);
+  if (repository.private && !governanceEnabled()) throw new Error("Private repositories require disclosure governance");
+  const owner = process.env.ADMIN_GITHUB_ID?.trim();
+  const githubIds = owner && /^\d+$/.test(owner) ? [owner] : [];
   return serializable(async (tx) => {
     const linked = await tx.projectIntegration.findUnique({ where: { repositoryId: String(repository.id) } });
     if (linked) return linked.projectId;
@@ -46,13 +66,21 @@ export async function connectProjectRepository(fullName: string) {
       const collision = await tx.project.findUnique({ where: { slug: baseSlug }, select: { id: true } });
       project = await tx.project.create({ data: {
         slug: collision ? `${baseSlug}-${repository.id}` : baseSlug,
-        repositoryFullName: repository.full_name, repositoryUrl: `https://github.com/${repository.full_name}`,
-        showOnPortfolio: false, showOnCv: true,
+        repositoryFullName: repository.full_name, repositoryUrl: repository.private ? null : `https://github.com/${repository.full_name}`,
+        showOnPortfolio: false, showOnCv: !repository.private,
         translations: { create: (["ES", "EN"] as const).map((locale) => ({
           locale, name: repository.name || repository.full_name, summary: repository.description || repository.full_name,
           detailedInfo: repository.description || repository.full_name,
         })) },
       } });
+    }
+    if (repository.private) {
+      const current = await tx.projectDisclosurePolicy.findUnique({ where: { projectId: project.id } });
+      // Never widen an existing policy; only a new project receives the chosen default.
+      if (!current) {
+        const policy = options.publishPrivate ? privateDerivedDisclosure(githubIds) : { ...defaultDisclosure, mode: "INTERNAL" as const, externalAi: "NONE" as const, participation: { ...defaultDisclosure.participation, githubIds } };
+        await tx.projectDisclosurePolicy.create({ data: { projectId: project.id, revision: randomUUID(), policy } });
+      }
     }
     await tx.projectIntegration.create({ data: {
       projectId: project.id, repositoryId: String(repository.id), branch: repository.default_branch,
@@ -64,7 +92,7 @@ export async function connectProjectRepository(fullName: string) {
 
 export async function saveProjectIntegration(input: z.infer<typeof integrationSchema>) {
   await requireWrite();
-  const repository = await getRepository(input.repositoryFullName);
+  const { repository } = await resolveRepository(input.repositoryFullName);
   return serializable(async (tx) => {
     const project = await tx.project.findUnique({ where: { id: input.projectId } });
     if (!project) return null;

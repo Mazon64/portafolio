@@ -31,9 +31,9 @@ export async function projectIntegrationAction(_state: ProjectIntegrationState, 
   const operation = data.get("operation");
   if (operation === "pilot" || operation === "connect") {
     try {
-      const fullName = String(data.get("repositoryFullName") ?? "").trim().replace(/^https:\/\/github\.com\//i, "").replace(/\/+$/, "").replace(/\.git$/, "");
-      if (operation === "connect" && !/^[\w.-]+\/[\w.-]+$/.test(fullName)) return { status: "invalid" };
-      const projectId = operation === "pilot" ? await initializePortfolioPilot() : await connectProjectRepository(fullName);
+      const identifier = String(data.get("repositoryId") || data.get("repositoryFullName") || "").trim();
+      if (operation === "connect" && (!identifier || identifier.length > 300)) return { status: "invalid" };
+      const projectId = operation === "pilot" ? await initializePortfolioPilot() : await connectProjectRepository(identifier, { publishPrivate: data.get("publishPrivate") === "on" });
       let queued = true;
       try {
         await enqueueProjectSync(projectId, `connect:${randomUUID()}`, null);

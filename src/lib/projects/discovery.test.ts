@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
+import { publicSource } from "./github";
 import { discoverFiles, discoverImages, discoverProject, detectTechnologies, repositoryDemoUrl, type TreeFile } from "./discovery";
 const repo = { id: 42, name: "repo", full_name: "owner/repo", default_branch: "main", private: false, description: "A project", homepage: "https://example.com", archived: false, topics: [] };
 const file = (path: string, mode = "100644"): TreeFile => ({ path, mode, type: "blob", sha: "a".repeat(40), size: 100 });
@@ -8,7 +9,7 @@ describe("automatic repository discovery", () => {
   it("supports repositories without GitHub Issues or documented milestones", async () => {
     const fetchMock = vi.fn(async (url: string) => url.includes("/git/trees/") ? Response.json({ tree: [], truncated: false }) : url.includes("/releases?") ? Response.json([]) : Response.json({}));
     vi.stubGlobal("fetch", fetchMock);
-    const result = await discoverProject({ ...repo, has_issues: false }, "a".repeat(40));
+    const result = await discoverProject(publicSource({ ...repo, has_issues: false }), "a".repeat(40));
     expect(result.chunks.map((chunk) => chunk.path)).toEqual(["GitHub metadata"]);
     expect(fetchMock.mock.calls.some(([url]) => url.includes("milestones"))).toBe(false);
   });
@@ -51,7 +52,7 @@ describe("automatic repository discovery", () => {
       if (/\/(milestones|issues|releases)\?/.test(url)) return Response.json([]);
       return Response.json({ TypeScript: 100 });
     }));
-    const result = await discoverProject(repo, "c".repeat(40));
+    const result = await discoverProject(publicSource(repo), "c".repeat(40));
     expect(result.metadata.techStack).toEqual(["Next.js", "TypeScript"]);
     expect(result.metadata.demoUrl).toBe("https://example.com/");
     expect(result.images).toEqual([]);
@@ -59,7 +60,7 @@ describe("automatic repository discovery", () => {
   });
   it("does not silently accept a truncated repository tree", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ tree: [], truncated: true })));
-    await expect(discoverProject(repo, "a".repeat(40))).rejects.toThrow("discovery budget");
+    await expect(discoverProject(publicSource(repo), "a".repeat(40))).rejects.toThrow("discovery budget");
   });
   it("imports ordinary GitHub activity as evidence rather than blindly copying closed states", async () => {
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
@@ -69,7 +70,7 @@ describe("automatic repository discovery", () => {
       if (url.includes("/releases?")) return Response.json([{ id: 4, name: "Beta", tag_name: "v1", body: "Public beta for feedback.", draft: false, prerelease: true }]);
       return Response.json({});
     }));
-    const result = await discoverProject(repo, "c".repeat(40));
+    const result = await discoverProject(publicSource(repo), "c".repeat(40));
     const issue = result.chunks.find((chunk) => chunk.path === "GitHub issue #3")!;
     expect(issue.sourceUrl).toBe("https://github.com/owner/repo/issues/3");
     expect(issue.content).toContain("Deployment exists.\nOwner acceptance remains pending.");
@@ -91,7 +92,7 @@ describe("automatic repository discovery", () => {
       return Response.json({});
     });
     vi.stubGlobal("fetch", fetchMock);
-    const result = await discoverProject(repo, "c".repeat(40));
+    const result = await discoverProject(publicSource(repo), "c".repeat(40));
     expect(result.chunks.filter((chunk) => chunk.path === "README.md")).toHaveLength(3);
     expect(result.chunks.some((chunk) => chunk.content.includes("Owner acceptance remains pending."))).toBe(true);
     expect(result.chunks.some((chunk) => chunk.path === "docs/chat.md")).toBe(true);

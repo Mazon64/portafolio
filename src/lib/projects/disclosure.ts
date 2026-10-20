@@ -12,6 +12,9 @@ export const disclosureSchema = z.object({
   relationship: z.enum(relationships),
   owner: z.string().max(200), // Internal, never projected to a public DTO.
   externalAi: z.enum(["NONE", "PUBLIC_ONLY", "PRIVATE_SELECTED"]),
+  // Private repositories stay internal unless the owner opts this project into a
+  // published, AI-derived description. Code, paths, links and images stay private.
+  privateSources: z.enum(["INTERNAL", "PUBLISH_DERIVED"]).default("INTERNAL"),
   embargoUntil: z.union([z.literal(""), z.iso.datetime()]),
   surfaces: z.object({ portfolio: z.boolean(), chat: z.boolean(), cv: z.boolean(), documents: z.boolean() }).strict(),
   fields: z.object({ repository: z.boolean(), demo: z.boolean(), technologies: z.boolean(), status: z.boolean(), milestones: z.boolean(), media: z.boolean(), sources: z.boolean() }).strict(),
@@ -30,7 +33,7 @@ export type DisclosurePolicy = z.infer<typeof disclosureSchema>;
 export type PublicationSurface = keyof DisclosurePolicy["surfaces"];
 const blank = { es: "", en: "" };
 export const defaultDisclosure: DisclosurePolicy = {
-  mode: "FULL", relationship: "UNSPECIFIED", owner: "", externalAi: "PUBLIC_ONLY", embargoUntil: "",
+  mode: "FULL", relationship: "UNSPECIFIED", owner: "", externalAi: "PUBLIC_ONLY", privateSources: "INTERNAL", embargoUntil: "",
   surfaces: { portfolio: true, chat: true, cv: true, documents: true },
   fields: { repository: true, demo: true, technologies: true, status: true, milestones: true, media: true, sources: true },
   participation: { role: blank, period: blank, contribution: blank, status: "UNSPECIFIED", githubIds: [] }, organizations: [],
@@ -39,6 +42,19 @@ export const defaultDisclosure: DisclosurePolicy = {
 };
 export function canPublish(policy: DisclosurePolicy, surface: PublicationSurface, now = Date.now()) {
   return !["INTERNAL", "EXCLUDED"].includes(policy.mode) && policy.surfaces[surface] && (!policy.embargoUntil || Date.parse(policy.embargoUntil) <= now);
+}
+// Without a saved opt-in a private repository is withdrawn, as before. A missing
+// policy (governance disabled) never admits private material.
+// The opt-in is checked here, not in the schema, so revocations that only flip the
+// mode (withdrawal, App uninstall) never leave a policy that fails to parse.
+export function canPublishPrivateRepository(policy: DisclosurePolicy | undefined) {
+  return Boolean(policy && policy.privateSources === "PUBLISH_DERIVED" && policy.mode === "FULL" && policy.externalAi === "PRIVATE_SELECTED" &&
+    !policy.fields.repository && !policy.fields.sources && !policy.fields.media);
+}
+export function privateDerivedDisclosure(githubIds: string[]): DisclosurePolicy {
+  return { ...defaultDisclosure, externalAi: "PRIVATE_SELECTED", privateSources: "PUBLISH_DERIVED",
+    fields: { ...defaultDisclosure.fields, repository: false, sources: false, media: false },
+    participation: { ...defaultDisclosure.participation, githubIds } };
 }
 export function canUsePublicSources(policy: DisclosurePolicy, surface: PublicationSurface) {
   return canPublish(policy, surface) && policy.mode === "FULL" && policy.fields.sources && (surface !== "chat" || policy.externalAi !== "NONE");

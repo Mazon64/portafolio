@@ -4,7 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CircleCheckIcon, CircleDashedIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { ProjectIntegrationWorkspace } from "@/data/admin/project-integration";
+import type { ProjectIntegrationWorkspace, RepositoryCandidates } from "@/data/admin/project-integration";
 import type { ProjectIntegrationCopy } from "@/i18n/project-integration";
 import type { Locale } from "@/i18n/config";
 import { milestoneProgress } from "@/lib/projects/schemas";
@@ -28,7 +28,42 @@ export function PortfolioPilot({ locale, copy, enabled }: { locale: Locale; copy
     <input type="hidden" name="operation" value="connect" />
     <p className="mb-4 text-sm text-muted-foreground">{copy.automaticHint}</p>
     <label className="block text-sm font-medium">{copy.repository}<input name="repositoryFullName" className={field} placeholder="Mazon64/portafolio" required disabled={!enabled || pending} /></label>
+    <PublishPrivate copy={copy} disabled={!enabled || pending} />
     <Button type="submit" variant="outline" className="mt-4" disabled={!enabled || pending}>{pending ? copy.working : copy.connect}</Button>
+    <Feedback state={state} copy={copy} />
+  </form>;
+}
+
+function PublishPrivate({ copy, disabled }: { copy: ProjectIntegrationCopy; disabled: boolean }) {
+  return <div className="mt-4 space-y-1">
+    <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="publishPrivate" disabled={disabled} />{copy.publishPrivate}</label>
+    <p className="text-xs leading-5 text-muted-foreground">{copy.publishPrivateHint}</p>
+  </div>;
+}
+
+export function RepositoryCandidateList({ locale, copy, enabled, data, installUrl }: { locale: Locale; copy: ProjectIntegrationCopy; enabled: boolean; data: RepositoryCandidates; installUrl: string | null }) {
+  return <section className={`${panel} my-6 space-y-4`}>
+    <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-semibold">{copy.candidatesTitle}</h2>{installUrl && <a href={installUrl} target="_blank" rel="noreferrer" className="text-sm underline underline-offset-4">{copy.installApp}</a>}</div>
+    <p className="text-sm text-muted-foreground">{copy.candidatesHint}</p>
+    {data.warnings.length > 0 && <p className="text-sm text-muted-foreground">{copy.candidatesWarning}</p>}
+    {!data.candidates.length && <p className="text-sm text-muted-foreground">{copy.candidatesEmpty}</p>}
+    <ul className="divide-y divide-border">{data.candidates.map((candidate) => <li key={candidate.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+      <div><p className="font-medium">{candidate.fullName}</p><p className="text-xs text-muted-foreground">{candidate.private ? copy.visibility.private : copy.visibility.public} · {candidate.origins.map((origin) => copy.origins[origin]).join(" · ")}</p></div>
+      {candidate.projectId ? <a href={`/admin/${locale}/projects/${candidate.projectId}`} className="underline underline-offset-4">{copy.linkedProject}</a>
+        : candidate.private && !candidate.installed ? <span className="text-xs text-muted-foreground">{copy.needsInstall}</span>
+        : <CandidateConnect id={candidate.id} isPrivate={candidate.private} locale={locale} copy={copy} enabled={enabled} />}
+    </li>)}</ul>
+  </section>;
+}
+
+function CandidateConnect({ id, isPrivate, locale, copy, enabled }: { id: string; isPrivate: boolean; locale: Locale; copy: ProjectIntegrationCopy; enabled: boolean }) {
+  const [state, action, pending] = useActionState(projectIntegrationAction, initial);
+  const router = useRouter();
+  useEffect(() => { if (state.projectId) router.push(`/admin/${locale}/projects/${state.projectId}`); }, [state.projectId, router, locale]);
+  return <form action={action} className="flex flex-wrap items-center gap-3">
+    <input type="hidden" name="operation" value="connect" /><input type="hidden" name="repositoryId" value={id} />
+    {isPrivate && <label className="flex items-center gap-2 text-xs"><input type="checkbox" name="publishPrivate" disabled={!enabled || pending} />{copy.publishPrivate}</label>}
+    <Button type="submit" variant="outline" size="sm" disabled={!enabled || pending}>{pending ? copy.working : copy.connect}</Button>
     <Feedback state={state} copy={copy} />
   </form>;
 }

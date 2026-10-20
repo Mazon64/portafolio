@@ -1,9 +1,6 @@
-import { after } from "next/server";
-import { z } from "zod";
-import { getPrisma } from "@/lib/prisma";
 import { projectIntegrationEnabled } from "@/lib/projects/configuration";
 import { boundedBody, validGithubSignature } from "@/lib/projects/http";
-import { enqueueProjectSync, processProjectSync, withdrawPublicProject } from "@/lib/projects/sync";
+import { handleRepositoryEvent, REPOSITORY_EVENTS } from "@/lib/projects/webhook";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -19,33 +16,6 @@ export async function POST(request: Request) {
   }
   const event = request.headers.get("x-github-event");
   if (event === "ping") return Response.json({ status: "pong" });
-  if (!["push", "repository", "milestone", "issues", "release"].includes(event ?? "")) return Response.json({ status: "ignored" }, { status: 202 });
-  const delivery = z.uuid().safeParse(request.headers.get("x-github-delivery"));
-  const parsed = z.object({
-    ref: z.string().max(200).optional(), after: z.string().regex(/^[a-f0-9]{40}$/).optional(), deleted: z.boolean().optional(),
-    repository: z.object({ id: z.number().int().positive(), private: z.boolean(), default_branch: z.string().optional() }),
-    issue: z.object({ milestone: z.unknown().optional() }).optional(), milestone: z.unknown().optional(),
-  });
-  let payload: z.infer<typeof parsed>;
-  try { payload = parsed.parse(JSON.parse(body.toString("utf8"))); }
-  catch { return Response.json({ status: "invalid" }, { status: 400 }); }
-  if (!delivery.success) return Response.json({ status: "invalid" }, { status: 400 });
-  if (event === "push" && (!payload.ref || !payload.after)) return Response.json({ status: "invalid" }, { status: 400 });
-  if (payload.repository.private) {
-    try {
-      const config = await getPrisma().projectIntegration.findUnique({ where: { repositoryId: String(payload.repository.id) } });
-      if (config) await withdrawPublicProject(config.projectId);
-      return Response.json({ status: "withdrawn" }, { status: 202 });
-    } catch { return Response.json({ status: "unavailable" }, { status: 503 }); }
-  }
-  if (payload.deleted) return Response.json({ status: "ignored" }, { status: 202 });
-  try {
-    const config = await getPrisma().projectIntegration.findUnique({ where: { repositoryId: String(payload.repository.id) } });
-    if (!config?.enabled || (event === "push" && payload.ref !== `refs/heads/${payload.repository.default_branch ?? config.branch}`)) return Response.json({ status: "ignored" }, { status: 202 });
-    const result = await enqueueProjectSync(config.projectId, `github:${delivery.data}`, event === "push" ? payload.after! : null);
-    if (!result.duplicate) after(async () => { await processProjectSync(config.projectId); });
-    return Response.json({ status: result.duplicate ? "duplicate" : "accepted" }, { status: 202 });
-  } catch {
-    return Response.json({ status: "unavailable" }, { status: 503 });
-  }
+  if (!REPOSITORY_EVENTS.includes(event ?? "")) return Response.json({ status: "ignored" }, { status: 202 });
+  return handleRepositoryEvent(event!, body, request.headers.get("x-github-delivery"), "github");
 }

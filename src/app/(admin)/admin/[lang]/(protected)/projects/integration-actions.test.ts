@@ -17,7 +17,14 @@ describe("project integration action boundary", () => {
     m.pilot.mockResolvedValue("project");
     const data = new FormData(); data.set("operation", "connect"); data.set("repositoryFullName", "https://github.com/owner/repo.git/");
     expect(await projectIntegrationAction({ status: "idle" }, data)).toEqual({ status: "success", projectId: "project" });
-    expect(m.pilot).toHaveBeenCalledWith("owner/repo"); expect(m.enqueue).toHaveBeenCalledWith("project", expect.stringMatching(/^connect:/), null);
+    // Normalization and validation happen where the repository is resolved.
+    expect(m.pilot).toHaveBeenCalledWith("https://github.com/owner/repo.git/", { publishPrivate: false }); expect(m.enqueue).toHaveBeenCalledWith("project", expect.stringMatching(/^connect:/), null);
+  });
+  it("connects a listed repository by ID with the private publication choice", async () => {
+    m.pilot.mockResolvedValue("project");
+    const data = new FormData(); data.set("operation", "connect"); data.set("repositoryId", "42"); data.set("publishPrivate", "on");
+    expect(await projectIntegrationAction({ status: "idle" }, data)).toEqual({ status: "success", projectId: "project" });
+    expect(m.pilot).toHaveBeenCalledWith("42", { publishPrivate: true });
   });
   it("reports a committed connection when initial enqueuing fails", async () => {
     m.pilot.mockResolvedValue("project"); m.enqueue.mockRejectedValue(new Error("Unavailable queue"));

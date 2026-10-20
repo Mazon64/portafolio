@@ -49,8 +49,14 @@ describe("GitHub webhook", () => {
   it("persists before scheduling background work and responds accepted", async () => {
     const response = await POST(request());
     expect(response.status).toBe(202); expect(await response.json()).toEqual({ status: "accepted" });
-    expect(enqueue).toHaveBeenCalledWith("project", "github:2eb66473-aca8-4f1f-a312-9a697b75a2e3", "a".repeat(40));
+    // Keyed by commit so the repository webhook and the App webhook coalesce.
+    expect(enqueue).toHaveBeenCalledWith("project", `push:42:${"a".repeat(40)}`, "a".repeat(40));
     expect(afterMock).toHaveBeenCalledOnce(); expect(processJob).not.toHaveBeenCalled();
+  });
+  it("ignores private deliveries for repositories that are not linked", async () => {
+    findConfig.mockResolvedValue(null);
+    const response = await POST(request({ ref: "refs/heads/main", after: "a".repeat(40), deleted: false, repository: { id: 42, private: true } }));
+    expect(await response.json()).toEqual({ status: "ignored" }); expect(enqueue).not.toHaveBeenCalled();
   });
   it("does not schedule duplicate deliveries or other branches", async () => {
     enqueue.mockResolvedValue({ duplicate: true });

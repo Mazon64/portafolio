@@ -2,13 +2,17 @@
 
 ## Contrato
 
-Vincular un repositorio público basta para iniciar descubrimiento, generación ES/EN,
+Vincular un repositorio público, o uno privado o de organización mediante la GitHub
+App, basta para iniciar descubrimiento, generación ES/EN,
 análisis de imágenes, indexación y publicación. No se rellenan fichas, tecnologías,
 descripciones de imágenes o hitos en el CMS y no se aprueba cada actualización.
 La IA genera y reevalúa los hitos; el servicio conserva su identidad, estado y
 evidencia en PostgreSQL. No se exige un manifiesto ni un archivo de hitos en el repo.
 El CMS administra la conexión, pausa, estado, reintentos y eliminación del proyecto.
 Los documentos profesionales (CV, ATS y cartas) conservan su flujo independiente.
+
+Los repositorios privados requieren una política explícita de publicación derivada;
+véase [project-disclosure-rollout.md](project-disclosure-rollout.md#vinculación-unificada).
 
 ## Descubrimiento De Fuentes
 

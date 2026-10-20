@@ -5,12 +5,15 @@ const mocks = vi.hoisted(() => ({
   query: vi.fn(), execute: vi.fn(), deleteDraft: vi.fn(), createDraft: vi.fn(),
   discover: vi.fn(), images: vi.fn(), published: vi.fn(), translation: vi.fn(), updateProject: vi.fn(), cache: vi.fn(),
   disableConfig: vi.fn(), retireKnowledge: vi.fn(), hideProject: vi.fn(), archiveDocuments: vi.fn(),
+  policies: vi.fn(), governance: vi.fn(), findPolicy: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidateTag: mocks.cache }));
 vi.mock("./discovery", () => ({ discoverProject: mocks.discover }));
 vi.mock("./media", () => ({ analyzeRepositoryImages: mocks.images }));
 vi.mock("@/lib/projects/github", () => ({ getRepository: mocks.getRepo, getBranchSha: mocks.getSha, getProjectSources: mocks.getSources }));
+vi.mock("./source", () => ({ openRepository: async (id: string, hint: string | null) => ({ repository: await mocks.getRepo(id, hint), access: "public", activity: true, json: vi.fn().mockResolvedValue([]) }) }));
+vi.mock("@/data/project-disclosure", () => ({ disclosurePolicies: mocks.policies, governanceEnabled: mocks.governance }));
 vi.mock("@/lib/projects/ai", () => ({ embedTexts: mocks.embed, generateProjectNarrative: mocks.narrative, projectAiFailureCode: () => "TEST_FAILURE" }));
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({
   $transaction: mocks.transaction, $queryRaw: mocks.query,
@@ -32,6 +35,7 @@ beforeEach(() => {
   mocks.getSources.mockResolvedValue([{ path: "README.md", ordinal: 0, content: "Source", sourceHash: "hash", sourceUrl: "https://github.com/owner/repo" }]);
   mocks.discover.mockResolvedValue({ chunks: [{ path: "README.md", ordinal: 0, content: "Owner acceptance remains pending.", sourceHash: "a".repeat(64), sourceUrl: "https://github.com/owner/repo" }], images: [], metadata });
   mocks.images.mockResolvedValue([]); mocks.published.mockResolvedValue(null);
+  mocks.policies.mockResolvedValue([]); mocks.governance.mockReturnValue(false);
   mocks.query.mockResolvedValue([]); mocks.embed.mockResolvedValue(["[1]"]); mocks.narrative.mockResolvedValue({ content: { names: { es: "Proyecto", en: "Project" }, narrative: { es: text, en: text }, milestones: [] }, model: "test" });
   mocks.createDraft.mockResolvedValue({ id: "draft" }); mocks.execute.mockResolvedValue(1);
   mocks.transaction.mockImplementation(async (fn) => fn({
@@ -39,7 +43,7 @@ beforeEach(() => {
     projectSyncJob: { findUnique: mocks.findExisting, count: mocks.countJobs, create: mocks.createJob, updateMany: mocks.updateJob },
     projectKnowledge: { deleteMany: mocks.deleteDraft, create: mocks.createDraft, updateMany: mocks.retireKnowledge }, $executeRaw: mocks.execute,
     project: { update: mocks.updateProject, updateMany: mocks.hideProject }, projectTranslation: { upsert: mocks.translation },
-    documentArtifact: { updateMany: mocks.archiveDocuments },
+    documentArtifact: { updateMany: mocks.archiveDocuments }, projectDisclosurePolicy: { findUnique: mocks.findPolicy, upsert: vi.fn() },
   }));
 });
 afterEach(() => vi.unstubAllEnvs());
@@ -49,6 +53,20 @@ describe("durable project processing", () => {
     expect(await processProjectSync()).toEqual({ status: "withdrawn" });
     expect(mocks.hideProject).toHaveBeenCalledWith({ where: { id: "project" }, data: { showOnPortfolio: false, showOnCv: false } });
     expect(mocks.retireKnowledge).toHaveBeenCalled(); expect(mocks.archiveDocuments).toHaveBeenCalled(); expect(mocks.narrative).not.toHaveBeenCalled();
+  });
+  it("withdraws a private repository that was never opted into publication", async () => {
+    mocks.getRepo.mockResolvedValue({ id: 42, full_name: "owner/repo", name: "repo", default_branch: "main", private: true });
+    expect(await processProjectSync()).toEqual({ status: "withdrawn" });
+    expect(mocks.narrative).not.toHaveBeenCalled(); expect(mocks.discover).not.toHaveBeenCalled();
+  });
+  it("publishes a derived description of an opted-in private repository without its images", async () => {
+    const { privateDerivedDisclosure } = await import("./disclosure");
+    mocks.governance.mockReturnValue(true);
+    mocks.policies.mockResolvedValue([{ projectId: "project", slug: "repo", revision: "rev", policy: privateDerivedDisclosure(["7"]) }]);
+    mocks.findPolicy.mockResolvedValue({ revision: "rev" });
+    mocks.getRepo.mockResolvedValue({ id: 42, full_name: "owner/repo", name: "repo", default_branch: "main", private: true });
+    expect(await processProjectSync()).toEqual({ status: "succeeded" });
+    expect(mocks.images).not.toHaveBeenCalled(); expect(mocks.narrative).toHaveBeenCalled();
   });
   it("does not withdraw a public project just because one source file is missing", async () => {
     mocks.discover.mockRejectedValue(new Error("GitHub HTTP 404"));
