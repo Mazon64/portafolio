@@ -13,10 +13,20 @@ import { analyzeRepositoryImages } from "./media";
 import { resolveMilestones } from "./milestones";
 import { EMBEDDING_MODEL, milestoneProgress, narrativeText, projectSnapshotSchema, MAX_CHUNKS, MAX_SOURCE_BYTES } from "./schemas";
 import { disclosurePolicies, governanceEnabled } from "@/data/project-disclosure";
+import { getDocumentGenerationModel } from "@/lib/documents/gemini";
 import { contributionSources } from "./contributions";
 import { canPublishPrivateRepository, defaultDisclosure, disclosureSchema } from "./disclosure";
 
 const LEASE_MS = 10 * 60_000;
+// Bump when the prompt or output contract changes so every project regenerates once.
+const GENERATION_POLICY = "narrative-v1";
+
+// Depends only on content hashes, never on the commit, so a push that leaves the
+// sampled sources unchanged (or a daily reconcile) reuses the published snapshot.
+export function corpusFingerprint(chunks: Array<{ path: string; ordinal: number; sourceHash: string }>, model: string) {
+  const parts = chunks.map((chunk) => `${chunk.path}\u0000${chunk.ordinal}\u0000${chunk.sourceHash}`).sort();
+  return createHash("sha256").update(JSON.stringify([GENERATION_POLICY, model, EMBEDDING_MODEL, parts])).digest("hex");
+}
 const MAX_ATTEMPTS = 5;
 
 export async function serializable<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
@@ -139,6 +149,16 @@ export async function processProjectSync(projectId?: string) {
       return { path: asset.sourcePath, ordinal: 0, content, sourceHash: createHash("sha256").update(`${asset.blobSha}:${content}`).digest("hex"), sourceUrl: `https://github.com/${repository.full_name}/blob/${sha}/${asset.sourcePath.split("/").map(encodeURIComponent).join("/")}` };
     })];
     if (chunks.length > MAX_CHUNKS || chunks.reduce((size, chunk) => size + Buffer.byteLength(chunk.content), 0) > MAX_SOURCE_BYTES) throw new Error("Corpus exceeds source budget");
+    const corpusHash = corpusFingerprint(chunks, getDocumentGenerationModel());
+    if (cachedSnapshot.success && cachedSnapshot.data.metadata.corpusHash === corpusHash && cachedSnapshot.data.metadata.repositoryId === String(repository.id)) {
+      failure = "PERSISTENCE_FAILED";
+      const owned = await getPrisma().projectSyncJob.updateMany({
+        where: { id: job.id, leaseToken: job.leaseToken, status: "PROCESSING", leaseUntil: { gt: new Date() } },
+        data: { status: "UNCHANGED", finishedAt: new Date(), leaseUntil: null, leaseToken: null },
+      });
+      if (owned.count) await getPrisma().project.updateMany({ where: { id: job.projectId }, data: { lastTelemetryAt: new Date() } });
+      return { status: owned.count ? "unchanged" : "superseded" };
+    }
     const cached = await getPrisma().$queryRaw<Array<{ path: string; ordinal: number; sourceHash: string; embedding: string }>>(Prisma.sql`
       SELECT c.path, c.ordinal, c."sourceHash", c.embedding::text AS embedding
       FROM "ProjectKnowledgeChunk" c JOIN "ProjectKnowledge" k ON k.id = c."knowledgeId"
@@ -158,7 +178,7 @@ export async function processProjectSync(projectId?: string) {
     const milestones = resolveMilestones(generated.content.milestones, chunks, previousMilestones);
     const snapshot = projectSnapshotSchema.parse({
       ...generated.content.narrative, automatic: true, names: generated.content.names, assets,
-      milestones, metadata: { ...discovered.metadata, milestonePolicy: "ai-v1" },
+      milestones, metadata: { ...discovered.metadata, milestonePolicy: "ai-v1", corpusHash },
     });
     // Check branch again after external calls, before publishing the snapshot.
     failure = "SOURCE_UNAVAILABLE";

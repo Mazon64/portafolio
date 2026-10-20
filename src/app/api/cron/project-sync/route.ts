@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   try {
     await getPrisma().projectQueryQuota.deleteMany({ where: { expiresAt: { lt: new Date() } } });
     await getPrisma().projectSyncJob.deleteMany({ where: {
-      status: { in: ["SUCCEEDED", "SUPERSEDED"] }, finishedAt: { lt: new Date(Date.now() - 30 * 86400_000) },
+      status: { in: ["SUCCEEDED", "SUPERSEDED", "UNCHANGED"] }, finishedAt: { lt: new Date(Date.now() - 30 * 86400_000) },
     } });
     const [publicResult, privateResult] = await Promise.all([reconcileProjectQueue(), reconcilePrivateEvidence()]);
     return Response.json({ ...publicResult, private: privateResult }, { headers: { "Cache-Control": "no-store" } });
