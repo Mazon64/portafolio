@@ -100,6 +100,8 @@ export const projectSnapshotSchema = narrativeSchema.extend({
     status: z.enum(["IN_PROGRESS", "COMPLETED", "ARCHIVED"]),
     sourcePaths: z.array(z.string()),
     milestonePolicy: z.literal("ai-v1").optional(),
+    // Fingerprint of the generation input; an identical corpus skips the AI call.
+    corpusHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
   }),
 });
 export type ProjectSnapshot = z.infer<typeof projectSnapshotSchema>;

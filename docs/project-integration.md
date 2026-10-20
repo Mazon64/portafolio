@@ -129,9 +129,27 @@ Un fallo de caché después del commit no convierte el guardado en fallo de pers
 
 El webhook verifica HMAC y deduplica entregas antes de responder `202`. Escucha
 `push` de la rama predeterminada, `repository`, `milestone`, `release` e `issues`,
-aunque no estén asociadas a hitos. Solo acepta repositorios vinculados y públicos; no consume
-como instrucciones el contenido del webhook. `after()` inicia el procesamiento,
+aunque no estén asociadas a hitos. Solo acepta repositorios vinculados; un privado
+requiere la política de publicación derivada. El webhook de la GitHub App recibe los
+mismos eventos y los pushes se agrupan por commit. No consume como instrucciones el
+contenido del webhook. `after()` inicia el procesamiento,
 pero la durabilidad está en PostgreSQL.
+
+### Sincronización Incremental
+
+Cada trabajo vuelve a leer GitHub (sin coste de IA) y calcula una huella del corpus a
+partir de los hashes de contenido de cada fragmento, el modelo configurado y la
+versión del prompt; no depende del commit. Si coincide con la del snapshot publicado,
+el trabajo termina como `UNCHANGED`, sin embeddings ni generación, y solo actualiza
+`lastTelemetryAt`. Un push que no altera las fuentes muestreadas, un evento duplicado
+o la reconciliación diaria no consumen tokens. Cambiar `GEMINI_MODEL` o la versión
+del prompt regenera cada proyecto una vez. Los snapshots sin huella se regeneran en
+su próxima sincronización.
+
+Las contribuciones se consultan filtradas por autor: PRs e issues propios mediante
+`issues?creator=`, priorizando PRs fusionados (hasta ocho), commits propios (hasta
+cuatro, salvo forks) y revisiones en PRs ajenos recientes (hasta dos). El login solo
+filtra la consulta; cada resultado se vuelve a comprobar por ID numérico.
 
 Los leases duran diez minutos, con cinco intentos y backoff exponencial. Solo el
 dueño vigente puede publicar; eventos de commits obsoletos se marcan `SUPERSEDED`.

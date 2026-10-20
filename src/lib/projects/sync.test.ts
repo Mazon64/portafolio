@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   query: vi.fn(), execute: vi.fn(), deleteDraft: vi.fn(), createDraft: vi.fn(),
   discover: vi.fn(), images: vi.fn(), published: vi.fn(), translation: vi.fn(), updateProject: vi.fn(), cache: vi.fn(),
   disableConfig: vi.fn(), retireKnowledge: vi.fn(), hideProject: vi.fn(), archiveDocuments: vi.fn(),
-  policies: vi.fn(), governance: vi.fn(), findPolicy: vi.fn(),
+  policies: vi.fn(), governance: vi.fn(), findPolicy: vi.fn(), touchProject: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidateTag: mocks.cache }));
@@ -19,9 +19,10 @@ vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({
   $transaction: mocks.transaction, $queryRaw: mocks.query,
   projectSyncJob: { findFirst: mocks.findJob, updateMany: mocks.updateJob },
   projectIntegration: { findUnique: mocks.findConfig },
-  projectKnowledge: { findFirst: mocks.published },
+  projectKnowledge: { findFirst: mocks.published }, project: { updateMany: mocks.touchProject },
 }) }));
-import { enqueueProjectSync, processProjectSync } from "./sync";
+import { corpusFingerprint, enqueueProjectSync, processProjectSync } from "./sync";
+import { getDocumentGenerationModel } from "@/lib/documents/gemini";
 const date = new Date("2026-09-01T00:00:00Z");
 const config = { projectId: "project", repositoryId: "42", branch: "main", sourcePaths: ["README.md"], assets: [], milestones: [], enabled: true, updatedAt: date, project: { updatedAt: date } };
 const text = { summary: "A documented project summary.", problem: "Documented problem.", solution: "Documented solution.", architecture: "Documented architecture.", decisions: "Documented decisions.", results: "Documented results." };
@@ -67,6 +68,21 @@ describe("durable project processing", () => {
     mocks.getRepo.mockResolvedValue({ id: 42, full_name: "owner/repo", name: "repo", default_branch: "main", private: true });
     expect(await processProjectSync()).toEqual({ status: "succeeded" });
     expect(mocks.images).not.toHaveBeenCalled(); expect(mocks.narrative).toHaveBeenCalled();
+  });
+  it("reuses the published snapshot without AI calls when the corpus is unchanged", async () => {
+    const chunks = [{ path: "README.md", ordinal: 0, content: "Owner acceptance remains pending.", sourceHash: "a".repeat(64), sourceUrl: "https://github.com/owner/repo" }];
+    const corpusHash = corpusFingerprint(chunks, getDocumentGenerationModel());
+    mocks.published.mockResolvedValue({ narrative: { automatic: true, names: { es: "Proyecto", en: "Project" }, es: text, en: text, assets: [], milestones: [], metadata: { ...metadata, corpusHash } } });
+    expect(await processProjectSync()).toEqual({ status: "unchanged" });
+    expect(mocks.narrative).not.toHaveBeenCalled(); expect(mocks.embed).not.toHaveBeenCalled(); expect(mocks.transaction).not.toHaveBeenCalled();
+    expect(mocks.updateJob).toHaveBeenLastCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "UNCHANGED" }) }));
+    expect(mocks.touchProject).toHaveBeenCalledWith({ where: { id: "project" }, data: { lastTelemetryAt: expect.any(Date) } });
+  });
+  it("fingerprints content independently of commit and order but not of the model", () => {
+    const a = { path: "README.md", ordinal: 0, sourceHash: "a".repeat(64) }, b = { path: "docs/srs.md", ordinal: 1, sourceHash: "b".repeat(64) };
+    expect(corpusFingerprint([a, b], "m")).toBe(corpusFingerprint([b, a], "m"));
+    expect(corpusFingerprint([a, b], "m")).not.toBe(corpusFingerprint([a, b], "other"));
+    expect(corpusFingerprint([a], "m")).not.toBe(corpusFingerprint([{ ...a, sourceHash: "c".repeat(64) }], "m"));
   });
   it("does not withdraw a public project just because one source file is missing", async () => {
     mocks.discover.mockRejectedValue(new Error("GitHub HTTP 404"));

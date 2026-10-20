@@ -39,7 +39,7 @@ export const projectIntegrationCopy = {
     askPlaceholder: "¿Cómo funciona la arquitectura de este proyecto?", askError: "La consulta no está disponible ahora. Inténtalo más tarde.", rateLimited: "Se alcanzó el límite de consultas. Inténtalo más tarde.",
     askHint: "Respuestas basadas en la documentación publicada, con enlaces al commit de origen.",
     statuses: { idle: "", success: "Cambios guardados.", queued: "Sincronización en cola. Actualiza el estado para consultar el resultado.", conflict: "La configuración, el proyecto o el borrador cambió. Actualiza la página.", invalid: "Revisa los campos y los límites indicados.", disabled: "Las escrituras de integración están deshabilitadas.", error: "No se pudo completar la operación.", "cache-error": "Se guardó, pero el refresco puede tardar en aparecer." },
-    jobStatuses: { QUEUED: "En cola", PROCESSING: "Procesando", SUCCEEDED: "Publicado automáticamente", FAILED: "Falló", SUPERSEDED: "Sustituido por cambios más recientes" },
+    jobStatuses: { QUEUED: "En cola", PROCESSING: "Procesando", SUCCEEDED: "Publicado automáticamente", UNCHANGED: "Sin cambios: se reutilizó la ficha publicada", FAILED: "Falló", SUPERSEDED: "Sustituido por cambios más recientes" },
   },
   en: {
     milestoneUnverified: "Unverified",
@@ -79,7 +79,7 @@ export const projectIntegrationCopy = {
     askPlaceholder: "How does this project's architecture work?", askError: "Queries are unavailable right now. Please try again later.", rateLimited: "The query limit has been reached. Please try again later.",
     askHint: "Answers grounded in published documentation, with links to the source commit.",
     statuses: { idle: "", success: "Changes saved.", queued: "Synchronization queued. Refresh the status to see the result.", conflict: "The configuration, project or draft changed. Refresh the page.", invalid: "Review the fields and indicated limits.", disabled: "Integration writes are disabled.", error: "Unable to complete the operation.", "cache-error": "Saved, but the refresh may take a moment to appear." },
-    jobStatuses: { QUEUED: "Queued", PROCESSING: "Processing", SUCCEEDED: "Automatically published", FAILED: "Failed", SUPERSEDED: "Superseded by newer changes" },
+    jobStatuses: { QUEUED: "Queued", PROCESSING: "Processing", SUCCEEDED: "Automatically published", UNCHANGED: "No changes: the published card was reused", FAILED: "Failed", SUPERSEDED: "Superseded by newer changes" },
   },
 } as const satisfies Record<Locale, object>;
 export type ProjectIntegrationCopy = (typeof projectIntegrationCopy)[Locale];
